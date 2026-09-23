@@ -1235,8 +1235,8 @@ function renderLogin(){
     <div class="login-wrap"><div class="login-card card card-pad">
       <div class="brand"><h1>${esc(APP_NAME)}</h1><small>Eigenes Passwort festlegen</small></div>
       <p class="hint">Hallo ${esc(p?p.name:'')}. Das ist deine erste Anmeldung – bitte lege jetzt ein eigenes Passwort fest.</p>
-      <div class="field"><label>Neues Passwort</label><input type="password" id="in-neues-pw" autofocus></div>
-      <div class="field"><label>Neues Passwort wiederholen</label><input type="password" id="in-neues-pw2"></div>
+      <div class="field"><label>Neues Passwort</label><input type="password" id="in-neues-pw" autofocus autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="field"><label>Neues Passwort wiederholen</label><input type="password" id="in-neues-pw2" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
       ${loginFehler?`<p class="hint" style="color:var(--accent-ink)">${esc(loginFehler)}</p>`:''}
       <button class="btn btn-primary" id="btn-pw-setzen" style="width:100%">Passwort speichern und anmelden</button>
     </div></div>`;
@@ -1249,7 +1249,7 @@ function renderLogin(){
       <input id="in-person" list="in-person-liste" autocomplete="off" placeholder="Namen eintippen …" value="${esc(loginEingabe)}">
       <datalist id="in-person-liste">${aktive.map(p=>`<option value="${esc(p.name)}">${p.benutzername?`Benutzername: ${esc(p.benutzername)}`:''}</option>`).join('')}</datalist>
     </div>
-    <div class="field"><label>Passwort</label><input type="password" id="in-pw" autofocus></div>
+    <div class="field"><label>Passwort</label><input type="password" id="in-pw" autofocus autocapitalize="off" autocorrect="off" spellcheck="false"></div>
     ${loginHinweis?`<div class="card card-pad" style="background:var(--soft);border:none;margin-bottom:12px"><p class="hint" style="margin:0">${esc(loginHinweis)}</p></div>`:''}
     ${loginFehler?`<p class="hint" style="color:var(--accent-ink)">${esc(loginFehler)}</p>`:''}
     <button class="btn btn-primary" id="btn-anmelden" style="width:100%">Anmelden</button>
@@ -1258,6 +1258,12 @@ function renderLogin(){
       <strong>Erste Einrichtung auf diesem Gerät</strong>
       <p class="hint" style="margin:6px 0 10px">Sie haben von Ihrer Staffelleitung eine Datendatei erhalten? Dann importieren Sie sie hier direkt – eine Anmeldung als „Admin“ ist dafür nicht nötig. Danach melden Sie sich mit Ihrem eigenen Namen an.</p>
       <label class="btn" style="display:inline-flex;cursor:pointer">📂 Datendatei importieren<input type="file" id="in-erststart-import" accept="application/json,.json" style="display:none"></label>
+    </div>`:''}
+    ${localStorage.getItem(STORAGE_KEY+'-vor-import-backup')?`
+    <div class="card card-pad" style="background:var(--soft);border:none;margin-top:16px">
+      <strong>Passwort vergessen / Import war ein Fehler?</strong>
+      <p class="hint" style="margin:6px 0 10px">Auf diesem Gerät gibt es eine automatische Sicherheitskopie von direkt vor dem letzten Import. Falls Sie sich mit keinem Zugang aus dem aktuellen Bestand mehr anmelden können, lässt sich dieser vorherige Stand hier zurückholen.</p>
+      <button class="btn" id="btn-login-backup-wiederherstellen">Vorherigen Stand (vor letztem Import) wiederherstellen</button>
     </div>`:''}
     <p class="hint" style="margin-top:14px">Beim Tippen erscheinen passende Namen zur Auswahl. Wer einen Benutzernamen hat, kann diesen statt des vollen Namens eingeben. Erstzugang erhältst du von der Leitung. Alle Daten bleiben ausschließlich auf diesem Gerät.</p>
   </div></div>`;
@@ -1297,6 +1303,18 @@ function bindLogin(){
     session = { personId:p.id };
     try{ localStorage.setItem('barry-last-login', p.benutzername || p.name); }catch(e){}
     render();
+  };
+  const backupBtn = document.getElementById('btn-login-backup-wiederherstellen');
+  if(backupBtn) backupBtn.onclick = ()=>{
+    if(!confirm('Den Stand von vor dem letzten Import wiederherstellen? Der aktuelle Bestand auf diesem Gerät wird dabei ersetzt — das kann Daten verwerfen, die seit dem letzten Import hinzugekommen sind.')) return;
+    try{
+      const roh = localStorage.getItem(STORAGE_KEY+'-vor-import-backup');
+      state = migriereState(Object.assign(leererState(), JSON.parse(roh)));
+      speichereState();
+      loginFehler = ''; loginEingabe = '';
+      loginHinweis = 'Der vorherige Datenbestand (von vor dem letzten Import) wurde wiederhergestellt. Bitte mit einer Person aus diesem Stand anmelden.';
+      render();
+    }catch(e){ alert('Sicherheitskopie konnte nicht gelesen werden.'); }
   };
 }
 
