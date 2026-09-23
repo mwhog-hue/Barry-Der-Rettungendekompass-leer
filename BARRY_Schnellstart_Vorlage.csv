@@ -1,0 +1,3 @@
+﻿Name;Rolle;Benutzername;HundName;HundRasse;HundGeburtsdatum;Sparten
+Max Mustermann;mitglied;;Bella;Labrador Retriever;2022-03-15;flaeche
+# Bitte die Beispielzeile oben löschen oder überschreiben. Spalte "Rolle": mitglied, ausbilder oder leitung. Spalte "Sparten": flaeche, truemmer und/oder mantrailing, mit Komma getrennt, kann leer bleiben. HundName/HundRasse/HundGeburtsdatum/Sparten dürfen leer bleiben, wenn die Person (noch) keinen eigenen Hund führt.
