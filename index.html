@@ -141,6 +141,8 @@ input,select,textarea{font-family:inherit;font-size:.95rem}
 .chip-select{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:1px solid var(--line);cursor:pointer;font-size:.85rem;margin:2px 6px 2px 0}
 .chip-select.active{background:var(--soft);color:var(--accent-ink);border-color:var(--accent-ink)}
 .chip-select input{margin:0}
+.jumpnav{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 16px}
+.jumpnav a.chip{text-decoration:none;cursor:pointer}
 .card.clickable{cursor:pointer;transition:box-shadow .15s ease,transform .15s ease}
 .card.clickable:hover{box-shadow:0 2px 10px rgba(0,0,0,.08);transform:translateY(-1px)}
 .who-hint{font-size:.78rem;color:var(--muted)}
@@ -290,6 +292,78 @@ function monateSeit(datumStr){
 function hundeLebensphase(geburtsdatum){
   const p = computeLebensphase(monateSeit(geburtsdatum));
   return p ? p.label : null;
+}
+function phaseKategorie(phaseId){
+  if(phaseId==='welpe' || phaseId==='junghund_fruehe_pubertaet' || phaseId==='junghund_pubertaet') return 'jung';
+  if(phaseId==='reif' || phaseId==='senior') return 'fortgeschritten';
+  return null;
+}
+/* Rassen-/lebensphasen-/entwicklungsthema-basierte Hinweis-Chips auf einzelnen Übungskarten (wortgetreu aus Team-Begleiter). */
+const RASSE_KARTEN_HINWEISE = {
+  hueterassen: {
+    'aa-verbeller-3': 'Hütehunde neigen bei Ablenkung schnell zu Übererregung und starrem Fixieren statt entspanntem Bellen — Ablenkungsreize besonders kleinschrittig steigern und auf lockere Körperspannung statt starrem Blick achten.',
+    'teilB-radfahrer': 'Bewegungsreize wie Radfahrer können bei Hütehunden einen starken Folge-/Hüteimpuls auslösen — mit größerer Anfangsdistanz und bewusst langsamem Herantasten arbeiten.',
+    'teilB-jogger': 'Laufende Personen können den Hüteinstinkt ansprechen — frühzeitig auf ruhiges Beobachten statt Hinterherfixieren konditionieren.'
+  },
+  jagd_apportierhunde: {
+    'aa-bringsel-1': 'Die natürliche Freude am Tragen und Apportieren ist bei dieser Rassegruppe oft schon vorhanden — dieser Vorteil lässt sich meist zügig auf das Bringsel übertragen.',
+    'drk11-akustische-einwirkungen': 'Jagdlich geprägte Hunde können durch Wild-/Beutereize zusätzlich ablenkbar sein — bei den Geräuschübungen besonders auf eine reizarme, wildfreie Umgebung achten.'
+  },
+  molosser_grosse_rassen: {
+    'drk13-bewegliche-bruecke': 'Große, schwere Rassen entwickeln sich skelettal langsamer — bewegliche Untergründe erst nach tierärztlicher Freigabe mit voller Belastung üben.',
+    'drk13-wippe': 'Der Kippeffekt der Wippe bedeutet stoßartige Belastung für die Gelenke — bei jungen Hunden dieser Rassegruppe besonders behutsam und in kleinen Schritten steigern.'
+  },
+  terrier: {
+    'aa-rueckverweiser-1': 'Terrier arbeiten gern eigenständig — das Rückkehr-Signal braucht deshalb eine besonders hochwertige, zuverlässige Belohnung, damit die Rückkehr zum Hundeführer attraktiver bleibt als das eigenständige Weiterarbeiten.'
+  },
+  nordische_spitz: {
+    'aa-pendler-1': 'Diese Rassegruppe ist historisch nicht auf engen Rückruf gezüchtet — den ersten Pendelweg mit besonders kurzer Distanz und hochwertiger Belohnung absichern, bevor gesteigert wird.'
+  },
+  brachyzephale: {
+    'drk13-roehre-tunnel': 'Kurzköpfige Rassen können in engen, wenig belüfteten Röhren schneller außer Atem geraten — Übungsdauer kurz halten und auf Hecheln/Erschöpfungsanzeichen achten.'
+  },
+  schaeferhund_gebrauchshund: {
+    'drk11-fremdpersonen-locken': 'Erhöhte Wachsamkeit gegenüber Fremden ist bei dieser Rassegruppe keine Seltenheit — das Locken durch fremde Personen besonders früh, häufig und mit wechselnden Personen üben.'
+  }
+};
+const PHASEN_KARTEN_HINWEISE_JUNG = {
+  'drk13-bewegliche-bruecke': 'In jungen Jahren sind Gelenke und Wachstumsfugen noch empfindlich und die Konzentrationsspanne kurz — Gewandtheitsübungen in sehr kurzen Einheiten und mit niedriger Sprung-/Gewichtsbelastung anbieten.',
+  'drk13-wippe': 'Kurze Trainingseinheiten und Rücksicht auf die noch offenen Wachstumsfugen sind in dieser Lebensphase besonders wichtig — lieber öfter kurz als selten lang üben.',
+  'drk13-roehre-tunnel': 'Junge Hunde ermüden in der Konzentration schnell — Übung kurz halten und bei nachlassender Aufmerksamkeit rechtzeitig beenden.',
+  'drk13-waagerechte-leiter-11': 'Die Trittsicherheit entwickelt sich erst mit der Zeit — in dieser Lebensphase niedrige Höhen und kurze Einheiten bevorzugen.',
+  'teilA-ablegen-ablenkung': 'Die Impulskontrolle ist in jungen Jahren noch im Aufbau — die Wartezeit unter Ablenkung entsprechend kurz halten und lieber häufiger kurz üben.'
+};
+const PHASEN_KARTEN_HINWEISE_FORTGESCHRITTEN = {
+  'drk13-bewegliche-bruecke': 'Mit zunehmendem Alter lohnt es sich, Motivation und Freude an der Übung aktiv wachzuhalten — kurze, abwechslungsreiche Einheiten statt reiner Routine.',
+  'teilA-ablegen-ablenkung': 'Auch bei einem erfahrenen Hund lohnt es sich, die Übung gelegentlich neu zu würzen (neue Ablenkungen, neue Orte), damit die Motivation nicht durch reine Routine nachlässt.'
+};
+function resolveBetrifftToken(token, hund){
+  const m = /^AA:([1-4])$/.exec(token);
+  if(m && hund && hund.anzeigeart) return 'aa-'+hund.anzeigeart+'-'+m[1];
+  return token;
+}
+function personalHinweise(cardKey, hund){
+  if(!hund) return [];
+  const out = [];
+  const rasseHints = RASSE_KARTEN_HINWEISE[hund.rassegruppe];
+  if(rasseHints && rasseHints[cardKey]) out.push({typ:'rasse', text: rasseHints[cardKey]});
+  const phase = computeLebensphase(monateSeit(hund.geburtsdatum));
+  if(phase){
+    const kat = phaseKategorie(phase.id);
+    if(kat==='jung' && PHASEN_KARTEN_HINWEISE_JUNG[cardKey]) out.push({typ:'phase', text:PHASEN_KARTEN_HINWEISE_JUNG[cardKey]});
+    if(kat==='fortgeschritten' && PHASEN_KARTEN_HINWEISE_FORTGESCHRITTEN[cardKey]) out.push({typ:'phase', text:PHASEN_KARTEN_HINWEISE_FORTGESCHRITTEN[cardKey]});
+  }
+  (hund.entwicklungsthemen||[]).forEach(th=>{
+    const betrifft = (th.betrifft||[]).map(tok=>resolveBetrifftToken(tok, hund));
+    if(betrifft.includes(cardKey)) out.push({typ:'thema', text: th.text});
+  });
+  return out;
+}
+function personalHinweiseHtml(cardKey, hund){
+  return personalHinweise(cardKey, hund).map(h=>{
+    if(h.typ==='thema') return `<div class="hint" style="background:var(--soft);border-radius:8px;padding:8px 10px;margin:8px 0"><strong>🎯 Passt zu eurem Entwicklungsthema:</strong> ${esc(h.text)}</div>`;
+    return `<div class="hint" style="background:var(--t-alltag-soft);border-radius:8px;padding:8px 10px;margin:8px 0">🐾 ${esc(h.text)}</div>`;
+  }).join('');
 }
 
 const TERMIN_KATEGORIEN = [
@@ -1086,6 +1160,7 @@ function seedState(){
     passwortHash: einfacherHash('admin'), mussPasswortAendern:true,
     angelegtAm: nowIso()
   });
+  s.qualifikationen = QUALIFIKATIONEN_KATALOG_VORSCHLAG.map(q=>({id:uid(), ...q}));
   return s;
 }
 
@@ -1129,7 +1204,7 @@ function zeigeToast(text){
 /* =========================================================
    LOGIN
    ========================================================= */
-let loginEingabe = '';
+let loginEingabe = (function(){ try{ return localStorage.getItem('barry-last-login') || ''; }catch(e){ return ''; } })();
 let loginHinweis = ''; // neutraler Hinweis, z. B. nach einem Import
 let loginFehler = '';
 let loginSchrittNeuesPasswort = null; // personId, wenn Erstpasswort geändert werden muss
@@ -1199,6 +1274,7 @@ function bindLogin(){
       p.mussPasswortAendern = false;
       speichereState();
       session = { personId:p.id };
+      try{ localStorage.setItem('barry-last-login', p.benutzername || p.name); }catch(e){}
       loginSchrittNeuesPasswort = null; loginFehler='';
       render();
     };
@@ -1219,6 +1295,7 @@ function bindLogin(){
     loginFehler=''; loginHinweis='';
     if(p.mussPasswortAendern){ loginSchrittNeuesPasswort = p.id; render(); return; }
     session = { personId:p.id };
+    try{ localStorage.setItem('barry-last-login', p.benutzername || p.name); }catch(e){}
     render();
   };
 }
@@ -1366,10 +1443,10 @@ function bindStart(person){
     b.onclick = ()=>{
       if(b.dataset.startArt==='rh'){
         rhHundId = b.dataset.startHund; rhDraft = rhLeer(b.dataset.startSparte); rhBearbeitenId = null;
-        rhAnsicht = 'formular'; ausbildungTab = 'rhtagebuch';
+        rhAnsicht = 'formular'; ausbildungTab = 'tagebuecher'; ausbildungTagebuchTyp = 'flaeche';
       } else {
         mantrailingHundId = b.dataset.startHund; mantrailingDraft = mtLeer(); mantrailingBearbeitenId = null;
-        mantrailingAnsicht = 'formular'; ausbildungTab = 'mantrailing';
+        mantrailingAnsicht = 'formular'; ausbildungTab = 'tagebuecher'; ausbildungTagebuchTyp = 'mantrailing';
       }
       route = {bereich:'ausbildung', unter:null, id:null}; render();
     };
@@ -3463,7 +3540,8 @@ function bindTabAnwesenheit(){
    AUSBILDUNG & TEAM (Trainingstagebuch, Finde- & Anzeigewille)
    ========================================================= */
 let ausbildungTeamFilter = 'alle'; // 'alle' | hundId
-let ausbildungTab = 'tagebuch'; // 'tagebuch' | 'findewille' | 'mantrailing' | 'rhtagebuch'
+let ausbildungTab = 'findewille'; // 'findewille' | 'tagebuecher'
+let ausbildungTagebuchTyp = 'allgemein'; // 'allgemein' | 'flaeche' | 'mantrailing' — Unterauswahl innerhalb "Trainingstagebücher"
 let wissenTab = 'pruefung';
 function darfTrainingBearbeiten(person){ return hatAusbilderRecht(person) || istLeitungOderAdmin(person) || hatZusatzrecht(person, ZUSATZRECHT_AUSBILDUNG); }
 // Neben Ausbildern darf auch der/die eigene Hundeführer/in eines Teams dessen Trainingsdaten dokumentieren
@@ -3474,11 +3552,31 @@ function teamLabel(hund){
   return `${hund.name}${f?' ('+f.name+')':''}${hund.status==='inaktiv'?' – inaktiv':''}`;
 }
 const AUSBILDUNG_TABS = [
-  {id:'tagebuch', label:'Trainingstagebuch'},
-  {id:'rhtagebuch', label:'RH-Tagebuch Fläche/Trümmer'},
-  {id:'mantrailing', label:'Mantrailing-Tagebuch'},
-  {id:'findewille', label:'Finde- & Anzeigewille'},
+  {id:'findewille', label:'Findewille & Anzeigetraining'},
+  {id:'tagebuecher', label:'Trainingstagebücher'},
 ];
+const AUSBILDUNG_TAGEBUCH_TYPEN = [
+  {id:'allgemein', label:'Allgemein'},
+  {id:'flaeche', label:'Fläche & Trümmer'},
+  {id:'mantrailing', label:'Mantrailing'},
+];
+function renderAusbildungTagebuecher(person){
+  const inhalt = ausbildungTagebuchTyp==='flaeche' ? renderAusbildungRH(person)
+    : ausbildungTagebuchTyp==='mantrailing' ? renderAusbildungMantrailing(person)
+    : renderAusbildungTagebuch(person);
+  return `
+    <div class="row" style="gap:6px;margin-bottom:14px">
+      ${AUSBILDUNG_TAGEBUCH_TYPEN.map(t=>`<button class="btn btn-sm ${ausbildungTagebuchTyp===t.id?'btn-primary':'btn-ghost'}" data-atagtyp="${t.id}">${esc(t.label)}</button>`).join('')}
+    </div>
+    ${inhalt}
+  `;
+}
+function bindAusbildungTagebuecher(person){
+  document.querySelectorAll('[data-atagtyp]').forEach(b=>{ b.onclick=()=>{ ausbildungTagebuchTyp=b.dataset.atagtyp; render(); }; });
+  if(ausbildungTagebuchTyp==='flaeche') bindAusbildungRH(person);
+  else if(ausbildungTagebuchTyp==='mantrailing') bindAusbildungMantrailing(person);
+  else bindAusbildungTagebuch(person);
+}
 const WISSEN_TABS = [
   {id:'pruefung', label:'Prüfungsordnungen'},
   {id:'fehlerdiagnose', label:'Fehlerdiagnose'},
@@ -3505,16 +3603,14 @@ function renderAusbildung(person){
     <div class="row" style="margin:14px 0 20px;border-bottom:1px solid var(--line);padding-bottom:2px">
       ${AUSBILDUNG_TABS.map(t=>`<button class="btn ${ausbildungTab===t.id?'btn-primary':'btn-ghost'}" data-atab="${t.id}">${esc(t.label)}</button>`).join('')}
     </div>
-    ${ausbildungTab==='tagebuch' ? renderAusbildungTagebuch(person) : ausbildungTab==='findewille' ? renderAusbildungFindewille(person) : ausbildungTab==='mantrailing' ? renderAusbildungMantrailing(person) : renderAusbildungRH(person)}
+    ${ausbildungTab==='findewille' ? renderAusbildungFindewille(person) : renderAusbildungTagebuecher(person)}
     ${modal ? renderModal() : ''}
   `;
 }
 function bindAusbildung(person){
   document.querySelectorAll('[data-atab]').forEach(b=>{ b.onclick=()=>{ ausbildungTab=b.dataset.atab; render(); }; });
-  if(ausbildungTab==='tagebuch') bindAusbildungTagebuch(person);
-  else if(ausbildungTab==='findewille') bindAusbildungFindewille(person);
-  else if(ausbildungTab==='mantrailing') bindAusbildungMantrailing(person);
-  else bindAusbildungRH(person);
+  if(ausbildungTab==='findewille') bindAusbildungFindewille(person);
+  else bindAusbildungTagebuecher(person);
   if(modal) bindModal(person);
 }
 function renderWissen(person){
@@ -3594,13 +3690,16 @@ function renderRasseLebensphaseKarte(hund){
   const rasse = RASSEGRUPPEN.find(r=>r.id===hund.rassegruppe);
   if(!phase && !rasse) return '';
   return `
-    <div class="card card-pad" style="margin-bottom:16px;background:var(--t-ausbildung-soft);border:none">
-      <h3>Rasse & Lebensphase – ${esc(hund.name)}</h3>
-      ${phase?`<p class="hint"><strong>${esc(phase.label)}</strong> (${monate} Monate): ${esc(phase.hinweis)}</p>`:'<p class="hint">Kein Geburtsdatum hinterlegt – Lebensphasen-Hinweis fehlt.</p>'}
-      ${rasse?`<p class="hint" style="margin-top:8px"><strong>${esc(rasse.label)}:</strong></p><ul class="hint" style="margin-top:2px">${rasse.hinweise.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:'<p class="hint" style="margin-top:8px">Keine Rassegruppe hinterlegt – im Hundeprofil ergänzbar.</p>'}
-      <p class="hint" style="margin-top:8px;font-style:italic">${esc(RASSE_HINWEIS_ALLGEMEIN)}</p>
-    </div>`;
+    <details class="card card-pad" style="margin-bottom:16px;background:var(--t-ausbildung-soft);border:none">
+      <summary style="cursor:pointer;font-weight:700">Rasse & Lebensphase – ${esc(hund.name)}</summary>
+      <div style="margin-top:10px">
+        ${phase?`<p class="hint"><strong>${esc(phase.label)}</strong> (${monate} Monate): ${esc(phase.hinweis)}</p>`:'<p class="hint">Kein Geburtsdatum hinterlegt – Lebensphasen-Hinweis fehlt.</p>'}
+        ${rasse?`<p class="hint" style="margin-top:8px"><strong>${esc(rasse.label)}:</strong></p><ul class="hint" style="margin-top:2px">${rasse.hinweise.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:'<p class="hint" style="margin-top:8px">Keine Rassegruppe hinterlegt – im Hundeprofil ergänzbar.</p>'}
+        <p class="hint" style="margin-top:8px;font-style:italic">${esc(RASSE_HINWEIS_ALLGEMEIN)}</p>
+      </div>
+    </details>`;
 }
+let findewilleZufallsUebung = null;
 function renderAusbildungFindewille(person){
   const hunde = state.hunde.filter(h=>h.status!=='inaktiv');
   if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.</p></div>`;
@@ -3626,7 +3725,23 @@ function renderAusbildungFindewille(person){
     </div>`).join('');
 
   return `
-    <p class="lead">Wortgetreu aus dem Team-Begleiter übernommen: Motivation/Findewille und die Beobachtung zur passenden Anzeigeart (Verbeller, Pendler, Rückverweiser, Freiverweiser, Bringsel) – die Hauptessenz der Ausbildung.</p>
+    <p class="lead">Motivation und Findewille des Hundes, die passende Anzeigeart finden und trainieren – die Hauptessenz der Rettungshundeausbildung.</p>
+
+    <div class="card card-pad" style="margin-bottom:16px;background:var(--t-ausbildung-soft);border:none;border-left:5px solid var(--t-ausbildung)">
+      <div class="spread"><h3 style="font-size:1.05rem">🎲 Anzeige-/Suchübung vorschlagen</h3></div>
+      <p class="hint">Zieht eine zufällige Übung aus dem Bereich Anzeige/Finden. Für die gesamte Übungsbibliothek (497 Übungen, durchsuchbar) siehe Alltag & Zuhause → Übungen.</p>
+      <div class="row" style="margin-top:8px">
+        <button class="btn btn-primary btn-sm" id="btn-fw-zufall">${findewilleZufallsUebung?'Neu vorschlagen':'Übung vorschlagen'}</button>
+        <button class="btn btn-ghost btn-sm" data-goto-inline="alltag" id="btn-fw-zur-bibliothek">→ Alle Übungen durchsuchen</button>
+      </div>
+      ${findewilleZufallsUebung ? `
+        <div class="card" style="margin-top:12px;padding:12px 14px;background:#fff;border:1px solid var(--line)">
+          ${renderUebungsbibliothekKarte(findewilleZufallsUebung)}
+          <button class="btn btn-primary btn-sm" id="btn-fw-zufall-uebernehmen" style="margin-top:8px">In Trainingstagebuch übernehmen</button>
+        </div>
+      ` : ''}
+    </div>
+
     <div class="row" style="margin:14px 0">
       <select id="fw-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${findewilleHundId===h.id?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
       ${profil?`<span class="hint">Zuletzt gespeichert: ${fmtDatum(profil.aktualisiertAm)}</span>`:''}
@@ -3696,9 +3811,12 @@ function renderAnzeigeaufbauKarte(hund, darf){
         </div>
       </div>
       <h3 style="margin-top:18px">Standardkette (4 Bausteine)</h3>
-      ${schritte.map((s,i)=>`
-        <details class="card" style="margin-bottom:10px;padding:14px 16px" ${i===aktuellerSchritt?'open':''}>
+      ${schritte.map((s,i)=>{
+        const cardKey = 'aa-'+artId+'-'+(i+1);
+        return `
+        <details class="card" id="${cardKey}" style="margin-bottom:10px;padding:14px 16px" ${i===aktuellerSchritt?'open':''}>
           <summary style="cursor:pointer;font-weight:600">${i+1}. ${esc(s.titel)} ${i===aktuellerSchritt?'<span class="chip">aktueller Baustein</span>':''}</summary>
+          ${personalHinweiseHtml(cardKey, hund)}
           <p class="hint" style="margin-top:10px"><strong>Planen:</strong> ${esc(s.planen)} <span class="hint">(${esc(s.verf)})</span></p>
           <p class="hint" style="margin-bottom:4px"><strong>Aufbau:</strong></p>
           <ul class="hint" style="margin-top:0">${s.aufbau.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>
@@ -3708,8 +3826,8 @@ function renderAnzeigeaufbauKarte(hund, darf){
           <p class="hint"><strong>Sicherheit:</strong> ${esc(s.sicherheit)}</p>
           <p class="hint"><strong>Alltagsspiel:</strong> ${esc(s.spiel)}</p>
           ${darf?`<button class="btn btn-sm ${i===aktuellerSchritt?'btn-primary':'btn-ghost'}" data-aa-schritt="${i}" style="margin-top:8px">${i===aktuellerSchritt?'Ist aktueller Baustein':'Als aktuellen Baustein markieren'}</button>`:''}
-        </details>
-      `).join('')}
+        </details>`;
+      }).join('')}
     </div>
   `;
 }
@@ -3878,6 +3996,20 @@ const FEHLERSUCHE_SYMPTOME = [
 function bindAusbildungFindewille(person){
   const sel = document.getElementById('fw-team');
   if(sel) sel.onchange = e=>{ findewilleHundId = e.target.value; findewilleDraft = null; anzeigeaufbauAuswahl = null; render(); };
+  const btnFwZufall = document.getElementById('btn-fw-zufall');
+  if(btnFwZufall) btnFwZufall.onclick = ()=>{
+    const pool = ALLE_UEBUNGEN.filter(u=>u.cat==='anzeige');
+    findewilleZufallsUebung = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+    render();
+  };
+  const btnFwBib = document.getElementById('btn-fw-zur-bibliothek');
+  if(btnFwBib) btnFwBib.onclick = ()=>{ route = {bereich:'alltag', unter:null, id:null}; alltagTab = 'bibliothek'; render(); };
+  const btnFwUebernehmen = document.getElementById('btn-fw-zufall-uebernehmen');
+  if(btnFwUebernehmen) btnFwUebernehmen.onclick = ()=>{
+    alltagVorschlagPreset = { hundId: findewilleHundId||'', thema: findewilleZufallsUebung.name };
+    modal = {type:'alltagseintrag', id:null};
+    render();
+  };
   document.querySelectorAll('[data-m-frage]').forEach(b=>{
     b.onclick = ()=>{ findewilleDraft.motivationsAntworten[b.dataset.mFrage] = b.dataset.mWert; render(); };
   });
@@ -3914,9 +4046,11 @@ let pruefungHundId = null;
 let pruefungVerband = 'brh';
 let pruefungOffenSet = new Set();
 const PRUEFUNG_STATUS = [
-  { id:'bestanden', label:'Bestanden' },
-  { id:'nicht_bestanden', label:'Nicht bestanden' },
-  { id:'offen', label:'Offen' },
+  { id:'offen', label:'Nicht bewertet' },
+  { id:'trainiert', label:'Im Aufbau / erprobt' },
+  { id:'gefestigt', label:'Gefestigt' },
+  { id:'sicher', label:'Sicher beherrscht' },
+  { id:'bestanden', label:'Geprüft / bestanden' },
 ];
 function pruefungStatusVon(hundId, modul, elementId){
   const e = state.pruefungsstatus.find(p=>p.hundId===hundId && p.modul===modul && p.elementId===elementId);
@@ -3930,35 +4064,101 @@ function pruefungFortschritt(hundId, modul, elementIds){
   const bestanden = elementIds.filter(id=>pruefungStatusVon(hundId,modul,id)==='bestanden').length;
   return `${bestanden}/${elementIds.length} bestanden`;
 }
+/* ---- Übungsvorschlag passend zum offenen DRK-Modulelement ---- */
+const DRK_MODUL_UEBUNGSKATEGORIE = { drk11:'verhalten', drk12:'geh', drk13:'geraete' };
+const DRK_MODUL_STOPPWORTE = ['oder','und','im','in','der','die','das','den','dem','des','am','an','mit','auf','für','ohne'];
+function uebungZuElementFinden(cat, titel){
+  const worte = titel.toLowerCase().split(/[^a-zäöüß]+/).filter(w=>w.length>2 && !DRK_MODUL_STOPPWORTE.includes(w));
+  const kandidaten = ALLE_UEBUNGEN.filter(u=>u.cat===cat);
+  if(!kandidaten.length) return null;
+  let beste = [], besterScore = 0;
+  kandidaten.forEach(u=>{
+    const text = (u.name+' '+(u.exam||'')).toLowerCase();
+    const score = worte.filter(w=>text.includes(w)).length;
+    if(score>besterScore){ besterScore=score; beste=[u]; }
+    else if(score===besterScore && score>0){ beste.push(u); }
+  });
+  if(besterScore>0) return beste[Math.floor(Math.random()*beste.length)];
+  return kandidaten[Math.floor(Math.random()*kandidaten.length)];
+}
+let pruefungVorschlag = null; // {modul, el, uebung} — für die aktuell gewählte pruefungHundId
+let pruefungVorschlagVersucht = false; // true sobald einmal gezogen wurde (auch wenn nichts offen war)
+function pruefungVorschlagZiehen(hundId){
+  const module = [
+    {modul:'drk11', label:'DRK 1.1 — Verhalten', elemente:DRK_VERHALTEN},
+    {modul:'drk12', label:'DRK 1.2 — Grundgehorsam', elemente:DRK_GRUNDGEHORSAM},
+    {modul:'drk13', label:'DRK 1.3 — Gewandtheit', elemente:DRK_GEWANDTHEIT},
+  ];
+  let offen = [];
+  module.forEach(m=>{
+    m.elemente.forEach(el=>{
+      if(pruefungStatusVon(hundId, m.modul, el.id)!=='bestanden') offen.push({modul:m.modul, modulLabel:m.label, el});
+    });
+  });
+  if(!offen.length) return null;
+  const wahl = offen[Math.floor(Math.random()*offen.length)];
+  const cat = DRK_MODUL_UEBUNGSKATEGORIE[wahl.modul];
+  const uebung = uebungZuElementFinden(cat, wahl.el.titel);
+  if(!uebung) return null;
+  return { modul:wahl.modul, modulLabel:wahl.modulLabel, el:wahl.el, uebung };
+}
+function renderPruefungVorschlagKarte(hid){
+  return `
+    <div class="card card-pad" style="margin-bottom:18px;background:var(--t-ausbildung-soft);border:none;border-left:5px solid var(--t-ausbildung)">
+      <div class="spread"><h3 style="font-size:1.05rem">🎯 Nächste Übung vorschlagen</h3></div>
+      <p class="hint">Zieht ein noch offenes Modulelement dieses Teams und schlägt dazu eine passende Übung aus der Übungsbibliothek vor.</p>
+      <div class="row" style="margin-top:8px">
+        <button class="btn btn-primary btn-sm" id="btn-pf-vorschlag">${pruefungVorschlagVersucht?'Neu vorschlagen':'Vorschlagen'}</button>
+      </div>
+      ${pruefungVorschlag ? `
+        <div class="card" style="margin-top:12px;padding:12px 14px;background:#fff;border:1px solid var(--line)">
+          <p class="hint" style="margin:0 0 8px"><strong>Offenes Element:</strong> ${esc(pruefungVorschlag.modulLabel)} — ${esc(pruefungVorschlag.el.titel)}</p>
+          ${renderUebungsbibliothekKarte(pruefungVorschlag.uebung)}
+          <button class="btn btn-primary btn-sm" id="btn-pf-vorschlag-uebernehmen" style="margin-top:8px">In Trainingstagebuch übernehmen</button>
+        </div>
+      ` : (pruefungVorschlagVersucht ? '<p class="hint" style="margin-top:10px">🎉 Alle Modulelemente dieses Teams sind aktuell als bestanden markiert.</p>' : '')}
+    </div>
+  `;
+}
+function renderJumpNav(items, modulPrefix){
+  if(!items.length) return '';
+  return `<nav class="jumpnav">${items.map(it=>`<a href="#${modulPrefix}-${it.id}" class="chip">${esc(it.titel)}</a>`).join('')}</nav>`;
+}
 function renderDrkElement(el, hundId, modul){
-  const key = modul+':'+el.id;
-  return `<details class="card" style="margin-bottom:10px;padding:14px 16px" data-pruef-key="${key}" ${pruefungOffenSet.has(key)?'open':''}>
-    <summary style="cursor:pointer;font-weight:600">${esc(el.titel)}</summary>
-    <p class="hint" style="margin-top:10px"><strong>Durchführung:</strong> ${esc(el.durchfuehrung)}</p>
+  const hund = state.hunde.find(h=>h.id===hundId);
+  const cardKey = modul+'-'+el.id;
+  return `<div class="card" id="${cardKey}" style="margin-bottom:10px;padding:14px 16px">
+    <h3 style="margin:0 0 8px">${esc(el.titel)}</h3>
+    ${personalHinweiseHtml(cardKey, hund)}
+    <p class="hint"><strong>Durchführung:</strong> ${esc(el.durchfuehrung)}</p>
     <p class="hint"><strong>Bewertung:</strong> ${esc(el.bewertung)}</p>
     ${el.aufbau?.length?`<p class="hint" style="margin-bottom:4px"><strong>Aufbau-Tipps:</strong></p><ul class="hint" style="margin-top:0">${el.aufbau.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
     <div class="row" style="margin-top:10px">${pruefungStatusButtons(hundId, modul, el.id)}</div>
-  </details>`;
+  </div>`;
 }
 function renderTeilAElement(el, hundId){
-  const key = 'vdh_a:'+el.id;
-  return `<details class="card" style="margin-bottom:10px;padding:14px 16px" data-pruef-key="${key}" ${pruefungOffenSet.has(key)?'open':''}>
-    <summary style="cursor:pointer;font-weight:600">${esc(el.titel)} <span class="chip muted">${el.punkte} Punkte</span></summary>
-    <p class="hint" style="margin-top:10px"><strong>Anforderung:</strong> ${esc(el.anforderung)}</p>
+  const hund = state.hunde.find(h=>h.id===hundId);
+  const cardKey = 'teilA-'+el.id;
+  return `<div class="card" id="vdh_a-${el.id}" style="margin-bottom:10px;padding:14px 16px">
+    <h3 style="margin:0 0 8px">${esc(el.titel)} <span class="chip muted">${el.punkte} Punkte</span></h3>
+    ${personalHinweiseHtml(cardKey, hund)}
+    <p class="hint"><strong>Anforderung:</strong> ${esc(el.anforderung)}</p>
     ${el.choreografie?.length?`<p class="hint" style="margin-bottom:4px"><strong>Choreografie:</strong></p><ol class="hint" style="margin-top:0">${el.choreografie.map(a=>`<li>${esc(a)}</li>`).join('')}</ol>`:''}
     <p class="hint"><strong>Typische Fehler:</strong> ${esc(el.fehler)}</p>
     ${el.aufbau?.length?`<p class="hint" style="margin-bottom:4px"><strong>Aufbau-Tipps:</strong></p><ul class="hint" style="margin-top:0">${el.aufbau.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
     <div class="row" style="margin-top:10px">${pruefungStatusButtons(hundId, 'vdh_a', el.id)}</div>
-  </details>`;
+  </div>`;
 }
 function renderTeilBElement(el, hundId){
-  const key = 'vdh_b:'+el.id;
-  return `<details class="card" style="margin-bottom:10px;padding:14px 16px" data-pruef-key="${key}" ${pruefungOffenSet.has(key)?'open':''}>
-    <summary style="cursor:pointer;font-weight:600">${esc(el.titel)}</summary>
-    <p class="hint" style="margin-top:10px">${esc(el.text)}</p>
+  const hund = state.hunde.find(h=>h.id===hundId);
+  const cardKey = 'teilB-'+el.id;
+  return `<div class="card" id="vdh_b-${el.id}" style="margin-bottom:10px;padding:14px 16px">
+    <h3 style="margin:0 0 8px">${esc(el.titel)}</h3>
+    ${personalHinweiseHtml(cardKey, hund)}
+    <p class="hint">${esc(el.text)}</p>
     ${el.aufbau?.length?`<p class="hint" style="margin-bottom:4px"><strong>Aufbau-Tipps:</strong></p><ul class="hint" style="margin-top:0">${el.aufbau.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
     <div class="row" style="margin-top:10px">${pruefungStatusButtons(hundId, 'vdh_b', el.id)}</div>
-  </details>`;
+  </div>`;
 }
 function renderAusbildungPruefung(person){
   const hunde = state.hunde.filter(h=>h.status!=='inaktiv');
@@ -3966,41 +4166,53 @@ function renderAusbildungPruefung(person){
   if(!hunde.some(h=>h.id===pruefungHundId)) pruefungHundId = hunde[0]?.id || null;
   const hid = pruefungHundId;
   return `
-    <p class="lead">Wortgetreu aus dem Team-Begleiter übernommen: Modul-Inhalte, Bestehensregeln und Aufbau-Tipps. Der Status je Element wird pro Team festgehalten.</p>
+    <p class="lead">Modul-Inhalte, Bestehensregeln und Aufbau-Tipps zur DRK-Prüfungsordnung. Der Status je Element wird pro Team festgehalten.</p>
     <div class="row" style="margin:14px 0 20px">
       <select id="pf-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${hid===h.id?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
     </div>
     ${renderRasseLebensphaseKarte(hunde.find(h=>h.id===hid))}
+    ${renderPruefungVorschlagKarte(hid)}
 
-    <div class="card card-pad" style="margin-bottom:18px">
-      <div class="spread"><h3>DRK Modul 1.1 — Verhalten und Grundfertigkeiten</h3><span class="chip">${pruefungFortschritt(hid,'drk11',DRK_VERHALTEN.map(e=>e.id))}</span></div>
-      <ul class="hint">${DRK_VERHALTEN_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
-      <p class="hint">${esc(DRK_ABBRUCH_AUSSCHLUSS)}</p>
+    <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
+      <div class="spread"><h3>DRK Modul 1.1 — Verhalten und Grundfertigkeiten</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk11',DRK_VERHALTEN.map(e=>e.id))}</span></div>
+      <details><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">Allgemeine Grundsätze</summary>
+        <ul class="hint">${DRK_VERHALTEN_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+        <p class="hint">${esc(DRK_ABBRUCH_AUSSCHLUSS)}</p>
+      </details>
+      ${renderJumpNav(DRK_VERHALTEN, 'drk11')}
       ${DRK_VERHALTEN.map(el=>renderDrkElement(el, hid, 'drk11')).join('')}
     </div>
 
-    <div class="card card-pad" style="margin-bottom:18px">
-      <div class="spread"><h3>DRK Modul 1.2 — Grundgehorsam</h3><span class="chip">${pruefungFortschritt(hid,'drk12',DRK_GRUNDGEHORSAM.map(e=>e.id))}</span></div>
-      <p class="hint">${esc(DRK_ERSATZREGEL)}</p>
-      <p class="hint">${esc(DRK_BESTEHENSREGEL)}</p>
-      <ul class="hint">${DRK_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
+      <div class="spread"><h3>DRK Modul 1.2 — Grundgehorsam</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk12',DRK_GRUNDGEHORSAM.map(e=>e.id))}</span></div>
+      <details><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">Allgemeine Grundsätze</summary>
+        <p class="hint">${esc(DRK_ERSATZREGEL)}</p>
+        <p class="hint">${esc(DRK_BESTEHENSREGEL)}</p>
+        <ul class="hint">${DRK_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+      </details>
+      ${renderJumpNav(DRK_GRUNDGEHORSAM, 'drk12')}
       ${DRK_GRUNDGEHORSAM.map(el=>renderDrkElement(el, hid, 'drk12')).join('')}
     </div>
 
-    <div class="card card-pad" style="margin-bottom:18px">
-      <div class="spread"><h3>DRK Modul 1.3 — Gewandtheit</h3><span class="chip">${pruefungFortschritt(hid,'drk13',DRK_GEWANDTHEIT.map(e=>e.id))}</span></div>
-      <ul class="hint">${DRK_GEWANDTHEIT_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
+      <div class="spread"><h3>DRK Modul 1.3 — Gewandtheit</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk13',DRK_GEWANDTHEIT.map(e=>e.id))}</span></div>
+      <details><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">Allgemeine Grundsätze</summary>
+        <ul class="hint">${DRK_GEWANDTHEIT_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+      </details>
+      ${renderJumpNav(DRK_GEWANDTHEIT, 'drk13')}
       ${DRK_GEWANDTHEIT.map(el=>renderDrkElement(el, hid, 'drk13')).join('')}
     </div>
 
     <div class="card card-pad" style="margin-bottom:18px">
       <div class="spread"><h3>VDH BH-VT — Teil A (Unterordnung)</h3><span class="chip">${pruefungFortschritt(hid,'vdh_a',TEIL_A.map(e=>e.id))}</span></div>
       <p class="hint">Mindestquote laut Prüfungsordnung: ${Math.round(TEILA_MINDESTQUOTE*100)} % der Punkte.</p>
+      ${renderJumpNav(TEIL_A, 'vdh_a')}
       ${TEIL_A.map(el=>renderTeilAElement(el, hid)).join('')}
     </div>
 
     <div class="card card-pad">
       <div class="spread"><h3>VDH BH-VT — Teil B (Verhalten im Verkehr)</h3><span class="chip">${pruefungFortschritt(hid,'vdh_b',TEIL_B.map(e=>e.id))}</span></div>
+      ${renderJumpNav(TEIL_B, 'vdh_b')}
       ${TEIL_B.map(el=>renderTeilBElement(el, hid)).join('')}
     </div>
 
@@ -4035,9 +4247,21 @@ function renderVerbandVergleich(hid){
 }
 function bindAusbildungPruefung(person){
   const sel = document.getElementById('pf-team');
-  if(sel) sel.onchange = e=>{ pruefungHundId = e.target.value; render(); };
+  if(sel) sel.onchange = e=>{ pruefungHundId = e.target.value; pruefungVorschlag = null; pruefungVorschlagVersucht = false; render(); };
   const verbandSel = document.getElementById('pf-verband');
   if(verbandSel) verbandSel.onchange = e=>{ pruefungVerband = e.target.value; render(); };
+  const btnVorschlag = document.getElementById('btn-pf-vorschlag');
+  if(btnVorschlag) btnVorschlag.onclick = ()=>{
+    pruefungVorschlag = pruefungVorschlagZiehen(pruefungHundId);
+    pruefungVorschlagVersucht = true;
+    render();
+  };
+  const btnVorschlagUebernehmen = document.getElementById('btn-pf-vorschlag-uebernehmen');
+  if(btnVorschlagUebernehmen) btnVorschlagUebernehmen.onclick = ()=>{
+    alltagVorschlagPreset = { hundId: pruefungHundId, thema: pruefungVorschlag.uebung.name };
+    modal = {type:'alltagseintrag', id:null};
+    render();
+  };
   document.querySelectorAll('[data-pruef-key]').forEach(d=>{
     d.addEventListener('toggle', ()=>{
       if(d.open) pruefungOffenSet.add(d.dataset.pruefKey);
@@ -4127,34 +4351,42 @@ function renderAusbildungFehlerdiagnose(person){
       `).join('')}
     </div>`;
   }).join('');
+  const swBeantwortet = Object.keys(bewertung).length;
+  const swGesamt = SCHWACHSTELLEN_FRAGEN.length;
+  const trainingBeantwortet = Object.keys(checkTraining).filter(k=>checkTraining[k]).length;
+  const selbstBeantwortet = Object.keys(checkSelbst).filter(k=>checkSelbst[k]).length;
 
   return `
-    <p class="lead">Wortgetreu aus dem Team-Begleiter übernommen: Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste, Selbstcheck und Fehlersuche.</p>
+    <p class="lead">Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste, Selbstcheck und Fehlersuche.</p>
     <div class="row" style="margin:14px 0 20px">
       <select id="fd-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${fehlerdiagnoseHundId===h.id?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
     </div>
 
-    <h3 style="margin-bottom:10px">Schwachstellen-Fragebogen</h3>
-    ${kategorienHtml}
+    <details class="card card-pad" style="margin-bottom:16px" ${swBeantwortet===0?'open':''}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Schwachstellen-Fragebogen <span class="chip muted" style="margin-left:6px">${swBeantwortet}/${swGesamt} beantwortet</span></summary>
+      <div style="margin-top:12px">${kategorienHtml}</div>
+    </details>
 
-    <div class="card card-pad" style="margin-bottom:16px">
-      <h3>Trainingsaufbau-Checkliste</h3>
-      <p class="hint">Vor bzw. nach einer Übung durchgehen, wenn etwas nicht wie erwartet lief.</p>
+    <details class="card card-pad" style="margin-bottom:16px" ${trainingBeantwortet===0?'open':''}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Trainingsaufbau-Checkliste <span class="chip muted" style="margin-left:6px">${trainingBeantwortet}/${TRAININGSAUFBAU_CHECKLISTE.length}</span></summary>
+      <p class="hint" style="margin-top:10px">Vor bzw. nach einer Übung durchgehen, wenn etwas nicht wie erwartet lief.</p>
       ${TRAININGSAUFBAU_CHECKLISTE.map(t=>`
         <label class="row" style="cursor:pointer;margin-bottom:6px">
           <input type="checkbox" data-check-training="${t.id}" ${checkTraining[t.id]?'checked':''} ${darf?'':'disabled'}>
           <span class="hint" style="color:var(--ink)">${esc(t.text)}</span>
         </label>`).join('')}
-    </div>
+    </details>
 
-    <div class="card card-pad" style="margin-bottom:16px">
-      <h3>Selbstcheck (Hundeführer/in)</h3>
+    <details class="card card-pad" style="margin-bottom:16px" ${selbstBeantwortet===0?'open':''}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Selbstcheck (Hundeführer/in) <span class="chip muted" style="margin-left:6px">${selbstBeantwortet}/${SELBSTCHECK_FRAGEN.length}</span></summary>
+      <div style="margin-top:10px">
       ${SELBSTCHECK_FRAGEN.map(s=>`
         <label class="row" style="cursor:pointer;margin-bottom:6px">
           <input type="checkbox" data-check-selbst="${s.id}" ${checkSelbst[s.id]?'checked':''} ${darf?'':'disabled'}>
           <span class="hint" style="color:var(--ink)">${esc(s.frage)}</span>
         </label>`).join('')}
-    </div>
+      </div>
+    </details>
 
     <div class="card card-pad" style="margin-bottom:16px">
       <h3>HF-Kompetenz-Themen</h3>
@@ -4168,14 +4400,19 @@ function renderAusbildungFehlerdiagnose(person){
 
     <div class="card card-pad">
       <h3>Fehlersuche: "Wenn X, dann prüfe Y"</h3>
-      ${FEHLERSUCHE_SYMPTOME.map(f=>`
+      ${FEHLERSUCHE_SYMPTOME.map(f=>{
+        const schonUebernommen = (hund.entwicklungsthemen||[]).some(th=>th.symptomId===f.id);
+        return `
         <details class="card" style="margin-bottom:8px;padding:12px 14px">
           <summary style="cursor:pointer;font-weight:600">${esc(f.titel)}</summary>
           <p class="hint" style="margin-top:8px"><strong>Hundeführer-Anteil:</strong> ${esc(f.hf)}</p>
           <p class="hint"><strong>Aufbau-Anteil:</strong> ${esc(f.aufbau)}</p>
           <p class="hint"><strong>Hund-Anteil:</strong> ${esc(f.hund)}</p>
           <p class="hint"><strong>Empfehlung:</strong> ${esc(f.empfehlung)}</p>
-        </details>`).join('')}
+          ${darf?`<button class="btn btn-sm ${schonUebernommen?'btn-ghost':'btn-primary'}" data-symptom-uebernehmen="${f.id}" ${schonUebernommen?'disabled':''} style="margin-top:8px">${schonUebernommen?'✓ Als Entwicklungsthema übernommen':'Das betrifft uns → als Entwicklungsthema übernehmen'}</button>`:''}
+        </details>`;
+      }).join('')}
+      <p class="hint" style="margin-top:10px">Übernommene Themen werden bei den betroffenen Übungskarten (DRK-Module, VDH, Anzeigeaufbau) als Hinweis „🎯 Passt zu eurem Entwicklungsthema" angezeigt.</p>
     </div>
   `;
 }
@@ -4280,6 +4517,20 @@ function bindAusbildungFehlerdiagnose(person){
       hund.selbstcheck = hund.selbstcheck || {};
       hund.selbstcheck[c.dataset.checkSelbst] = c.checked;
       speichereState();
+    };
+  });
+  document.querySelectorAll('[data-symptom-uebernehmen]').forEach(b=>{
+    b.onclick = ()=>{
+      const hund = state.hunde.find(h=>h.id===fehlerdiagnoseHundId);
+      const symptom = FEHLERSUCHE_SYMPTOME.find(f=>f.id===b.dataset.symptomUebernehmen);
+      if(!symptom) return;
+      hund.entwicklungsthemen = hund.entwicklungsthemen || [];
+      if(!hund.entwicklungsthemen.some(th=>th.symptomId===symptom.id)){
+        hund.entwicklungsthemen.push({id:uid(), symptomId:symptom.id, text:symptom.titel+' — '+symptom.empfehlung, betrifft:(symptom.betrifft||[]).slice(), erstelltAm:nowIso()});
+        speichereState();
+        zeigeToast('Als Entwicklungsthema übernommen — erscheint jetzt bei den betroffenen Übungen.');
+        render();
+      }
     };
   });
 }
@@ -4407,7 +4658,7 @@ function renderThemenKarte(th){
 }
 function renderAusbildungSparten(person){
   return `
-    <p class="lead">Wortgetreu aus dem Team-Begleiter übernommen: Übungskataloge für Mantrailing und Trümmersuche, Schulungsthemen für Helferinnen und Helfer sowie Erste Hilfe am Hund. Nachschlagewerk, nicht team-gebunden.</p>
+    <p class="lead">Übungskataloge für Mantrailing und Trümmersuche, Schulungsthemen für Helferinnen und Helfer sowie Erste Hilfe am Hund – als Nachschlagewerk, nicht team-gebunden.</p>
 
     <div class="card card-pad" style="margin-bottom:16px">
       <h3>Mantrailing – Übungskatalog (${MANTRAIL_UEBUNGEN.length} Übungen)</h3>
@@ -4627,7 +4878,7 @@ function renderAusbildungMantrailing(person){
   const eintraege = state.mantrailingEintraege.filter(e=>e.hundId===mantrailingHundId).sort((a,b)=> new Date(b.worked||b.laid||0) - new Date(a.worked||a.laid||0));
   const mtDarf = darfEintragFuerHund(person, hunde.find(h=>h.id===mantrailingHundId));
   return `
-    <p class="lead">Wortgetreu aus dem Trainingstagebuch Mantrailing übernommen: Geruchsartikel, Trailalter, Entscheidungen, Handling und Auswertung. Zum Ansehen oder Bearbeiten auf einen Eintrag klicken.</p>
+    <p class="lead">Spezialisiertes Tagebuch für Mantrailing-Training: Geruchsartikel, Trailalter, Entscheidungen, Handling und Auswertung. Zum Ansehen oder Bearbeiten auf einen Eintrag klicken.</p>
     <div class="row" style="margin:14px 0">
       <select id="mt-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${mantrailingHundId===h.id?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
       ${mtDarf?`<button class="btn btn-primary" id="mt-neu">+ Neuer Trail</button>`:''}
@@ -5162,7 +5413,7 @@ function renderAusbildungRH(person){
   const eintraege = state.rhEintraege.filter(e=>e.hundId===rhHundId && (!rhSparteFilter || e.sparte===rhSparteFilter)).sort((a,b)=> new Date(b.datum)-new Date(a.datum));
   const rhDarf = darfEintragFuerHund(person, hunde.find(h=>h.id===rhHundId));
   return `
-    <p class="lead">Wortgetreu aus dem Trainingstagebuch Rettungshundearbeit übernommen: Dokumentation nach Trainingsbereich, individuelle Auswertung je Helfer/Versteckperson (auch bei Trümmersuche), Physio-Übungskatalog. Zum Ansehen oder Bearbeiten auf einen Eintrag klicken.</p>
+    <p class="lead">Spezialisiertes Tagebuch für Fläche und Trümmer: Dokumentation nach Trainingsbereich, individuelle Auswertung je Helfer/Versteckperson, Physio-Übungskatalog. Zum Ansehen oder Bearbeiten auf einen Eintrag klicken.</p>
     <div class="row" style="margin:14px 0">
       <select id="rh-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${rhHundId===h.id?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
       <select id="rh-sparte-filter" style="width:auto"><option value="">Alle Bereiche</option>${Object.entries(RH_DISCIPLINES).map(([id,m])=>`<option value="${id}" ${rhSparteFilter===id?'selected':''}>${esc(m.label)}</option>`).join('')}</select>
@@ -5377,12 +5628,12 @@ function bindModalTrainingseintrag(person){
    ALLTAG & ZUHAUSE (Pfotenalltag-Grundfunktion)
    ========================================================= */
 let alltagTeamFilter = 'alle';
-let alltagTab = 'tagebuch';
+let alltagTab = 'bibliothek';
 let hausaufgabenHundId = null;
 const ALLTAG_TABS = [
+  {id:'bibliothek', label:'Übungen'},
   {id:'tagebuch', label:'Trainingstagebuch'},
   {id:'hausaufgaben', label:'Hausaufgaben'},
-  {id:'bibliothek', label:'Übungsbibliothek'},
 ];
 function renderAlltag(person){
   return `
@@ -5539,90 +5790,180 @@ function renderFitnessKarte(u){
 // Kalender-, Legacy- und Impulskontroll-Übungen teilen dieselbe Struktur und Kategorienliste.
 const ALLE_UEBUNGEN = [...CALENDAR_EXERCISES, ...LEGACY_EXERCISES, ...IMPULSE_EXERCISES, ...EXAM_EXERCISES];
 const VERTIEFUNG_INDEX = VERTIEFUNG;
-let bibliothekQuelle = 'uebungen'; // 'uebungen' | 'fitness'
+let bibliothekZufallsTeam = 'alle';
+let bibliothekZufallsUebung = null;
+let alltagVorschlagPreset = null; // {hundId, thema} - für den nächsten "Übung eintragen"-Dialog vorbelegt
+function alltagUebungZufaellig(liste, hundId){
+  let pool = liste;
+  if(hundId && hundId!=='alle'){
+    const hund = state.hunde.find(h=>h.id===hundId);
+    const sparten = (hund && hund.sparten) || [];
+    // Kürzel im Übungspool ('mantrail') weicht vom Sparten-Kürzel ('mantrailing') ab.
+    const disziplinMap = { mantrailing:'mantrail' };
+    const disziplinen = sparten.map(s=>disziplinMap[s]||s);
+    if(disziplinen.length){
+      const gefiltert = pool.filter(u=>Array.isArray(u.discipline) && u.discipline.some(d=>disziplinen.includes(d)));
+      if(gefiltert.length) pool = gefiltert;
+    }
+  }
+  if(!pool.length) return null;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
 const BIB_QUELLEN = [
-  {id:'uebungen', label:'Übungen (Kalender, Legacy, Impuls, Prüfung)'},
+  {id:'uebungen', label:'Übungen'},
   {id:'fitness', label:'Fitness-Übungen'},
   {id:'anzeigeprogramme', label:'Anzeigeart-Programme'},
   {id:'fachfragen', label:'Fachfragen'},
 ];
-function renderBibQuelleSelect(){
-  return `<select id="bib-quelle" style="width:auto">${BIB_QUELLEN.map(q=>`<option value="${q.id}" ${bibliothekQuelle===q.id?'selected':''}>${esc(q.label)}</option>`).join('')}</select>`;
+let bibliothekQuellen = ['uebungen'];
+function renderBibQuelleCheckboxen(){
+  return `<div class="row" style="gap:14px;flex-wrap:wrap">${BIB_QUELLEN.map(q=>`
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:.88rem;cursor:pointer">
+      <input type="checkbox" data-bib-quelle="${q.id}" ${bibliothekQuellen.includes(q.id)?'checked':''}>${esc(q.label)}
+    </label>
+  `).join('')}</div>`;
 }
 function renderAlltagBibliothek(person){
-  if(bibliothekQuelle==='fitness'){
+  const teamsAktiv = state.hunde.filter(h=>h.status!=='inaktiv');
+  const abschnitte = [];
+
+  if(bibliothekQuellen.includes('fitness')){
     const phasen = ['warmup','main','cooldown'];
-    return `
-      <p class="lead">Wortgetreu aus Pfotenalltag übernommen: ${FITNESS_EXERCISES.length} Fitness-Übungen für Warm-up, Hauptteil und Cool-down.</p>
-      <div class="row" style="margin:14px 0">${renderBibQuelleSelect()}</div>
-      ${phasen.map(p=>`
-        <h3 style="margin-top:14px">${esc(FITNESS_PHASEN[p])}</h3>
-        ${FITNESS_EXERCISES.filter(u=>u.phase===p).map(renderFitnessKarte).join('')}
-      `).join('')}
-    `;
+    abschnitte.push(`
+      <details class="card card-pad" style="margin-bottom:12px" open>
+        <summary style="cursor:pointer;font-weight:700;font-size:.98rem">Fitness-Übungen <span class="chip muted">${FITNESS_EXERCISES.length}</span></summary>
+        <p class="hint" style="margin-top:8px">Warm-up, Hauptteil und Cool-down.</p>
+        ${phasen.map(p=>`
+          <h3 style="margin-top:14px">${esc(FITNESS_PHASEN[p])}</h3>
+          ${FITNESS_EXERCISES.filter(u=>u.phase===p).map(renderFitnessKarte).join('')}
+        `).join('')}
+      </details>
+    `);
   }
-  if(bibliothekQuelle==='anzeigeprogramme'){
-    return `
-      <p class="lead">Wortgetreu aus Pfotenalltag übernommen: ${INDICATION_PROGRAMS.length} Anzeigeart-Programme als Schritt-für-Schritt-Ablauf – eine zweite, ergänzende Quelle neben dem Anzeigeaufbau im Team-Begleiter-Teil.</p>
-      <div class="row" style="margin:14px 0">${renderBibQuelleSelect()}</div>
-      ${INDICATION_PROGRAMS.map(p=>`
-        <details class="card" style="margin-bottom:10px;padding:14px 16px">
-          <summary style="cursor:pointer;font-weight:600">${esc(p.title)}</summary>
-          <p class="hint" style="margin-top:8px;font-style:italic">${esc(p.subtitle)}</p>
-          <ol class="hint">${p.steps.map(s=>`<li><strong>${esc(s[1])}:</strong> ${esc(s[2])}</li>`).join('')}</ol>
-        </details>
-      `).join('')}
-    `;
+  if(bibliothekQuellen.includes('anzeigeprogramme')){
+    abschnitte.push(`
+      <details class="card card-pad" style="margin-bottom:12px">
+        <summary style="cursor:pointer;font-weight:700;font-size:.98rem">Anzeigeart-Programme <span class="chip muted">${INDICATION_PROGRAMS.length}</span></summary>
+        <p class="hint" style="margin-top:8px">Schritt-für-Schritt-Abläufe je Anzeigeart, ergänzend zum Anzeigeaufbau unter Ausbildung & Team.</p>
+        ${INDICATION_PROGRAMS.map(p=>`
+          <details class="card" style="margin-bottom:10px;padding:14px 16px">
+            <summary style="cursor:pointer;font-weight:600">${esc(p.title)}</summary>
+            <p class="hint" style="margin-top:8px;font-style:italic">${esc(p.subtitle)}</p>
+            <ol class="hint">${p.steps.map(s=>`<li><strong>${esc(s[1])}:</strong> ${esc(s[2])}</li>`).join('')}</ol>
+          </details>
+        `).join('')}
+      </details>
+    `);
   }
-  if(bibliothekQuelle==='fachfragen'){
+  if(bibliothekQuellen.includes('fachfragen')){
     let liste = FACHFRAGEN;
     if(bibliothekSuche.trim()){
       const q = bibliothekSuche.trim().toLowerCase();
       liste = liste.filter(f => f.frage.toLowerCase().includes(q) || f.thema.toLowerCase().includes(q));
     }
     const themen = [...new Set(liste.map(f=>f.thema))];
-    return `
-      <p class="lead">Wortgetreu aus Pfotenalltag übernommen: ${FACHFRAGEN.length} Fachfragen mit Antworten für die Theorie-Prüfungsvorbereitung.</p>
-      <div class="row" style="margin:14px 0">
-        ${renderBibQuelleSelect()}
-        <input id="bib-suche" placeholder="Suche nach Frage oder Thema…" value="${esc(bibliothekSuche)}" style="flex:1;min-width:200px;padding:9px 10px;border:1px solid var(--line);border-radius:8px">
-      </div>
-      ${themen.map(t=>`
-        <h3 style="margin-top:14px">${esc(t)}</h3>
-        ${liste.filter(f=>f.thema===t).map(f=>`
-          <details class="card" style="margin-bottom:8px;padding:12px 14px">
-            <summary style="cursor:pointer;font-weight:600">${esc(f.frage)}</summary>
-            <p class="hint" style="margin-top:8px">${esc(f.antwort)}</p>
-          </details>
-        `).join('')}
-      `).join('') || '<div class="card empty"><p>Keine Fachfragen gefunden.</p></div>'}
-    `;
+    abschnitte.push(`
+      <details class="card card-pad" style="margin-bottom:12px">
+        <summary style="cursor:pointer;font-weight:700;font-size:.98rem">Fachfragen <span class="chip muted">${FACHFRAGEN.length}</span></summary>
+        <p class="hint" style="margin-top:8px">Für die Theorie-Prüfungsvorbereitung.</p>
+        ${themen.map(t=>`
+          <h3 style="margin-top:14px">${esc(t)}</h3>
+          ${liste.filter(f=>f.thema===t).map(f=>`
+            <details class="card" style="margin-bottom:8px;padding:12px 14px">
+              <summary style="cursor:pointer;font-weight:600">${esc(f.frage)}</summary>
+              <p class="hint" style="margin-top:8px">${esc(f.antwort)}</p>
+            </details>
+          `).join('')}
+        `).join('') || '<p class="hint">Keine Fachfragen gefunden.</p>'}
+      </details>
+    `);
   }
-  let liste = ALLE_UEBUNGEN;
-  if(bibliothekSuche.trim()){
-    const q = bibliothekSuche.trim().toLowerCase();
-    liste = liste.filter(u => u.name.toLowerCase().includes(q) || (u.goal||'').toLowerCase().includes(q));
-  } else if(bibliothekKategorie!=='alle'){
-    liste = liste.filter(u=>u.cat===bibliothekKategorie);
+  if(bibliothekQuellen.includes('uebungen')){
+    let liste = ALLE_UEBUNGEN;
+    if(bibliothekSuche.trim()){
+      const q = bibliothekSuche.trim().toLowerCase();
+      liste = liste.filter(u => u.name.toLowerCase().includes(q) || (u.goal||'').toLowerCase().includes(q));
+    } else if(bibliothekKategorie!=='alle'){
+      liste = liste.filter(u=>u.cat===bibliothekKategorie);
+    }
+    const anzeigeListe = liste.slice(0, 120);
+    abschnitte.push(`
+      <details class="card card-pad" style="margin-bottom:12px" open>
+        <summary style="cursor:pointer;font-weight:700;font-size:.98rem">Übungen <span class="chip muted">${ALLE_UEBUNGEN.length}</span></summary>
+        <div class="row" style="margin:12px 0">
+          <select id="bib-kategorie" style="width:auto" ${bibliothekSuche?'disabled':''}>
+            <option value="alle">Alle Kategorien</option>
+            ${PFA_CATS_LIST.map(c=>`<option value="${c.id}" ${bibliothekKategorie===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+          </select>
+          <input id="bib-suche" placeholder="Suche nach Übung oder Ziel…" value="${esc(bibliothekSuche)}" style="flex:1;min-width:200px;padding:9px 10px;border:1px solid var(--line);border-radius:8px">
+        </div>
+        <p class="hint">${liste.length} Übung(en) gefunden${liste.length>120?' – die ersten 120 angezeigt, bitte weiter eingrenzen':''}.</p>
+        ${anzeigeListe.map(renderUebungsbibliothekKarte).join('') || '<div class="card empty"><p>Keine Übungen gefunden.</p></div>'}
+      </details>
+    `);
   }
-  const anzeigeListe = liste.slice(0, 120);
+
   return `
-    <p class="lead">Wortgetreu aus Pfotenalltag übernommen: ${ALLE_UEBUNGEN.length} Übungen (Kalender-, Legacy-, Impulskontroll- und Prüfungsübungen) mit Ziel, Prüfungsbezug, Alltagsanwendung, Sicherheitshinweis, Steigerungsstufen und – wo vorhanden – Vertiefung.</p>
-    <div class="row" style="margin:14px 0">
-      ${renderBibQuelleSelect()}
-      <select id="bib-kategorie" style="width:auto" ${bibliothekSuche?'disabled':''}>
-        <option value="alle">Alle Kategorien</option>
-        ${PFA_CATS_LIST.map(c=>`<option value="${c.id}" ${bibliothekKategorie===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
-      </select>
-      <input id="bib-suche" placeholder="Suche nach Übung oder Ziel…" value="${esc(bibliothekSuche)}" style="flex:1;min-width:200px;padding:9px 10px;border:1px solid var(--line);border-radius:8px">
+    <div class="card card-pad" style="margin-bottom:14px;background:var(--t-alltag-soft);border:none;border-left:5px solid var(--t-alltag)">
+      <div class="spread"><h3 style="font-size:1.05rem">🎲 Übung vorschlagen</h3></div>
+      <p class="hint">Zieht eine zufällige Übung passend zur aktuellen Kategorie/Suche. Mit Team wird passend zu dessen Sparten gewichtet, wenn möglich.</p>
+      <div class="row" style="gap:8px;margin-top:8px">
+        <select id="bib-zufall-team" style="width:auto">
+          <option value="alle" ${bibliothekZufallsTeam==='alle'?'selected':''}>Kein Team (alle Übungen)</option>
+          ${teamsAktiv.map(h=>`<option value="${h.id}" ${bibliothekZufallsTeam===h.id?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}
+        </select>
+        <button class="btn btn-primary btn-sm" id="btn-bib-zufall">Übung ziehen</button>
+        ${bibliothekZufallsUebung ? '<button class="btn btn-ghost btn-sm" id="btn-bib-zufall-neu">Neu würfeln</button>' : ''}
+      </div>
+      ${bibliothekZufallsUebung ? `
+        <div class="card" style="margin-top:12px;padding:12px 14px;background:#fff;border:1px solid var(--line)">
+          ${renderUebungsbibliothekKarte(bibliothekZufallsUebung)}
+          <button class="btn btn-primary btn-sm" id="btn-bib-zufall-uebernehmen" style="margin-top:8px">In Trainingstagebuch übernehmen</button>
+        </div>
+      ` : ''}
     </div>
-    <p class="hint">${liste.length} Übung(en) gefunden${liste.length>120?' – die ersten 120 angezeigt, bitte weiter eingrenzen':''}.</p>
-    ${anzeigeListe.map(renderUebungsbibliothekKarte).join('') || '<div class="card empty"><p>Keine Übungen gefunden.</p></div>'}
+    <div class="card card-pad" style="margin-bottom:14px">
+      <p class="hint" style="margin:0 0 8px"><strong>Quellen anzeigen</strong> (mehrere möglich):</p>
+      ${renderBibQuelleCheckboxen()}
+    </div>
+    ${abschnitte.join('') || '<div class="card empty"><p>Bitte mindestens eine Quelle auswählen.</p></div>'}
   `;
 }
 function bindAlltagBibliothek(person){
-  const quelle = document.getElementById('bib-quelle');
-  if(quelle) quelle.onchange = e=>{ bibliothekQuelle = e.target.value; render(); };
+  const zufallTeam = document.getElementById('bib-zufall-team');
+  if(zufallTeam) zufallTeam.onchange = e=>{ bibliothekZufallsTeam = e.target.value; render(); };
+  const btnZufall = document.getElementById('btn-bib-zufall');
+  if(btnZufall) btnZufall.onclick = ()=>{
+    let liste = ALLE_UEBUNGEN;
+    if(bibliothekSuche.trim()){
+      const q = bibliothekSuche.trim().toLowerCase();
+      liste = liste.filter(u => u.name.toLowerCase().includes(q) || (u.goal||'').toLowerCase().includes(q));
+    } else if(bibliothekKategorie!=='alle'){
+      liste = liste.filter(u=>u.cat===bibliothekKategorie);
+    }
+    bibliothekZufallsUebung = alltagUebungZufaellig(liste, bibliothekZufallsTeam);
+    if(!bibliothekZufallsUebung) zeigeToast('Keine passende Übung in dieser Auswahl gefunden.');
+    render();
+  };
+  const btnZufallNeu = document.getElementById('btn-bib-zufall-neu');
+  if(btnZufallNeu) btnZufallNeu.onclick = ()=>{ btnZufall && btnZufall.onclick(); };
+  const btnUebernehmen = document.getElementById('btn-bib-zufall-uebernehmen');
+  if(btnUebernehmen) btnUebernehmen.onclick = ()=>{
+    alltagVorschlagPreset = {
+      hundId: bibliothekZufallsTeam!=='alle' ? bibliothekZufallsTeam : '',
+      thema: bibliothekZufallsUebung.name,
+    };
+    modal = {type:'alltagseintrag', id:null};
+    render();
+  };
+  document.querySelectorAll('[data-bib-quelle]').forEach(cb=>{
+    cb.onchange = ()=>{
+      const id = cb.dataset.bibQuelle;
+      if(cb.checked){ if(!bibliothekQuellen.includes(id)) bibliothekQuellen.push(id); }
+      else { bibliothekQuellen = bibliothekQuellen.filter(x=>x!==id); }
+      render();
+    };
+  });
   const kat = document.getElementById('bib-kategorie');
   if(kat) kat.onchange = e=>{ bibliothekKategorie = e.target.value; render(); };
   const suche = document.getElementById('bib-suche');
@@ -5636,7 +5977,9 @@ function bindAlltagBibliothek(person){
 /* ---- Alltagseintrag ---- */
 function renderModalAlltagseintrag(){
   const bestehend = modal.id ? state.alltagseintraege.find(e=>e.id===modal.id) : null;
-  const e = bestehend || {hundId:alltagTeamFilter!=='alle'?alltagTeamFilter:'',datum:new Date().toISOString().slice(0,10),kategorie:ALLTAG_KATEGORIEN[0].id,thema:'',notizen:''};
+  const preset = (!bestehend && alltagVorschlagPreset) ? alltagVorschlagPreset : null;
+  const e = bestehend || {hundId:(preset?preset.hundId:'') || (alltagTeamFilter!=='alle'?alltagTeamFilter:''),datum:new Date().toISOString().slice(0,10),kategorie:ALLTAG_KATEGORIEN[0].id,thema:preset?preset.thema:'',notizen:''};
+  alltagVorschlagPreset = null;
   const hunde = state.hunde.filter(h=>h.status!=='inaktiv' || h.id===e.hundId);
   return `
   <div class="modal-back"><div class="modal">
@@ -6008,7 +6351,7 @@ function renderModalRisiko(){
   <div class="modal-back"><div class="modal" style="max-width:720px">
     <div class="modal-head"><h3>Vermissten-Risiko / Suchpriorität</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
     <div class="modal-body" style="max-height:70vh;overflow-y:auto">
-      <p class="hint">Wortgetreu aus dem Einsatzprotokoll-Tool übernommen. Je Kategorie eine Einschätzung wählen; grau markierte Kategorien lösen bei der ungünstigsten Option automatisch die Stufe HOCH aus – unabhängig von der Punktsumme.</p>
+      <p class="hint">Je Kategorie eine Einschätzung wählen; grau markierte Kategorien lösen bei der ungünstigsten Option automatisch die Stufe HOCH aus – unabhängig von der Punktsumme.</p>
       ${RISIKO_KATEGORIEN.map(kat=>`
         <div class="field">
           <label>${esc(kat.label)}${kat.grau?' <span class="hint" style="font-weight:400">(kritische Kategorie)</span>':''}</label>
