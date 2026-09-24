@@ -1555,10 +1555,21 @@ function bindVerwaltungTab(tab, person){
 }
 
 /* ---------- Personen ---------- */
+function personenDuplikatGruppen(){
+  const gruppen = {};
+  state.personen.forEach(p=>{
+    const key = p.name.trim().toLowerCase();
+    if(!key) return;
+    gruppen[key] = gruppen[key] || [];
+    gruppen[key].push(p);
+  });
+  return Object.values(gruppen).filter(g=>g.length>1);
+}
 function renderTabPersonen(){
   if(state.personen.length===0){
     return `<div class="card empty"><h3>Noch keine Personen</h3><p>Lege die erste Person an.</p><button class="btn btn-primary" id="btn-neue-person">Person anlegen</button></div>`;
   }
+  const duplikate = personenDuplikatGruppen();
   const zeilen = state.personen.map(p=>`
     <tr class="clickable" data-person="${p.id}">
       <td>${esc(p.name)}</td>
@@ -1567,6 +1578,16 @@ function renderTabPersonen(){
       <td>${p.status==='inaktiv'?'<span class="badge off">inaktiv</span>':p.status==='extern'?'<span class="badge warn">extern</span>':'<span class="badge ok">aktiv</span>'}</td>
     </tr>`).join('');
   return `
+    ${duplikate.length?`
+    <div class="card card-pad" style="margin-bottom:14px;background:var(--soft);border:none">
+      <h3>⚠️ Mögliche Duplikate (${duplikate.length})</h3>
+      <p class="hint">Diese Namen kommen mehrfach vor — meist durch einen doppelt eingelesenen Import entstanden. „Zusammenführen" behält die erste Person, verschiebt deren Hunde und Qualifikationen auf sie und löscht die übrigen.</p>
+      ${duplikate.map((g,gi)=>`
+        <div class="row" style="justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed var(--line)">
+          <span>${esc(g[0].name)} <span class="chip muted">${g.length}×</span></span>
+          <button class="btn btn-sm" data-duplikat-zusammenfuehren="${gi}">Zusammenführen</button>
+        </div>`).join('')}
+    </div>`:''}
     <div class="spread" style="margin-bottom:14px">
       <p class="hint">${state.personen.length} Personen im Bestand · Zum Bearbeiten anklicken</p>
       <button class="btn btn-primary" id="btn-neue-person">+ Person anlegen</button>
@@ -1579,6 +1600,30 @@ function bindTabPersonen(){
   if(btn) btn.onclick = ()=>{ modal = {type:'person', id:null}; render(); };
   document.querySelectorAll('[data-person]').forEach(tr=>{
     tr.onclick = ()=>{ modal = {type:'person', id:tr.dataset.person}; render(); };
+  });
+  document.querySelectorAll('[data-duplikat-zusammenfuehren]').forEach(b=>{
+    b.onclick = ()=>{
+      const gruppe = personenDuplikatGruppen()[+b.dataset.duplikatZusammenfuehren];
+      if(!gruppe) return;
+      const [behalten, ...rest] = gruppe;
+      if(!confirm(`"${behalten.name}" ${gruppe.length}× zusammenführen? Hunde und Qualifikationen der ${rest.length} anderen werden auf die erste Person übertragen, die übrigen ${rest.length} Personendatensätze werden gelöscht. Das lässt sich nicht rückgängig machen.`)) return;
+      // Falls eine der zu löschenden Personen die letzte Admin-Rolle trägt, behält "behalten" diese Rolle.
+      if(rest.some(p=>(p.rollen||[]).includes('admin')) && !(behalten.rollen||[]).includes('admin')){
+        behalten.rollen = [...(behalten.rollen||[]), 'admin'];
+      }
+      rest.forEach(p=>{
+        state.hunde.forEach(h=>{ if(h.hundefuehrerId===p.id) h.hundefuehrerId = behalten.id; });
+        state.personQualifikationen.forEach(pq=>{ if(pq.personId===p.id) pq.personId = behalten.id; });
+        ['benutzername','geburtsdatum','mitgliedSeit','email','telefon','mitgliedsnummer','strasse','plz','ort'].forEach(feld=>{
+          if(!behalten[feld] && p[feld]) behalten[feld] = p[feld];
+        });
+      });
+      const restIds = rest.map(p=>p.id);
+      state.personen = state.personen.filter(p=>!restIds.includes(p.id));
+      speichereState();
+      zeigeToast(`Zusammengeführt: ${rest.length} doppelte(r) Eintrag/Einträge entfernt.`);
+      render();
+    };
   });
 }
 
@@ -2308,23 +2353,33 @@ function csvSchnellstartEinlesen(file){
       const idxPlFl = kopf.indexOf('plaketteflaeche');
       const idxPlTr = kopf.indexOf('plakettetruemmer');
       const idxPlMt = kopf.indexOf('plakettemantrailing');
-      let neuePersonen=0, neueHunde=0, uebersprungen=0;
+      let neuePersonen=0, aktualisiertePersonen=0, neueHunde=0, aktualisierteHunde=0, uebersprungen=0;
       const startHash = einfacherHash('start');
+      const personenNeu = [], hundeNeu = [];
+      const personenUpdates = [], hundeUpdates = [];
       for(let i=1;i<zeilen.length;i++){
         const f = csvZeileParsen(zeilen[i]);
         const name = (f[idxName]||'').trim();
         if(!name || name === CSV_SCHNELLSTART_BEISPIEL[0]){ uebersprungen++; continue; }
         const rolleRoh = (idxRolle>-1 ? f[idxRolle]||'' : '').trim().toLowerCase();
         const rolle = ['admin','leitung','ausbilder'].includes(rolleRoh) ? rolleRoh : 'mitglied';
-        const person = {
-          id: uid(), name, benutzername: idxBenutzername>-1 ? (f[idxBenutzername]||'').trim() : '',
-          mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum: idxGeburt>-1 ? parseCsvDatum(f[idxGeburt]) : '',
-          mitgliedSeit: idxMitgliedSeit>-1 ? parseCsvDatum(f[idxMitgliedSeit]) : '',
-          strasse:'', plz:'', ort:'', email:'', telefon:'',
-          rollen:[rolle], zusatzrechte:[], status:'aktiv',
-          passwortHash: startHash, mussPasswortAendern:true, angelegtAm: nowIso(),
-        };
-        state.personen.push(person); neuePersonen++;
+        let person = state.personen.find(p=>p.status!=='inaktiv' && p.name.trim().toLowerCase()===name.toLowerCase())
+          || personenNeu.find(p=>p.name.trim().toLowerCase()===name.toLowerCase());
+        if(person){
+          // Bereits vorhanden (z. B. erneuter Import derselben/erweiterten Tabelle) — nur leere Felder ergänzen, nichts überschreiben.
+          personenUpdates.push({person, benutzername: idxBenutzername>-1?(f[idxBenutzername]||'').trim():'', geburtsdatum: idxGeburt>-1?parseCsvDatum(f[idxGeburt]):'', mitgliedSeit: idxMitgliedSeit>-1?parseCsvDatum(f[idxMitgliedSeit]):''});
+          aktualisiertePersonen++;
+        } else {
+          person = {
+            id: uid(), name, benutzername: idxBenutzername>-1 ? (f[idxBenutzername]||'').trim() : '',
+            mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum: idxGeburt>-1 ? parseCsvDatum(f[idxGeburt]) : '',
+            mitgliedSeit: idxMitgliedSeit>-1 ? parseCsvDatum(f[idxMitgliedSeit]) : '',
+            strasse:'', plz:'', ort:'', email:'', telefon:'',
+            rollen:[rolle], zusatzrechte:[], status:'aktiv',
+            passwortHash: startHash, mussPasswortAendern:true, angelegtAm: nowIso(),
+          };
+          personenNeu.push(person); neuePersonen++;
+        }
         const hundName = idxHundName>-1 ? (f[idxHundName]||'').trim() : '';
         if(hundName){
           const sparten = idxSparten>-1 ? rhsSpartenNormalisieren((f[idxSparten]||'')) : [];
@@ -2334,28 +2389,45 @@ function csvSchnellstartEinlesen(file){
           if(idxPlFl>-1 && (f[idxPlFl]||'').trim()) plaketten.push({sparte:'flaeche', nummer:(f[idxPlFl]||'').trim(), datum:''});
           if(idxPlTr>-1 && (f[idxPlTr]||'').trim()) plaketten.push({sparte:'truemmer', nummer:(f[idxPlTr]||'').trim(), datum:''});
           if(idxPlMt>-1 && (f[idxPlMt]||'').trim()) plaketten.push({sparte:'mantrailing', nummer:(f[idxPlMt]||'').trim(), datum:''});
-          const hund = {
-            id: uid(), name: hundName,
-            rasse: idxHundRasse>-1 ? (f[idxHundRasse]||'').trim() : '',
-            geburtsdatum: idxHundGeburt>-1 ? parseCsvDatum(f[idxHundGeburt]) : '',
-            geschlecht, chipnummer: idxHundChip>-1 ? (f[idxHundChip]||'').trim() : '',
-            hundefuehrerId: person.id, status:'aktiv', sparten, anzeigeart:'', rassegruppe:'', plaketten,
-          };
-          rhsSicherstellen(hund);
-          state.hunde.push(hund); neueHunde++;
+          let hund = state.hunde.find(h=>h.status!=='inaktiv' && h.hundefuehrerId===person.id && h.name.trim().toLowerCase()===hundName.toLowerCase())
+            || hundeNeu.find(h=>h.hundefuehrerId===person.id && h.name.trim().toLowerCase()===hundName.toLowerCase());
+          if(hund){
+            hundeUpdates.push({hund, rasse: idxHundRasse>-1?(f[idxHundRasse]||'').trim():'', geburtsdatum: idxHundGeburt>-1?parseCsvDatum(f[idxHundGeburt]):'', geschlecht, chipnummer: idxHundChip>-1?(f[idxHundChip]||'').trim():'', sparten, plaketten});
+            aktualisierteHunde++;
+          } else {
+            hund = {
+              id: uid(), name: hundName,
+              rasse: idxHundRasse>-1 ? (f[idxHundRasse]||'').trim() : '',
+              geburtsdatum: idxHundGeburt>-1 ? parseCsvDatum(f[idxHundGeburt]) : '',
+              geschlecht, chipnummer: idxHundChip>-1 ? (f[idxHundChip]||'').trim() : '',
+              hundefuehrerId: person.id, status:'aktiv', sparten, anzeigeart:'', rassegruppe:'', plaketten,
+            };
+            rhsSicherstellen(hund);
+            hundeNeu.push(hund); neueHunde++;
+          }
         }
       }
-      if(neuePersonen===0){ alert('Keine gültigen Zeilen gefunden. Bitte Beispielzeile ersetzen und erneut versuchen.'); return; }
-      const meldung = `${neuePersonen} Person(en) und ${neueHunde} Hund(e) werden neu angelegt`
+      if(neuePersonen===0 && aktualisiertePersonen===0){ alert('Keine gültigen Zeilen gefunden. Bitte Beispielzeile ersetzen und erneut versuchen.'); return; }
+      const meldung = `${neuePersonen} neue Person(en), ${aktualisiertePersonen} bereits vorhandene Person(en) ergänzt, ${neueHunde} neue(r) Hund(e), ${aktualisierteHunde} bereits vorhandene(r) Hund(e) ergänzt`
         + (uebersprungen ? `, ${uebersprungen} Zeile(n) übersprungen (leer oder Beispiel)` : '') + '. Fortfahren?';
-      if(!confirm(meldung)){
-        // Rückgängig machen, da bereits in den State geschrieben wurde.
-        state.personen.splice(state.personen.length-neuePersonen, neuePersonen);
-        if(neueHunde) state.hunde.splice(state.hunde.length-neueHunde, neueHunde);
-        return;
-      }
+      if(!confirm(meldung)) return; // Es wurde noch nichts in den echten Bestand geschrieben.
+      state.personen.push(...personenNeu);
+      state.hunde.push(...hundeNeu);
+      personenUpdates.forEach(u=>{
+        if(u.benutzername && !u.person.benutzername) u.person.benutzername = u.benutzername;
+        if(u.geburtsdatum && !u.person.geburtsdatum) u.person.geburtsdatum = u.geburtsdatum;
+        if(u.mitgliedSeit && !u.person.mitgliedSeit) u.person.mitgliedSeit = u.mitgliedSeit;
+      });
+      hundeUpdates.forEach(u=>{
+        if(u.rasse && !u.hund.rasse) u.hund.rasse = u.rasse;
+        if(u.geburtsdatum && !u.hund.geburtsdatum) u.hund.geburtsdatum = u.geburtsdatum;
+        if(u.geschlecht && !u.hund.geschlecht) u.hund.geschlecht = u.geschlecht;
+        if(u.chipnummer && !u.hund.chipnummer) u.hund.chipnummer = u.chipnummer;
+        if(u.sparten.length) u.hund.sparten = [...new Set([...(u.hund.sparten||[]), ...u.sparten])];
+        if(u.plaketten.length) u.hund.plaketten = [...(u.hund.plaketten||[]), ...u.plaketten.filter(pl=>!(u.hund.plaketten||[]).some(x=>x.sparte===pl.sparte && x.nummer===pl.nummer))];
+      });
       speichereState();
-      zeigeToast(`${neuePersonen} Person(en) und ${neueHunde} Hund(e) angelegt. Startpasswort: „start" (muss beim ersten Login geändert werden).`);
+      zeigeToast(`${neuePersonen} neue Person(en), ${neueHunde} neue(r) Hund(e) angelegt. Bereits vorhandene wurden nur ergänzt. Startpasswort neuer Personen: „start".`);
       render();
     }catch(err){
       alert('Die Tabelle konnte nicht eingelesen werden: '+err.message);
