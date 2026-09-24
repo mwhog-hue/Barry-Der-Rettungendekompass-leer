@@ -2214,6 +2214,18 @@ function bindTabDatensicherung(){
 /* ---------- Schnellstart-Import (CSV): Mitglieder & Hunde für neue Staffeln ---------- */
 const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','HundName','HundRasse','HundGeburtsdatum','HundGeschlecht','HundChipnummer','Sparten','PlaketteFlaeche','PlaketteTruemmer','PlaketteMantrailing'];
 const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','Bella','Labrador Retriever','2022-03-15','huendin','276093400690717','flaeche','','',''];
+function parseCsvDatum(s){
+  // Erkennt gängige Datumsformate aus Excel/Calc (TT.MM.JJJJ, TT/MM/JJJJ, ISO) und liefert JJJJ-MM-TT oder '' zurück.
+  const t = String(s||'').trim();
+  if(!t) return '';
+  if(/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  const m = t.match(/^(\d{1,2})[.\/](\d{1,2})[.\/](\d{4})$/);
+  if(m){
+    const [_, tag, monat, jahr] = m;
+    return jahr + '-' + monat.padStart(2,'0') + '-' + tag.padStart(2,'0');
+  }
+  return '';
+}
 function csvZeileEscapen(feld){
   const t = String(feld ?? '');
   return /[;"\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t;
@@ -2224,7 +2236,8 @@ function csvSchnellstartVorlageHerunterladen(){
     CSV_SCHNELLSTART_BEISPIEL.map(csvZeileEscapen).join(';'),
   ];
   const hinweis = '# Bitte die Beispielzeile oben löschen oder überschreiben. Spalte "Rolle": mitglied, ausbilder oder leitung. '
-    + 'Spalte "Sparten": flaeche, truemmer und/oder mantrailing, mit Komma getrennt, kann leer bleiben. '
+    + 'Spalte "HundGeburtsdatum": TT.MM.JJJJ (z. B. 22.03.2021) oder JJJJ-MM-TT. '
+    + 'Spalte "Sparten": flaeche, truemmer und/oder mantrailing (auch mit ä/ü geschrieben), mit Komma getrennt, kann leer bleiben. '
     + 'Spalte "HundGeschlecht": ruede oder huendin, kann leer bleiben. '
     + 'Spalten "PlaketteFlaeche"/"PlaketteTruemmer"/"PlaketteMantrailing": jeweils die Plaketten-/ID-Nr., falls die Prüfung schon bestanden ist, sonst leer lassen. '
     + 'HundName/HundRasse/HundGeburtsdatum/Sparten dürfen leer bleiben, wenn die Person (noch) keinen eigenen Hund führt.';
@@ -2301,7 +2314,7 @@ function csvSchnellstartEinlesen(file){
           const hund = {
             id: uid(), name: hundName,
             rasse: idxHundRasse>-1 ? (f[idxHundRasse]||'').trim() : '',
-            geburtsdatum: idxHundGeburt>-1 ? (f[idxHundGeburt]||'').trim() : '',
+            geburtsdatum: idxHundGeburt>-1 ? parseCsvDatum(f[idxHundGeburt]) : '',
             geschlecht, chipnummer: idxHundChip>-1 ? (f[idxHundChip]||'').trim() : '',
             hundefuehrerId: person.id, status:'aktiv', sparten, anzeigeart:'', rassegruppe:'', plaketten,
           };
