@@ -897,97 +897,207 @@ function pruefungFortschrittZahlen(hundId, modul, elementIds){
   return { bestanden, gesamt: elementIds.length };
 }
 
-// Einmaliger Vorschlags-Katalog für die Qualifikationsverwaltung (Personen-Ausbildungen/Fortbildungen),
-// zusammengestellt aus der Stammdaten-Liste der Staffel und dem DRK-KatS-Ausbildungsposter (Region Kassel).
-// intervallMonate/hinweis sind nur bei den beiden Punkten gesetzt, für die eine Auffrischungsempfehlung
-// recherchiert werden konnte (Quelle: DRK-Infomaterial) — bei allen anderen bewusst leer gelassen,
-// da die tatsächliche Wiederholungsfrist von der Kreisbereitschaftsleitung bestätigt werden muss.
+// Qualifikationskatalog – Reihenfolge nach Bedeutung für die Rettungshundestaffel:
+// zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Pflicht laut „Rettungshundearbeit in Hessen“, Dienstanweisung LV Hessen 29.08.2023,
+// Übersicht „Notwendige Qualifikation Rettungshundeführende“ 31.08.2023 und Staffel-Merkblatt), danach Führung, Sanität, Betreuung, Technik.
+// code = stabiler Schlüssel; aliase = frühere Bezeichnungen (werden beim Laden automatisch zusammengeführt).
+const QUALI_KATEGORIEN = [
+  'RHA · Grundausbildung EK-B (Pflicht)',
+  'RHA · Fach- und Zusatzausbildung (Pflicht)',
+  'RHA · Fachdienstausbildung Rettungshund (RHd, 35 UE)',
+  'RHA · Prüfung, Einsatzfähigkeit & jährliche Unterweisungen',
+  'RHA · Empfohlen & staffelinterne Ergänzungen',
+  'Führung (GF-RHA / ZF-RHA)',
+  'Sanitätsdienst',
+  'Betreuungsdienst & Verpflegung',
+  'Technik & Logistik',
+  'Weitere KatS-Module',
+];
+const [K_GA, K_FA, K_RHD, K_PR, K_EMP, K_FUE, K_SAN, K_BT, K_TL, K_KATS] = QUALI_KATEGORIEN;
+const QUALI_HINWEIS_KBL = 'Wiederholungsfrist bitte bei der KBL bestätigen lassen.';
 const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
-  // Rettungshundearbeit – Person
-  { label:'Einführungsseminar', kategorie:'Rettungshundearbeit – Person' },
-  { label:'RHA (Rettungshundearbeit-Grundlagen)', kategorie:'Rettungshundearbeit – Person' },
-  { label:'Orga/Struktur', kategorie:'Rettungshundearbeit – Person' },
-  { label:'UVV / Sicherheit im Einsatz', kategorie:'Rettungshundearbeit – Person' },
-  { label:'Transport verletzter Hunde', kategorie:'Rettungshundearbeit – Person' },
-  { label:'HGA Einsatz', kategorie:'Rettungshundearbeit – Person' },
-  { label:'HGA Sanität', kategorie:'Rettungshundearbeit – Person' },
-  { label:'HGA Betreuung', kategorie:'Rettungshundearbeit – Person' },
-  { label:'HGA Technik', kategorie:'Rettungshundearbeit – Person' },
-  { label:'BA Technik + Logistik', kategorie:'Rettungshundearbeit – Person' },
-  // DRK Grundausbildung EK-B (71 UE)
-  { label:'RKE – Rotkreuz-Einführungsseminar', kategorie:'DRK Grundausbildung EK-B' },
-  { label:'EH – Erste Hilfe', kategorie:'DRK Grundausbildung EK-B', intervallMonate:24, hinweis:'DRK empfiehlt eine Auffrischung alle 2 Jahre – bitte bei der KBL bestätigen lassen.' },
-  { label:'DS – Datenschutz (online)', kategorie:'DRK Grundausbildung EK-B' },
-  { label:'EKGA-E – Einsatz', kategorie:'DRK Grundausbildung EK-B' },
-  { label:'EKGA-T – Technik', kategorie:'DRK Grundausbildung EK-B' },
-  { label:'EKGA-S – Sanitätsdienst', kategorie:'DRK Grundausbildung EK-B' },
-  { label:'EKGA-B – Betreuung', kategorie:'DRK Grundausbildung EK-B' },
-  { label:'TiE – Basisausb. Technik & Logistik', kategorie:'DRK Grundausbildung EK-B' },
-  // DRK Zusatzausbildung KatS für alle EK-F (76 UE)
-  { label:'BOS – Sprechfunkausbildung', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'CBRN-G – Schutzausstattung', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'PSNV-1 – Grundlagen', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'HEIKAT', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'SuWR – Sonder-/Wegerechte', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'PÜ# – Praktische Übungen (alle FachD)', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'PSU – Psycho-Soziale Unterstützung', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'AT# – Aktuelle Themen (alle FachD)', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'BtD-13 – Besondere Einsatzlagen', kategorie:'DRK Zusatzausbildung KatS' },
-  { label:'EKF.Prüf – Fachbezogene Prüfung', kategorie:'DRK Zusatzausbildung KatS' },
-  // DRK Führung / fachrichtungsübergreifende Spezialisierung
-  { label:'TF – Truppführer:in (online)', kategorie:'DRK Führung' },
-  { label:'Gruppenführer:in', kategorie:'DRK Führung' },
-  // DRK Fachausbildung – gemeinsame Grundlagen aller Fachrichtungen
-  { label:'BtD-01 – Aufgaben & takt. Einheiten', kategorie:'DRK Fachausbildung – gemeinsame Grundlagen' },
-  { label:'BtD-02 – Einsatzabläufe', kategorie:'DRK Fachausbildung – gemeinsame Grundlagen' },
-  { label:'BtD-03 – Einrichtungen & Strukturen', kategorie:'DRK Fachausbildung – gemeinsame Grundlagen' },
-  { label:'BtD-10 – Infektions-, Arbeits- und Umweltschutz', kategorie:'DRK Fachausbildung – gemeinsame Grundlagen' },
-  // DRK Fachausbildung Sanitätsdienst
-  { label:'SLG – Sanitätslehrgang', kategorie:'DRK Fachausbildung Sanitätsdienst', intervallMonate:24, hinweis:'Für Sanitätsdienst-EK ist laut DRK-Infomaterial eine Fortbildung (16 UE in 2 Jahren) zur Aufrechterhaltung vorgesehen – bitte bei der KBL bestätigen lassen.' },
-  { label:'SANiKS – SAN-EK im KatS', kategorie:'DRK Fachausbildung Sanitätsdienst' },
-  { label:'RettSAN – Rettungssanitäter:in', kategorie:'DRK Fachausbildung Sanitätsdienst' },
-  { label:'MTF – Einweisung', kategorie:'DRK Fachausbildung Sanitätsdienst' },
-  { label:'BHP – Seminar BHP der MTF', kategorie:'DRK Fachausbildung Sanitätsdienst' },
-  { label:'HiGE – Helfer im Großeinsatz', kategorie:'DRK Fachausbildung Sanitätsdienst' },
-  { label:'LSi – Ladungssicherung', kategorie:'DRK Fachausbildung Sanitätsdienst' },
-  // DRK Fachausbildung Technik & Logistik
-  { label:'BtD-14 – Materialkunde & Instandhaltung', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'TLG – Technik & Logistik (Gerätewart)', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'FKH – Maschinist:in FKH Kärcher', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'MS – Motorsäge Hessenforst LVH-F', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'UwSte – Unterw. Stromerzeuger KatS', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'TW5k – Trinkwasser 5000', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'TWA1 – Trinkwasseraufbereitung 1', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'TWA2 – Trinkwasseraufbereitung 2', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  { label:'TWA3 – Trinkwasseraufbereitung 3', kategorie:'DRK Fachausbildung Technik & Logistik' },
-  // DRK Fachausbildung Verpflegung
-  { label:'BtD-15 – Ausgabe v. Verpflegung', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-16 – Planung & Beschaffung', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-17 – Beschaffung Lebensmittel', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-18 – Lagerung Lebensmittel', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-19 – Lebensmitteltransport', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-20 – Einrichtung Küchen & Lagern', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-22 – Dokumentation, HACCP', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-23 – Lebensmittelkunde', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-24 – Zubereitung Kaltverpflegung', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-25 – Zubereitung Warmverpflegung', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-26 – Einsatzkräfteverpflegung', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-27 – Trinkwasser', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-28 – Rückbau, Wartung, Pflege', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-29 – Mat. Zubereitung / Ausgabe', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'BtD-30 – Hygiene & Lebensmittelrecht', kategorie:'DRK Fachausbildung Verpflegung' },
-  { label:'FKo – Feldkoch/Feldköchin', kategorie:'DRK Fachausbildung Verpflegung' },
-  // DRK Fachausbildung Betreuung & Unterkunft
-  { label:'BtD-04 – Transportbegleitung Betroffener', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-05 – Materiallogistik', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-06 – Registrierung & Information', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-07 – Erkundung & Einrichtung', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-08 – Interkulturelle Kompetenzen', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-09 – Vernetzung & Komplexes Handeln', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-11 – Ausgabe v. Bedarfsgegenständen', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'BtD-12 – Soziale Betreuung', kategorie:'DRK Fachausbildung Betreuung' },
-  { label:'PSNV-B', kategorie:'DRK Fachausbildung Betreuung' },
-].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, ...q }));
+  // 1) Grundausbildung Einsatzkraft Bereitschaft – Pflicht für Rettungshundehelfende und -führende
+  { code:'rke', label:'RKE – Rotkreuz-Einführungsseminar', kategorie:K_GA, ue:9, pflichtRHF:true, aliase:['Einführungsseminar','DRK Einführungsseminar'] },
+  { code:'eh', label:'EH – Erste Hilfe', kategorie:K_GA, ue:9, pflichtRHF:true, intervallMonate:24, hinweis:'DRK empfiehlt eine Auffrischung alle 2 Jahre – '+QUALI_HINWEIS_KBL },
+  { code:'ds', label:'DS – Datenschutz (online)', kategorie:K_GA, ue:2, pflichtRHF:true, hinweis:'Voraussetzung: RKE' },
+  { code:'ekga_e', label:'EKGA-E – Grundausbildung Einsatz (HGA Einsatz)', kategorie:K_GA, ue:10, pflichtRHF:true, aliase:['HGA Einsatz','EKGA-E – Einsatz','EGA Einsatz'] },
+  { code:'ekga_s', label:'EKGA-S – Grundausbildung Sanität (HGA SAN)', kategorie:K_GA, ue:10, pflichtRHF:true, hinweis:'Voraussetzung: EH', aliase:['HGA Sanität','HGA San','EKGA-S – Sanitätsdienst','EGA San'] },
+  { code:'ekga_b', label:'EKGA-B – Grundausbildung Betreuung (HGA Betreuung)', kategorie:K_GA, ue:10, pflichtRHF:true, aliase:['HGA Betreuung','EKGA-B – Betreuung','EGA Betreuung'] },
+  { code:'ekga_t', label:'EKGA-T – Grundausbildung Technik (HGA Technik)', kategorie:K_GA, ue:10, pflichtRHF:true, aliase:['HGA Technik','EKGA-T – Technik','EGA Technik'] },
+  // 2) Fach- und Zusatzausbildung
+  { code:'slg', label:'SLG – Sanitätslehrgang inkl. Prüfung', kategorie:K_FA, ue:64, pflichtRHF:true, intervallMonate:24, hinweis:'Voraussetzung: EKGA-S. Regelmäßige Fortbildung erforderlich (DRK-Infomaterial: 16 UE in 2 Jahren) – '+QUALI_HINWEIS_KBL, aliase:['SLG – Sanitätslehrgang','Sanitätslehrgang','Sanitätsl.'] },
+  { code:'ekf_pruef', label:'EKF.Prüf – Fachbezogene Prüfung', kategorie:K_FA, ue:2, pflichtRHF:true },
+  { code:'bos', label:'BOS – Sprechfunkausbildung (digital)', kategorie:K_FA, ue:20, pflichtRHF:true, hinweis:'Voraussetzung: EKGA-E', aliase:['BOS – Sprechfunkausbildung','BOS Funk','BOS'] },
+  { code:'suwr', label:'SuWR – Sonder- und Wegerechte im Einsatz', kategorie:K_FA, ue:2, pflichtRHF:true, hinweis:'Pflicht laut Staffel-Merkblatt', aliase:['SuWR – Sonder-/Wegerechte','Sonderrechte im Einsatz'] },
+  // 3) Fachdienstausbildung Rettungshund (RHd) – Gesamtkurs und Theorieteile
+  { code:'rhd', label:'RHd – Fachdienstausbildung Rettungshund (gesamt)', kategorie:K_RHD, ue:35, pflichtRHF:true, hinweis:'Voraussetzung: SLG. Theorieteile siehe folgende Einträge.', aliase:['Fachdienstausbildung Rettungshunde','Rettungshundeführer'] },
+  { code:'rhd_ehhund', label:'RHd · Erste Hilfe am Hund', kategorie:K_RHD, pflichtRHF:true, aliase:['EH Hund','Erste Hilfe am Hund'] },
+  { code:'rhd_kyno', label:'RHd · Kynologie (Verhalten, Lerntheorie, Körpersprache, Stress, Ausbildung RH)', kategorie:K_RHD, pflichtRHF:true, aliase:['Kynologie'] },
+  { code:'rhd_orient', label:'RHd · Orientierungs- und Kartenarbeit', kategorie:K_RHD, pflichtRHF:true, aliase:['Orientierung','Orientierung und Kartenkunde'] },
+  { code:'rhd_taktik', label:'RHd · Einsatztaktik Fläche/Mantrailing/Trümmer inkl. Lagebeurteilung', kategorie:K_RHD, pflichtRHF:true, aliase:['Einsatztaktik'] },
+  { code:'rhd_truemmer', label:'RHd · Trümmerkunde', kategorie:K_RHD, pflichtRHF:true, aliase:['Trümmerkunde'] },
+  { code:'rhd_transport', label:'RHd · Verhaltensgrundsätze beim Transport von Hunden', kategorie:K_RHD, pflichtRHF:true, aliase:['Transport verletzter Hunde','Transp. V. H.'] },
+  { code:'rhd_uvv', label:'RHd · UVV / Sicherheit im Einsatz mit Hund', kategorie:K_RHD, pflichtRHF:true, aliase:['UVV / Sicherheit im Einsatz','UVV/Sich.i.E.'] },
+  { code:'rhd_sk_fl', label:'RHd · Spartenkunde Flächensuche', kategorie:K_RHD, pflichtRHF:true, aliase:['Flächensuche'] },
+  { code:'rhd_sk_mt', label:'RHd · Spartenkunde Mantrailing', kategorie:K_RHD, pflichtRHF:true },
+  { code:'rhd_sk_tr', label:'RHd · Spartenkunde Trümmersuche', kategorie:K_RHD, pflichtRHF:true },
+  { code:'rhd_recht', label:'RHd · Geschichte und Rechtsgrundlagen der RHA', kategorie:K_RHD, pflichtRHF:true, aliase:['RHA (Rettungshundearbeit-Grundlagen)','Rechtliches und Grundlagen','Geschichte und Entwicklung'] },
+  { code:'rhd_geruch', label:'RHd · Geruch und Geruchsausbreitung', kategorie:K_RHD, pflichtRHF:true, aliase:['Geruch','Geruch und Geruchsverteilung'] },
+  { code:'rhd_orga', label:'RHd · Organisation und Struktur', kategorie:K_RHD, pflichtRHF:true, aliase:['Orga/Struktur','Organisation'] },
+  // 4) Prüfung, Einsatzfähigkeit, jährliche Unterweisungen
+  { code:'rh_pruef', label:'RH-Prüf – Rettungshundeprüfung (Suchprüfung)', kategorie:K_PR, ue:4, pflichtRHF:true, intervallMonate:24, hinweis:'Laut Dienstanweisung alle 24 Monate.' },
+  { code:'tf', label:'TF – Truppführer:in (online)', kategorie:K_PR, ue:3, pflichtRHF:true },
+  { code:'hlw', label:'HLW und AED (Auffrischung)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt 1× jährlich.' },
+  { code:'uvv_jaehrlich', label:'UVV-Unterweisung (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt jährlich.' },
+  { code:'hygiene', label:'Hygieneunterweisung (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt jährlich.' },
+  // 5) Empfohlen & staffelinterne Ergänzungen
+  { code:'tie', label:'TiE – Basisausbildung Technik und Logistik', kategorie:K_EMP, ue:10, empfohlen:true, hinweis:'Empfohlen; Voraussetzung: EKGA-T', aliase:['BA Technik + Logistik','TiE – Basisausb. Technik & Logistik','BA Tech+Logi'] },
+  { code:'heikat', label:'HEIKAT', kategorie:K_EMP, ue:2, empfohlen:true, aliase:['Heikat'] },
+  { code:'psnv_g', label:'PSNV-G – Psychosoziale Notfallversorgung Grundlagen', kategorie:K_EMP, ue:16, empfohlen:true, hinweis:'Empfohlen; Voraussetzung: PSU', aliase:['PSNV-1 – Grundlagen','PSNV'] },
+  { code:'rhd_fb', label:'Fortbildung/Wiederholung Fachdienstausbildung Rettungshund', kategorie:K_EMP, empfohlen:true, hinweis:'Empfohlen: regelmäßige Wiederholung (Staffel-Merkblatt).' },
+  { code:'wasser', label:'Wasserrettung / Wassersuche', kategorie:K_EMP },
+  { code:'abseilen', label:'Abseilen von Mensch und Hund (Trümmer)', kategorie:K_EMP },
+  { code:'mt_sichtung', label:'Mantrailing – Sichtung/Vorprüfung vor DRK-Prüfung', kategorie:K_EMP },
+  { code:'mt_polizei', label:'Mantrailing – Prüfung Polizei Hessen (einmalig nach DRK-Prüfung)', kategorie:K_EMP },
+  // 6) Führung
+  { code:'rkas', label:'RKAS – Rotkreuz-Aufbauseminar', kategorie:K_FUE, ue:16 },
+  { code:'teukm', label:'TEuKM – Teamentwicklung und Konfliktmanagement', kategorie:K_FUE, ue:16 },
+  { code:'gfue', label:'GFü – Gruppenführer:in', kategorie:K_FUE, ue:40, hinweis:'Rettungshunde Einsatz-Fachberater:in (GF-RHA): RKAS + TEuKM + GFü + Prüfung', aliase:['Gruppenführer:in','Gruppenf.','Gruppenführer im Katastrophenschutz'] },
+  { code:'gf_pruef', label:'Gruppenführer:in – Prüfung', kategorie:K_FUE, ue:2 },
+  { code:'psnv_e', label:'PSNV-E – Psychosoziale Notfallversorgung Einsatzkräfte Modul 1', kategorie:K_FUE, empfohlen:true, hinweis:'Empfohlen für Einsatz-Fachberater:innen' },
+  { code:'smufk', label:'SMuFK – Sozialmanagement und Freiwilligenkoordination', kategorie:K_FUE, ue:16 },
+  { code:'susm', label:'SuSM – Selbst- und Stressmanagement', kategorie:K_FUE, ue:16 },
+  { code:'zfue', label:'ZFü – Zugführer:in', kategorie:K_FUE, ue:40, hinweis:'Staffelleitung (ZF-RHA): GF-RHA + SMuFK + SuSM + ZFü + Prüfung' },
+  { code:'zf_pruef', label:'Zugführer:in – Prüfung', kategorie:K_FUE, ue:2 },
+  // 7) Sanitätsdienst
+  { code:'saniks', label:'SANiKS – SAN-EK im KatS', kategorie:K_SAN, ue:32 },
+  { code:'rettsan', label:'RettSAN – Rettungssanitäter:in', kategorie:K_SAN, ue:520 },
+  { code:'mtf', label:'MTF – Einweisung', kategorie:K_SAN, ue:8 },
+  { code:'bhp', label:'BHP – Seminar BHP der MTF', kategorie:K_SAN, ue:16 },
+  { code:'hige', label:'HiGE – Helfer im Großeinsatz', kategorie:K_SAN, ue:16 },
+  { code:'lsi', label:'LSi – Ladungssicherung', kategorie:K_SAN, ue:8 },
+  // 8) Betreuungsdienst & Verpflegung
+  { code:'btd04', label:'BtD-04 – Transportbegleitung Betroffener', kategorie:K_BT, ue:1 },
+  { code:'btd05', label:'BtD-05 – Materiallogistik', kategorie:K_BT, ue:4.5 },
+  { code:'btd06', label:'BtD-06 – Registrierung & Information', kategorie:K_BT, ue:3 },
+  { code:'btd07', label:'BtD-07 – Erkundung & Einrichtung', kategorie:K_BT, ue:9 },
+  { code:'btd08', label:'BtD-08 – Interkulturelle Kompetenzen', kategorie:K_BT, ue:3 },
+  { code:'btd09', label:'BtD-09 – Vernetzung & Komplexes Handeln', kategorie:K_BT, ue:4 },
+  { code:'btd11', label:'BtD-11 – Ausgabe v. Bedarfsgegenständen', kategorie:K_BT, ue:2 },
+  { code:'btd12', label:'BtD-12 – Soziale Betreuung', kategorie:K_BT, ue:8 },
+  { code:'psnv_b', label:'PSNV-B', kategorie:K_BT, ue:16 },
+  { code:'btd15', label:'BtD-15 – Ausgabe v. Verpflegung', kategorie:K_BT, ue:3 },
+  { code:'btd16', label:'BtD-16 – Planung & Beschaffung', kategorie:K_BT, ue:2 },
+  { code:'btd17', label:'BtD-17 – Beschaffung Lebensmittel', kategorie:K_BT, ue:2 },
+  { code:'btd18', label:'BtD-18 – Lagerung Lebensmittel', kategorie:K_BT, ue:2 },
+  { code:'btd19', label:'BtD-19 – Lebensmitteltransport', kategorie:K_BT, ue:2 },
+  { code:'btd20', label:'BtD-20 – Einrichtung Küchen & Lagern', kategorie:K_BT, ue:4 },
+  { code:'btd22', label:'BtD-22 – Dokumentation, HACCP', kategorie:K_BT, ue:2 },
+  { code:'btd23', label:'BtD-23 – Lebensmittelkunde', kategorie:K_BT, ue:2 },
+  { code:'btd24', label:'BtD-24 – Zubereitung Kaltverpflegung', kategorie:K_BT, ue:3 },
+  { code:'btd25', label:'BtD-25 – Zubereitung Warmverpflegung', kategorie:K_BT, ue:4 },
+  { code:'btd26', label:'BtD-26 – Einsatzkräfteverpflegung', kategorie:K_BT, ue:3 },
+  { code:'btd27', label:'BtD-27 – Trinkwasser', kategorie:K_BT, ue:3 },
+  { code:'btd28', label:'BtD-28 – Rückbau, Wartung, Pflege', kategorie:K_BT, ue:3 },
+  { code:'btd29', label:'BtD-29 – Mat. Zubereitung / Ausgabe', kategorie:K_BT, ue:4 },
+  { code:'btd30', label:'BtD-30 – Hygiene & Lebensmittelrecht', kategorie:K_BT, ue:3 },
+  { code:'fko', label:'FKo – Feldkoch/Feldköchin', kategorie:K_BT, ue:40 },
+  // 9) Technik & Logistik
+  { code:'btd14', label:'BtD-14 – Materialkunde & Instandhaltung', kategorie:K_TL, ue:6 },
+  { code:'tlg', label:'TLG – Technik & Logistik (Gerätewart)', kategorie:K_TL, ue:32 },
+  { code:'fkh', label:'FKH – Maschinist:in FKH Kärcher', kategorie:K_TL, ue:16 },
+  { code:'ms', label:'MS – Motorsäge Hessenforst LVH-F', kategorie:K_TL, ue:16 },
+  { code:'uwste', label:'UwSte – Unterw. Stromerzeuger KatS', kategorie:K_TL, ue:8 },
+  { code:'tw5k', label:'TW5k – Trinkwasser 5000', kategorie:K_TL, ue:16 },
+  { code:'twa1', label:'TWA1 – Trinkwasseraufbereitung 1', kategorie:K_TL, ue:16 },
+  { code:'twa2', label:'TWA2 – Trinkwasseraufbereitung 2', kategorie:K_TL, ue:16 },
+  { code:'twa3', label:'TWA3 – Trinkwasseraufbereitung 3', kategorie:K_TL, ue:16 },
+  // 10) Weitere KatS-Module
+  { code:'btd01', label:'BtD-01 – Aufgaben & takt. Einheiten', kategorie:K_KATS, ue:2 },
+  { code:'btd02', label:'BtD-02 – Einsatzabläufe', kategorie:K_KATS, ue:2.5 },
+  { code:'btd03', label:'BtD-03 – Einrichtungen & Strukturen', kategorie:K_KATS, ue:2.5 },
+  { code:'btd10', label:'BtD-10 – Infektions-, Arbeits- und Umweltschutz', kategorie:K_KATS, ue:3.5 },
+  { code:'btd13', label:'BtD-13 – Besondere Einsatzlagen', kategorie:K_KATS, ue:2 },
+  { code:'cbrn_g', label:'CBRN-G – Schutzausstattung', kategorie:K_KATS, ue:17 },
+  { code:'pue', label:'PÜ# – Praktische Übungen (alle FachD)', kategorie:K_KATS, ue:2 },
+  { code:'psu', label:'PSU – Psycho-Soziale Unterstützung', kategorie:K_KATS, ue:4 },
+  { code:'at', label:'AT# – Aktuelle Themen (alle FachD)', kategorie:K_KATS, ue:2 },
+].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null, aliase:[], ...q }));
+const QUALI_KATALOG_VERSION = 2;
+function qualiNorm(t){ return String(t||'').toLowerCase().replace(/[‐-–—]/g,'-').replace(/\s+/g,' ').trim(); }
+function qualiKatalogEintragFuer(label){
+  const n = qualiNorm(label);
+  return QUALIFIKATIONEN_KATALOG_VORSCHLAG.find(c=>qualiNorm(c.label)===n || c.aliase.some(a=>qualiNorm(a)===n)) || null;
+}
+function qualiFindenNachBezeichnung(label){
+  const n = qualiNorm(label);
+  const direkt = state.qualifikationen.find(q=>qualiNorm(q.label)===n);
+  if(direkt) return direkt;
+  const c = qualiKatalogEintragFuer(label);
+  return c ? state.qualifikationen.find(q=>q.code===c.code) || null : null;
+}
+function qualiSortSchluessel(q){
+  const ki = QUALI_KATEGORIEN.indexOf(q.kategorie);
+  const ci = q.code ? QUALIFIKATIONEN_KATALOG_VORSCHLAG.findIndex(c=>c.code===q.code) : -1;
+  return [(ki===-1?999:ki), (ci===-1?9999:ci), q.label];
+}
+function qualiSortiert(){
+  return [...state.qualifikationen].sort((a,b)=>{
+    const x=qualiSortSchluessel(a), y=qualiSortSchluessel(b);
+    return x[0]-y[0] || x[1]-y[1] || String(x[2]).localeCompare(String(y[2]),'de');
+  });
+}
+function qualiGruppiert(){
+  const gruppen = [];
+  qualiSortiert().forEach(q=>{
+    const k = QUALI_KATEGORIEN.includes(q.kategorie) ? q.kategorie : (q.kategorie ? 'Eigene Einträge · '+q.kategorie : 'Eigene Einträge');
+    let g = gruppen.find(x=>x.kategorie===k); if(!g){ g={kategorie:k, eintraege:[]}; gruppen.push(g); }
+    g.eintraege.push(q);
+  });
+  return gruppen;
+}
+function qualiOptionenHtml(ausgewaehltId){
+  return qualiGruppiert().map(g=>`<optgroup label="${esc(g.kategorie)}">${g.eintraege.map(q=>`<option value="${q.id}" data-intervall="${q.intervallMonate||''}" ${q.id===ausgewaehltId?'selected':''}>${esc(q.label)}${q.pflichtRHF?' ★':''}</option>`).join('')}</optgroup>`).join('');
+}
+// Bestehenden Katalog auf die neue Struktur bringen: Einträge per Code/Bezeichnung zuordnen, Doppelte zusammenführen
+// (Zuordnungen zu Personen werden umgehängt), fehlende ergänzen. Eigene Einträge bleiben erhalten.
+function qualiKatalogMigrieren(s){
+  s.meta = s.meta || {};
+  if((s.meta.qualiKatalogVersion||0) >= QUALI_KATALOG_VERSION) return;
+  const neu = [];
+  const verbraucht = new Set();
+  QUALIFIKATIONEN_KATALOG_VORSCHLAG.forEach(c=>{
+    const namen = [c.label, ...c.aliase].map(qualiNorm);
+    const treffer = s.qualifikationen.filter(q=>!verbraucht.has(q.id) && (q.code===c.code || namen.includes(qualiNorm(q.label))));
+    let q;
+    if(treffer.length){
+      q = treffer[0];
+      treffer.slice(1).forEach(d=>{
+        s.personQualifikationen.forEach(pq=>{ if(pq.qualifikationId===d.id) pq.qualifikationId = q.id; });
+        if(d.pflicht) q.pflicht = true;
+        if(!q.intervallMonate && d.intervallMonate) q.intervallMonate = d.intervallMonate;
+        verbraucht.add(d.id);
+      });
+      verbraucht.add(q.id);
+      q.code = c.code; q.label = c.label; q.kategorie = c.kategorie; q.ue = c.ue; q.pflichtRHF = c.pflichtRHF; q.empfohlen = c.empfohlen;
+      if(!q.intervallMonate && c.intervallMonate) q.intervallMonate = c.intervallMonate;
+      if(!q.hinweis) q.hinweis = c.hinweis;
+    } else {
+      const {aliase, ...rest} = c;
+      q = {id:uid(), ...rest};
+    }
+    neu.push(q);
+  });
+  const eigene = s.qualifikationen.filter(q=>!verbraucht.has(q.id));
+  s.qualifikationen = [...neu, ...eigene];
+  // Doppelte Zuordnungen nach dem Zusammenführen entfernen (gleiche Person, Qualifikation und Datum)
+  const gesehen = new Set();
+  s.personQualifikationen = s.personQualifikationen.filter(pq=>{
+    const k = pq.personId+'|'+pq.qualifikationId+'|'+(pq.datum||'');
+    if(gesehen.has(k)) return false; gesehen.add(k); return true;
+  });
+  s.meta.qualiKatalogVersion = QUALI_KATALOG_VERSION;
+}
 
 const ALLTAG_KATEGORIEN = [
   { id:'sozialisierung', label:'Sozialisierung' },
@@ -1131,7 +1241,8 @@ function migriereState(s){
     if(q.pflicht===undefined) q.pflicht = false;
     if(q.hinweis===undefined) q.hinweis = '';
   });
-  if(s.qualifikationen.length===0) s.qualifikationen = QUALIFIKATIONEN_KATALOG_VORSCHLAG.map(q=>({id:uid(), ...q}));
+  if(s.qualifikationen.length===0) s.qualifikationen = QUALIFIKATIONEN_KATALOG_VORSCHLAG.map(({aliase, ...q})=>({id:uid(), ...q}));
+  qualiKatalogMigrieren(s);
   s.meta = s.meta || {};
   s.meta.schemaVersion = BARRY_SCHEMA_VERSION;
   return s;
@@ -1169,7 +1280,8 @@ function seedState(){
     passwortHash: einfacherHash('admin'), mussPasswortAendern:true,
     angelegtAm: nowIso()
   });
-  s.qualifikationen = QUALIFIKATIONEN_KATALOG_VORSCHLAG.map(q=>({id:uid(), ...q}));
+  s.qualifikationen = QUALIFIKATIONEN_KATALOG_VORSCHLAG.map(({aliase, ...q})=>({id:uid(), ...q}));
+  s.meta = s.meta || {}; s.meta.qualiKatalogVersion = QUALI_KATALOG_VERSION;
   return s;
 }
 
@@ -1495,6 +1607,7 @@ function renderStartLeitungsHinweise(person){
   if(f.abgelaufen.length) hinweise.push({txt:`${f.abgelaufen.length} Qualifikation(en) abgelaufen`, unter:'fristen', warn:true});
   if(f.baldAblaufend.length) hinweise.push({txt:`${f.baldAblaufend.length} Qualifikation(en) laufen in den nächsten ${FRISTEN_BALD_TAGE} Tagen ab`, unter:'fristen', warn:true});
   if(f.fehlendePflicht.length) hinweise.push({txt:`${f.fehlendePflicht.length}× Pflichtqualifikation fehlt`, unter:'fristen', warn:true});
+  if(f.rhfLuecken.length) hinweise.push({txt:`${f.rhfLuecken.length} Rettungshundeführende mit offenen Pflichtausbildungen`, unter:'fristen', warn:true});
   if(f.hundeKurzDavor.filter(x=>x.anteil>=HUND_KURZ_DAVOR_ANTEIL).length) hinweise.push({txt:`${f.hundeKurzDavor.filter(x=>x.anteil>=HUND_KURZ_DAVOR_ANTEIL).length} Hund/Team-Modul(e) kurz vor Abschluss`, unter:'fristen'});
   if(f.jubilaeen.length) hinweise.push({txt:`🎉 ${f.jubilaeen.length} Jubiläum/Jubiläen ${f.heuteJahr}`, unter:'fristen'});
   if(f.duplikate.length && istLeitungOderAdmin(person)) hinweise.push({txt:`⚠️ ${f.duplikate.length} mögliche Personen-Duplikate`, unter:'personen', warn:true});
@@ -1903,15 +2016,23 @@ function bindTabHunde(){
 
 /* ---------- Qualifikationen ---------- */
 function renderTabQualifikationen(){
-  const katalogZeilen = state.qualifikationen.map(q=>{
+  const katalogZeile = q=>{
     const anzahl = state.personQualifikationen.filter(pq=>pq.qualifikationId===q.id).length;
     const badges = [
-      q.pflicht ? '<span class="badge" style="margin-left:6px">Pflicht</span>' : '',
+      q.pflichtRHF ? '<span class="badge" style="margin-left:6px">Pflicht RHF</span>' : '',
+      q.empfohlen ? '<span class="badge" style="margin-left:6px">empfohlen</span>' : '',
+      q.pflicht ? '<span class="badge" style="margin-left:6px">Pflicht alle</span>' : '',
       q.intervallMonate ? `<span class="badge" style="margin-left:6px">alle ${q.intervallMonate} Mon.</span>` : '',
     ].join('');
-    return `<tr><td>${esc(q.label)}${badges}${q.hinweis?`<br><span class="hint">${esc(q.hinweis)}</span>`:''}</td><td>${esc(q.kategorie)||'–'}</td><td>${anzahl} Personen</td>
+    return `<tr><td>${esc(q.label)}${badges}${q.hinweis?`<br><span class="hint">${esc(q.hinweis)}</span>`:''}</td><td style="white-space:nowrap">${q.ue?esc(String(q.ue))+' UE':'–'}</td><td style="white-space:nowrap">${anzahl}</td>
       <td><button class="btn btn-sm btn-ghost" data-del-qual="${q.id}">Entfernen</button></td></tr>`;
-  }).join('') || `<tr><td colspan="4" class="hint">Noch keine Qualifikationen im Katalog.</td></tr>`;
+  };
+  const katalogGruppen = qualiGruppiert();
+  const katalogHtml = katalogGruppen.map((g,gi)=>`
+    <details ${gi<3?'open':''} style="border-top:1px solid var(--line);padding:8px 0">
+      <summary style="cursor:pointer;font-weight:700">${esc(g.kategorie)} <span class="chip muted">${g.eintraege.length}</span></summary>
+      <div class="table-scroll"><table><thead><tr><th>Bezeichnung</th><th>UE</th><th>Personen</th><th></th></tr></thead><tbody>${g.eintraege.map(katalogZeile).join('')}</tbody></table></div>
+    </details>`).join('') || '<p class="hint">Noch keine Qualifikationen im Katalog.</p>';
 
   const zuordnungsZeilen = state.personQualifikationen.map(pq=>{
     const p = state.personen.find(x=>x.id===pq.personId);
@@ -1924,7 +2045,8 @@ function renderTabQualifikationen(){
     <div class="stack">
       <div class="card card-pad">
         <div class="spread"><h3>Qualifikationskatalog</h3><button class="btn btn-sm" id="btn-neue-qual">+ Qualifikation</button></div>
-        <table><thead><tr><th>Bezeichnung</th><th>Kategorie</th><th>Zuordnungen</th><th></th></tr></thead><tbody>${katalogZeilen}</tbody></table>
+        <p class="hint">Reihenfolge: zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (★ = Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt), danach Führung, Sanität, Betreuung, Technik. Diese Reihenfolge gilt auch in allen Auswahllisten.</p>
+        ${katalogHtml}
       </div>
       <div class="card card-pad">
         <div class="spread"><h3>Personen zuordnen</h3><button class="btn btn-sm" id="btn-neue-zuordnung" ${state.qualifikationen.length===0?'disabled':''}>+ Zuordnung</button></div>
@@ -1995,7 +2117,7 @@ function csvQualifikationenEinlesen(file){
         if(!personName || !qualLabel || (personName===CSV_QUAL_BEISPIEL[0] && qualLabel===CSV_QUAL_BEISPIEL[1])){ uebersprungen++; continue; }
         const person = state.personen.find(p=>p.name.trim().toLowerCase()===personName.toLowerCase());
         if(!person){ unbekanntePersonen.add(personName); continue; }
-        let qual = state.qualifikationen.find(q=>q.label.trim().toLowerCase()===qualLabel.toLowerCase());
+        let qual = qualiFindenNachBezeichnung(qualLabel);
         if(!qual){
           qual = { id:uid(), label:qualLabel, kategorie: idxKategorie>-1?(f[idxKategorie]||'').trim():'', intervallMonate:null, hinweis:'', pflicht:false };
           state.qualifikationen.push(qual); neueQualis++;
@@ -2089,6 +2211,14 @@ function fristenAuswertung(){
     });
   });
 
+  // Rettungshundeführende (Person führt mind. einen aktiven Hund): fehlende Pflichtausbildungen laut Dienstanweisung/Merkblatt
+  const rhfPflicht = qualiSortiert().filter(q=>q.pflichtRHF);
+  const rhfLuecken = aktivePersonen
+    .filter(p=>state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, p.id)))
+    .map(p=>({p, fehlt: rhfPflicht.filter(q=>!state.personQualifikationen.some(pq=>pq.personId===p.id && pq.qualifikationId===q.id))}))
+    .filter(x=>x.fehlt.length)
+    .sort((a,b)=>a.fehlt.length-b.fehlt.length);
+
   // Hunde/Teams: DRK-Module, die begonnen aber noch nicht abgeschlossen sind
   const hundeKurzDavor = [];
   aktiveHunde.forEach(h=>{
@@ -2113,10 +2243,10 @@ function fristenAuswertung(){
   });
   jubilaeen.sort((a,b)=>b.jahre-a.jahre);
 
-  return { abgelaufen, baldAblaufend, fehlendePflicht, pflichtQualis, hundeKurzDavor, jubilaeen, heuteJahr, duplikate: personenDuplikatGruppen() };
+  return { abgelaufen, baldAblaufend, fehlendePflicht, pflichtQualis, rhfLuecken, rhfPflichtAnzahl: rhfPflicht.length, hundeKurzDavor, jubilaeen, heuteJahr, duplikate: personenDuplikatGruppen() };
 }
 function renderTabFristen(){
-  const { abgelaufen, baldAblaufend, fehlendePflicht, pflichtQualis, hundeKurzDavor, jubilaeen, heuteJahr } = fristenAuswertung();
+  const { abgelaufen, baldAblaufend, fehlendePflicht, pflichtQualis, rhfLuecken, rhfPflichtAnzahl, hundeKurzDavor, jubilaeen, heuteJahr } = fristenAuswertung();
 
   const zeile = (label, rows) => rows.map(r=>label(r)).join('') || `<tr><td colspan="4" class="hint">Keine Einträge.</td></tr>`;
 
@@ -2134,6 +2264,12 @@ function renderTabFristen(){
         <h3>⚠️ Läuft bald ab (nächste ${FRISTEN_BALD_TAGE} Tage) (${baldAblaufend.length})</h3>
         <table><thead><tr><th>Person</th><th>Qualifikation</th><th>Noch</th><th>Am</th></tr></thead>
         <tbody>${zeile(r=>`<tr><td>${esc(r.p.name)}</td><td>${esc(r.q.label)}</td><td>${r.tage} Tage</td><td>${fmtDatum(r.pq.gueltigBis)}</td></tr>`, baldAblaufend)}</tbody></table>
+      </div>
+
+      <div class="card card-pad">
+        <h3>🐕 Pflichtausbildungen Rettungshundeführende (${rhfLuecken.length})</h3>
+        <p class="hint">Personen, die einen aktiven Hund führen, und die noch nicht alle ${rhfPflichtAnzahl} Pflicht-Einträge (★) laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt nachgewiesen haben. Zum Aufklappen antippen.</p>
+        ${rhfLuecken.map(x=>`<details style="border-top:1px dashed var(--line);padding:6px 0"><summary style="cursor:pointer"><strong>${esc(x.p.name)}</strong> – fehlt: ${x.fehlt.length} von ${rhfPflichtAnzahl}</summary><ul class="hint" style="margin:6px 0 0 -18px">${x.fehlt.map(q=>`<li>${esc(q.label)}</li>`).join('')}</ul></details>`).join('') || '<p class="hint">Alle Rettungshundeführenden haben die Pflichtausbildungen vollständig eingetragen.</p>'}
       </div>
 
       <div class="card card-pad">
@@ -2360,7 +2496,8 @@ function renderTabDatensicherung(){
       </ol>
       <p class="hint">Der Schnellstart <strong>ergänzt</strong> den Bestand (nichts wird ersetzt). Bereits vorhandene Personen und Hunde werden erkannt: keine Doppelungen, nur leere Felder werden nachgetragen; steht ein Hund bei einer zweiten Person, wird diese als Zweit-Hundeführer/in übernommen. Neue Personen erhalten das Startpasswort <strong>start</strong>.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap">
-        <button class="btn" id="btn-csv-vorlage" style="align-self:flex-start">Vorlage herunterladen (CSV)</button>
+        <button class="btn" id="btn-csv-vorlage" style="align-self:flex-start">Leere Vorlage (CSV)</button>
+        <button class="btn" id="btn-csv-bestand" style="align-self:flex-start">Aktuellen Bestand als Tabelle (CSV)</button>
         <label class="btn" for="in-csv-import" style="align-self:flex-start">Ausgefüllte Tabelle einlesen</label>
         <input type="file" id="in-csv-import" accept=".csv,text/csv" style="display:none">
       </div>
@@ -2404,6 +2541,7 @@ function bindTabDatensicherung(){
     bestandAusDateiImportieren(file);
   };
   document.getElementById('btn-csv-vorlage').onclick = ()=> csvSchnellstartVorlageHerunterladen();
+  const bb = document.getElementById('btn-csv-bestand'); if(bb) bb.onclick = ()=> csvSchnellstartBestandExportieren();
   document.getElementById('in-csv-import').onchange = (e)=>{
     const file = e.target.files[0]; e.target.value=''; if(!file) return;
     csvSchnellstartEinlesen(file);
@@ -2428,6 +2566,27 @@ function parseCsvDatum(s){
 function csvZeileEscapen(feld){
   const t = String(feld ?? '');
   return /[;"\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t;
+}
+function csvSchnellstartBestandExportieren(){
+  // Alle aktiven Personen (außer dem technischen Admin-Konto) mit ihren Hunden im Vorlagen-Format – extern ergänzen und wieder einlesen.
+  const de = iso => (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) ? iso.slice(8,10)+'.'+iso.slice(5,7)+'.'+iso.slice(0,4) : (iso||'');
+  const rolleVon = p => (p.rollen||[]).includes('leitung')||(p.rollen||[]).includes('admin') ? 'leitung' : (p.rollen||[]).some(r=>String(r).startsWith('ausbilder')) ? 'ausbilder' : 'mitglied';
+  const zeilen = [CSV_SCHNELLSTART_KOPF.join(';')];
+  state.personen.filter(p=>p.status!=='inaktiv').forEach(p=>{
+    const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && h.hundefuehrerId===p.id);
+    (hunde.length?hunde:[null]).forEach((h,i)=>{
+      const pl = sp => h ? ((h.plaketten||[]).find(x=>x.sparte===sp)?.nummer||'') : '';
+      const zweit = h && h.zweitHundefuehrerId ? (state.personen.find(x=>x.id===h.zweitHundefuehrerId)?.name||'') : '';
+      zeilen.push([p.name, i?'':rolleVon(p), i?'':(p.benutzername||''), i?'':de(p.geburtsdatum), i?'':de(p.mitgliedSeit),
+        h?h.name:'', h?(h.rasse||''):'', h?de(h.geburtsdatum):'', h?(h.geschlecht||''):'', h?(h.chipnummer||''):'',
+        h?(h.sparten||[]).join(','):'', pl('flaeche'), pl('truemmer'), pl('mantrailing'), zweit].map(csvZeileEscapen).join(';'));
+    });
+  });
+  const blob = new Blob(['\uFEFF'+zeilen.join('\r\n')+'\r\n'], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `BARRY_Mitglieder_Hunde_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast('Bestand als Tabelle exportiert.');
 }
 function csvSchnellstartVorlageHerunterladen(){
   const zeilen = [
@@ -2729,7 +2888,7 @@ function renderPersonQualifikationenBereich(p){
     <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
       <select id="pf-qual-neu" style="flex:1;min-width:160px">
         <option value="">– Qualifikation wählen –</option>
-        ${state.qualifikationen.map(q=>`<option value="${q.id}" data-intervall="${q.intervallMonate||''}">${esc(q.label)}</option>`).join('')}
+        ${qualiOptionenHtml()}
       </select>
       <input id="pf-qual-datum" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:auto">
       <input id="pf-qual-bis" type="date" placeholder="Gültig bis (optional)" style="width:auto">
@@ -3058,7 +3217,8 @@ function renderModalQualifikation(){
     <div class="modal-head"><h3>Qualifikation anlegen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Bezeichnung</label><input id="qf-label" placeholder="z. B. Rettungshundeführer RH-Fläche"></div>
-      <div class="field"><label>Kategorie (optional)</label><input id="qf-kategorie" placeholder="z. B. Fläche, Trümmer, Mantrailing, Sanität"></div>
+      <div class="field"><label>Kategorie</label><select id="qf-kategorie">${QUALI_KATEGORIEN.map(k=>`<option value="${esc(k)}" ${k===QUALI_KATEGORIEN[4]?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
+      <div class="field"><label class="row" style="gap:8px;align-items:center"><input id="qf-pflichtrhf" type="checkbox"> Pflicht für Rettungshundeführende (★)</label></div>
       <div class="field"><label>Wiederholung/Auffrischung alle … Monate (optional)</label><input id="qf-intervall" type="number" min="1" placeholder="z. B. 24"></div>
       <div class="field"><label class="row" style="gap:8px;align-items:center"><input id="qf-pflicht" type="checkbox"> Pflichtqualifikation (erscheint unter „Fristen & Lücken", wenn einer aktiven Person diese fehlt)</label></div>
     </div>
@@ -3076,6 +3236,7 @@ function bindModalQualifikation(){
       id:uid(), label, kategorie:document.getElementById('qf-kategorie').value.trim(),
       intervallMonate: intervallRoh ? Number(intervallRoh) : null,
       pflicht: document.getElementById('qf-pflicht').checked, hinweis:'',
+      pflichtRHF: document.getElementById('qf-pflichtrhf').checked, empfohlen:false, ue:null,
     });
     speichereState(); zeigeToast('Gespeichert.'); schliesseModal();
   };
@@ -3088,7 +3249,7 @@ function renderModalZuordnung(){
     <div class="modal-head"><h3>Qualifikation zuordnen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Person</label><select id="zf-person">${state.personen.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
-      <div class="field"><label>Qualifikation</label><select id="zf-qual">${state.qualifikationen.map(q=>`<option value="${q.id}" data-intervall="${q.intervallMonate||''}">${esc(q.label)}</option>`).join('')}</select></div>
+      <div class="field"><label>Qualifikation</label><select id="zf-qual">${qualiOptionenHtml()}</select></div>
       <div class="field"><label>Seit</label><input id="zf-datum" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
       <div class="field"><label>Gültig bis (optional — wird bei hinterlegtem Wiederholungsintervall automatisch vorgeschlagen)</label><input id="zf-bis" type="date"></div>
     </div>
@@ -7718,7 +7879,7 @@ const HILFE_ARTIKEL = [
   {id:"verwaltung-ueberblick", kategorie:"Verwaltung", titel:"Verwaltung: Wer sieht was?", rollen:["ausbilder", "leitung"], text:"\n<p>Ausbilder/-innen (alle drei Ausbilder-Rollen) sehen die Reiter <strong>Hunde, Qualifikationen, Fristen &amp; Lücken,\nAnwesenheit, Orte &amp; Gebiete</strong> \u2013 die f\u00fcr den laufenden Trainingsbetrieb wichtigen Bereiche.\nNur Staffel-/Bereitschaftsleitung und Admin sehen zus\u00e4tzlich <strong>Personen, Rollen &amp; Rechte</strong>\nund <strong>Datensicherung</strong>, sowie das Feld f\u00fcr den Staffelnamen oben auf dieser Seite.</p>\n"},
   {id:"verwaltung-personen", kategorie:"Verwaltung", titel:"Personen und Hunde anlegen und pflegen", rollen:["leitung"], text:"\n<p>Unter <strong>Personen</strong> werden neue Mitglieder mit Name, Rolle(n) und einem ersten Passwort\nangelegt. Der Status l\u00e4sst sich auf <strong>inaktiv</strong> setzen, wenn jemand pausiert oder die\nStaffel verl\u00e4sst, oder auf <strong>extern</strong> f\u00fcr G\u00e4ste/Einsatzkr\u00e4fte anderer Einheiten. Wichtig:\nIst eine Person oder ein Hund bereits in Trainings, Terminen o. \u00c4. verwendet, bietet BARRY statt\nL\u00f6schen automatisch \u201eauf inaktiv setzen\" an, damit keine historischen Daten verloren gehen. Ein\nHundef\u00fchrer-Wechsel wird zus\u00e4tzlich in einer kleinen Historie am Hund festgehalten.</p>\n"},
   {id:"verwaltung-rechte", kategorie:"Verwaltung", titel:"Rollen und individuelle Zusatzrechte vergeben", rollen:["leitung"], text:"\n<p>Beim Anlegen oder Bearbeiten einer Person werden die Rollen per H\u00e4kchen vergeben. Zus\u00e4tzlich lassen\nsich unter <strong>Rollen &amp; Rechte</strong> einzelne, frei benannte Zusatzrechte definieren; die\nbeiden vorbelegten Eintr\u00e4ge \u201eKalender verwalten\" und \u201eAusbildung verwalten\" wirken sich tats\u00e4chlich auf\ndie Berechtigung aus, auch wenn die Person keine Ausbilder-Rolle hat.</p>\n"},
-  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen (Rettungshundearbeit, DRK-Grundausbildung, KatS-Zusatzausbildung, Fachausbildungen Sanität/Technik/Verpflegung/Betreuung, Führung). Beim ersten Start ist er bereits vorbelegt und lässt sich ergänzen. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
+  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt und lässt sich um eigene Einträge ergänzen. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
   {id:"fristen", kategorie:"Verwaltung", titel:"Fristen & Lücken, Jubiläen und Erinnerungen", rollen:["ausbilder", "leitung"], text:"\n<p><strong>Verwaltung → Fristen &amp; Lücken</strong> wertet automatisch aus: abgelaufene und bald ablaufende Qualifikationen (auf Basis der „Gültig bis“-Daten), Personen ohne eine als Pflicht markierte Qualifikation, Hund/Team-Module, die kurz vor dem Abschluss stehen, sowie <strong>Jubiläen</strong> (5/10/15/… Jahre im DRK, aus „Mitglied im DRK seit“ im Personen-Dialog).</p>\n<p>Weil BARRY offline arbeitet, gibt es keine Push-Benachrichtigungen. Stattdessen zeigt die <strong>Startseite</strong> für Leitung und Ausbilder/-innen eine Karte „Für Leitung &amp; Ausbildung“ mit den wichtigsten offenen Punkten und den Terminen der nächsten sieben Tage inklusive Zusagen und fehlender Rückmeldungen – ein Klick führt zur jeweiligen Verwaltungsseite.</p>\n"},
   {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte. Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
   {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Die Leitung oder ein Admin vergibt unter Verwaltung → Personen → Person öffnen → „Passwort zurücksetzen“ ein neues Startpasswort.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
