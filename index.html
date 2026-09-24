@@ -1932,6 +1932,18 @@ function renderTabFristen(){
   });
   hundeKurzDavor.sort((a,b)=>b.anteil-a.anteil);
 
+  // Jubiläen: Mitgliedschaft im DRK seit X Jahren (5/10/15/…), bezogen auf das laufende Kalenderjahr
+  const heuteJahr = new Date().getFullYear();
+  const jubilaeen = [];
+  aktivePersonen.forEach(p=>{
+    if(!p.mitgliedSeit) return;
+    const startJahr = new Date(p.mitgliedSeit).getFullYear();
+    if(isNaN(startJahr)) return;
+    const jahre = heuteJahr - startJahr;
+    if(jahre>0 && jahre%5===0) jubilaeen.push({p, jahre, mitgliedSeit:p.mitgliedSeit});
+  });
+  jubilaeen.sort((a,b)=>b.jahre-a.jahre);
+
   const zeile = (label, rows) => rows.map(r=>label(r)).join('') || `<tr><td colspan="4" class="hint">Keine Einträge.</td></tr>`;
 
   return `
@@ -1961,6 +1973,13 @@ function renderTabFristen(){
         <h3>🐾 Hund/Team-Module kurz vor Abschluss (${hundeKurzDavor.length})</h3>
         <table><thead><tr><th>Hund/Team</th><th>Modul</th><th>Stand</th></tr></thead>
         <tbody>${zeile(r=>`<tr><td>${esc(teamLabel(r.h))}</td><td>${esc(r.m.label)}</td><td>${r.bestanden}/${r.gesamt} bestanden${r.anteil>=HUND_KURZ_DAVOR_ANTEIL?' — <strong>kurz davor</strong>':''}</td></tr>`, hundeKurzDavor)}</tbody></table>
+      </div>
+
+      <div class="card card-pad">
+        <h3>🎉 Jubiläen ${heuteJahr} (${jubilaeen.length})</h3>
+        <p class="hint">Mitgliedschaft im DRK seit 5, 10, 15 … Jahren, bezogen auf das laufende Kalenderjahr. Datum unter Verwaltung → Personen → „Mitglied im DRK seit" pflegen.</p>
+        <table><thead><tr><th>Person</th><th>Jubiläum</th><th>Mitglied seit</th></tr></thead>
+        <tbody>${zeile(r=>`<tr><td>${esc(r.p.name)}</td><td><strong>${r.jahre} Jahre</strong></td><td>${fmtDatum(r.mitgliedSeit)}</td></tr>`, jubilaeen)}</tbody></table>
       </div>
     </div>
   `;
@@ -2212,8 +2231,8 @@ function bindTabDatensicherung(){
 }
 
 /* ---------- Schnellstart-Import (CSV): Mitglieder & Hunde für neue Staffeln ---------- */
-const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','HundName','HundRasse','HundGeburtsdatum','HundGeschlecht','HundChipnummer','Sparten','PlaketteFlaeche','PlaketteTruemmer','PlaketteMantrailing'];
-const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','Bella','Labrador Retriever','2022-03-15','huendin','276093400690717','flaeche','','',''];
+const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','Geburtsdatum','MitgliedSeit','HundName','HundRasse','HundGeburtsdatum','HundGeschlecht','HundChipnummer','Sparten','PlaketteFlaeche','PlaketteTruemmer','PlaketteMantrailing'];
+const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','15.06.1990','01.09.2018','Bella','Labrador Retriever','2022-03-15','huendin','276093400690717','flaeche','','',''];
 function parseCsvDatum(s){
   // Erkennt gängige Datumsformate aus Excel/Calc (TT.MM.JJJJ, TT/MM/JJJJ, ISO) und liefert JJJJ-MM-TT oder '' zurück.
   const t = String(s||'').trim();
@@ -2236,7 +2255,7 @@ function csvSchnellstartVorlageHerunterladen(){
     CSV_SCHNELLSTART_BEISPIEL.map(csvZeileEscapen).join(';'),
   ];
   const hinweis = '# Bitte die Beispielzeile oben löschen oder überschreiben. Spalte "Rolle": mitglied, ausbilder oder leitung. '
-    + 'Spalte "HundGeburtsdatum": TT.MM.JJJJ (z. B. 22.03.2021) oder JJJJ-MM-TT. '
+    + '"Geburtsdatum" (der Person), "MitgliedSeit" (DRK-Eintrittsdatum) und "HundGeburtsdatum": TT.MM.JJJJ (z. B. 22.03.2021) oder JJJJ-MM-TT. '
     + 'Spalte "Sparten": flaeche, truemmer und/oder mantrailing (auch mit ä/ü geschrieben), mit Komma getrennt, kann leer bleiben. '
     + 'Spalte "HundGeschlecht": ruede oder huendin, kann leer bleiben. '
     + 'Spalten "PlaketteFlaeche"/"PlaketteTruemmer"/"PlaketteMantrailing": jeweils die Plaketten-/ID-Nr., falls die Prüfung schon bestanden ist, sonst leer lassen. '
@@ -2278,6 +2297,8 @@ function csvSchnellstartEinlesen(file){
       if(idxName === -1) throw new Error('Spalte "Name" nicht gefunden. Bitte die unveränderte Vorlage verwenden.');
       const idxRolle = kopf.indexOf('rolle');
       const idxBenutzername = kopf.indexOf('benutzername');
+      const idxGeburt = kopf.indexOf('geburtsdatum');
+      const idxMitgliedSeit = kopf.indexOf('mitgliedseit');
       const idxHundName = kopf.indexOf('hundname');
       const idxHundRasse = kopf.indexOf('hundrasse');
       const idxHundGeburt = kopf.indexOf('hundgeburtsdatum');
@@ -2297,7 +2318,9 @@ function csvSchnellstartEinlesen(file){
         const rolle = ['admin','leitung','ausbilder'].includes(rolleRoh) ? rolleRoh : 'mitglied';
         const person = {
           id: uid(), name, benutzername: idxBenutzername>-1 ? (f[idxBenutzername]||'').trim() : '',
-          mitgliedsnummer:'', dienstbuchNr:'', strasse:'', plz:'', ort:'', email:'', telefon:'',
+          mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum: idxGeburt>-1 ? parseCsvDatum(f[idxGeburt]) : '',
+          mitgliedSeit: idxMitgliedSeit>-1 ? parseCsvDatum(f[idxMitgliedSeit]) : '',
+          strasse:'', plz:'', ort:'', email:'', telefon:'',
           rollen:[rolle], zusatzrechte:[], status:'aktiv',
           passwortHash: startHash, mussPasswortAendern:true, angelegtAm: nowIso(),
         };
@@ -2431,9 +2454,62 @@ function bindModal(person){
 }
 
 /* ---- Person ---- */
+function renderPersonQualifikationenBereich(p){
+  const zuordnungen = state.personQualifikationen.filter(pq=>pq.personId===p.id);
+  const zeilen = zuordnungen.map(pq=>{
+    const q = state.qualifikationen.find(x=>x.id===pq.qualifikationId);
+    if(!q) return '';
+    return `<div class="row" style="justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed var(--line)">
+      <span>${esc(q.label)}${pq.datum?` <span class="hint">(seit ${fmtDatum(pq.datum)})</span>`:''}${pq.gueltigBis?` <span class="hint">– gültig bis ${fmtDatum(pq.gueltigBis)}</span>`:''}</span>
+      <button class="btn btn-sm btn-ghost" data-person-qual-entfernen="${pq.id}" type="button">✕</button>
+    </div>`;
+  }).join('') || '<p class="hint" style="margin:6px 0">Noch keine Qualifikation zugeordnet.</p>';
+  return `
+  <div class="field">
+    <label>Qualifikationen dieser Person</label>
+    <div id="pf-qual-liste">${zeilen}</div>
+    <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
+      <select id="pf-qual-neu" style="flex:1;min-width:160px">
+        <option value="">– Qualifikation wählen –</option>
+        ${state.qualifikationen.map(q=>`<option value="${q.id}" data-intervall="${q.intervallMonate||''}">${esc(q.label)}</option>`).join('')}
+      </select>
+      <input id="pf-qual-datum" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:auto">
+      <input id="pf-qual-bis" type="date" placeholder="Gültig bis (optional)" style="width:auto">
+      <button class="btn btn-sm btn-primary" id="pf-qual-hinzufuegen" type="button">+ Hinzufügen</button>
+    </div>
+  </div>`;
+}
+function bindPersonQualifikationenBereich(p){
+  const sel = document.getElementById('pf-qual-neu');
+  const bis = document.getElementById('pf-qual-bis');
+  const von = document.getElementById('pf-qual-datum');
+  if(!sel) return;
+  const vorschlagen = ()=>{
+    const monate = Number(sel.selectedOptions[0]?.dataset.intervall || 0);
+    if(!monate || bis.value || !von.value) return;
+    const d = new Date(von.value); d.setMonth(d.getMonth()+monate);
+    bis.value = d.toISOString().slice(0,10);
+  };
+  sel.onchange = vorschlagen;
+  von.onchange = vorschlagen;
+  document.getElementById('pf-qual-hinzufuegen').onclick = ()=>{
+    if(!sel.value){ alert('Bitte eine Qualifikation auswählen.'); return; }
+    state.personQualifikationen.push({id:uid(), personId:p.id, qualifikationId:sel.value, datum:von.value, gueltigBis:bis.value||null});
+    speichereState();
+    zeigeToast('Qualifikation zugeordnet.');
+    render();
+  };
+  document.querySelectorAll('[data-person-qual-entfernen]').forEach(b=>{
+    b.onclick = ()=>{
+      state.personQualifikationen = state.personQualifikationen.filter(pq=>pq.id!==b.dataset.personQualEntfernen);
+      speichereState();
+      render();
+    };
+  });
+}
 function renderModalPerson(){
   const bestehend = modal.id ? state.personen.find(p=>p.id===modal.id) : null;
-  const p = bestehend || {name:'',benutzername:'',mitgliedsnummer:'',dienstbuchNr:'',strasse:'',plz:'',ort:'',email:'',telefon:'',rollen:[],zusatzrechte:[],status:'aktiv',kmStandard:null};
+  const p = bestehend || {name:'',benutzername:'',mitgliedsnummer:'',dienstbuchNr:'',strasse:'',plz:'',ort:'',email:'',telefon:'',rollen:[],zusatzrechte:[],status:'aktiv',kmStandard:null,geburtsdatum:'',mitgliedSeit:''};
   return `
   <div class="modal-back"><div class="modal">
     <div class="modal-head"><h3>${bestehend?'Person bearbeiten':'Person anlegen'}</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
@@ -2445,6 +2521,10 @@ function renderModalPerson(){
         </div>
         <div class="field"><label>Mitgliedsnummer</label><input id="pf-mnr" value="${esc(p.mitgliedsnummer)}"></div>
         <div class="field"><label>Dienstbuch-Nr.</label><input id="pf-dnr" value="${esc(p.dienstbuchNr)}"></div>
+        <div class="field"><label>Geburtsdatum</label><input id="pf-geb" type="date" value="${esc(p.geburtsdatum||'')}"></div>
+        <div class="field"><label>Mitglied im DRK seit</label><input id="pf-mitglied-seit" type="date" value="${esc(p.mitgliedSeit||'')}">
+          <div class="hint">Für die Jubiläums-Übersicht (5/10/15/…/40 Jahre) unter Verwaltung → Fristen & Lücken.</div>
+        </div>
         <div class="field"><label>Status</label>
           <select id="pf-status"><option value="aktiv" ${p.status==='aktiv'?'selected':''}>aktiv</option><option value="extern" ${p.status==='extern'?'selected':''}>extern (Gast/Einsatzkraft anderer Einheit)</option><option value="inaktiv" ${p.status==='inaktiv'?'selected':''}>inaktiv</option></select>
         </div>
@@ -2480,6 +2560,7 @@ function renderModalPerson(){
       <div class="field"><button class="btn btn-sm" id="pf-pw-reset">Passwort zurücksetzen</button>
         <div class="hint" id="pf-pw-reset-hint"></div>
       </div>`}
+      ${bestehend?renderPersonQualifikationenBereich(bestehend):''}
     </div>
     <div class="modal-foot">
       ${bestehend?`<button class="btn btn-danger" id="m-loeschen" style="margin-right:auto">Löschen</button>`:''}
@@ -2491,6 +2572,7 @@ function renderModalPerson(){
 function bindModalPerson(){
   document.getElementById('m-schliessen').onclick = schliesseModal;
   document.getElementById('m-abbrechen').onclick = schliesseModal;
+  if(modal.id) bindPersonQualifikationenBereich(state.personen.find(x=>x.id===modal.id));
   if(!modal.id){
     const nameFeld = document.getElementById('pf-name');
     const buFeld = document.getElementById('pf-benutzername');
@@ -2538,6 +2620,8 @@ function bindModalPerson(){
     const daten = {
       name, benutzername, mitgliedsnummer:document.getElementById('pf-mnr').value.trim(),
       dienstbuchNr:document.getElementById('pf-dnr').value.trim(),
+      geburtsdatum:document.getElementById('pf-geb').value,
+      mitgliedSeit:document.getElementById('pf-mitglied-seit').value,
       strasse:document.getElementById('pf-strasse').value.trim(),
       plz:document.getElementById('pf-plz').value.trim(), ort:document.getElementById('pf-ort').value.trim(),
       email:document.getElementById('pf-email').value.trim(), telefon:document.getElementById('pf-telefon').value.trim(),
