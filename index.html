@@ -4120,6 +4120,62 @@ function pruefungVorschlagZiehen(hundId){
   if(!uebung) return null;
   return { modul:wahl.modul, modulLabel:wahl.modulLabel, el:wahl.el, uebung };
 }
+/* ---- Import/Export Modulprüfungen (CSV, additiv) — markiert bei "bestanden" alle Elemente des Moduls ---- */
+const CSV_MODUL_KOPF = ['Team','Modul','Status'];
+const CSV_MODUL_BEISPIEL = ['Mäx (Michèle Boos)','drk12','bestanden'];
+const MODUL_STATUS_ERLAUBT = PRUEFUNG_STATUS.map(s=>s.id);
+function csvModulVorlageHerunterladen(){
+  const zeilen = [ CSV_MODUL_KOPF.join(';'), CSV_MODUL_BEISPIEL.map(csvZeileEscapen).join(';') ];
+  const hinweis = '# Bitte die Beispielzeile löschen/überschreiben. "Team" muss exakt dem Team-Namen in BARRY entsprechen (Hundename oder "Hund (Hundeführer)"). '
+    + '"Modul" ist eines von: drk11 (1.1 Verhalten), drk12 (1.2 Grundgehorsam), drk13 (1.3 Gewandtheit). '
+    + '"Status" ist eines von: ' + MODUL_STATUS_ERLAUBT.join(', ') + ' — bei "bestanden" werden automatisch ALLE Elemente dieses Moduls für das Team auf diesen Status gesetzt.';
+  const csv = '\uFEFF' + zeilen.join('\r\n') + '\r\n' + hinweis + '\r\n';
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'BARRY_Modulpruefungen_Vorlage.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+function modulTeamFinden(name){
+  const n = name.trim().toLowerCase();
+  return state.hunde.find(h=>teamLabel(h).trim().toLowerCase()===n || (h.name||'').trim().toLowerCase()===n);
+}
+function csvModulEinlesen(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const text = String(reader.result).replace(/^\uFEFF/, '');
+      const zeilen = text.split(/\r\n|\r|\n/).filter(z=>z.trim() && !z.trim().startsWith('#'));
+      if(zeilen.length < 2) throw new Error('Die Datei enthält außer der Kopfzeile keine Einträge.');
+      const kopf = csvZeileParsen(zeilen[0]).map(h=>h.toLowerCase());
+      const idxTeam = kopf.indexOf('team'), idxModul = kopf.indexOf('modul'), idxStatus = kopf.indexOf('status');
+      if(idxTeam===-1 || idxModul===-1 || idxStatus===-1) throw new Error('Spalten "Team", "Modul" und "Status" nicht gefunden.');
+      const moduleElemente = {drk11:DRK_VERHALTEN, drk12:DRK_GRUNDGEHORSAM, drk13:DRK_GEWANDTHEIT};
+      let gesetzt=0, uebersprungen=0; const unbekannteTeams=new Set();
+      for(let i=1;i<zeilen.length;i++){
+        const f = csvZeileParsen(zeilen[i]);
+        const teamName=(f[idxTeam]||'').trim(), modul=(f[idxModul]||'').trim(), status=(f[idxStatus]||'').trim();
+        if(!teamName || !modul || (teamName===CSV_MODUL_BEISPIEL[0])){ uebersprungen++; continue; }
+        if(!moduleElemente[modul] || !MODUL_STATUS_ERLAUBT.includes(status)){ uebersprungen++; continue; }
+        const team = modulTeamFinden(teamName);
+        if(!team){ unbekannteTeams.add(teamName); continue; }
+        moduleElemente[modul].forEach(el=>{
+          let eintrag = state.pruefungsstatus.find(p=>p.hundId===team.id && p.modul===modul && p.elementId===el.id);
+          if(eintrag) eintrag.status = status;
+          else state.pruefungsstatus.push({id:uid(), hundId:team.id, modul, elementId:el.id, status});
+        });
+        gesetzt++;
+      }
+      if(gesetzt===0){ alert('Keine gültigen Zeilen übernommen.' + (unbekannteTeams.size?' Unbekannte Teams: '+[...unbekannteTeams].join(', '):'')); return; }
+      let meldung = `${gesetzt} Modul-Status werden gesetzt`+(uebersprungen?`, ${uebersprungen} Zeile(n) übersprungen`:'')+(unbekannteTeams.size?`. Unbekannte Teams (übersprungen): ${[...unbekannteTeams].join(', ')}`:'')+'. Fortfahren?';
+      if(!confirm(meldung)) return;
+      speichereState();
+      zeigeToast(`${gesetzt} Modul-Status übernommen.`);
+      render();
+    }catch(err){ alert('Die Tabelle konnte nicht eingelesen werden: '+err.message); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
 function renderPruefungVorschlagKarte(hid){
   return `
     <div class="card card-pad" style="margin-bottom:18px;background:var(--t-ausbildung-soft);border:none;border-left:5px solid var(--t-ausbildung)">
@@ -4190,6 +4246,16 @@ function renderAusbildungPruefung(person){
     </div>
     ${renderRasseLebensphaseKarte(hunde.find(h=>h.id===hid))}
     ${renderPruefungVorschlagKarte(hid)}
+
+    <div class="card card-pad" style="margin-bottom:18px">
+      <h3>Modulprüfungen aus Tabelle übernehmen</h3>
+      <p class="hint">Für viele Teams auf einmal: markiert bei „bestanden" automatisch alle Elemente von DRK 1.1/1.2/1.3 für das jeweilige Team.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btn-modul-csv-vorlage">Vorlage herunterladen (CSV)</button>
+        <label class="btn btn-sm" for="in-modul-csv-import" style="cursor:pointer">Ausgefüllte Tabelle einlesen</label>
+        <input type="file" id="in-modul-csv-import" accept=".csv,text/csv" style="display:none">
+      </div>
+    </div>
 
     <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
       <div class="spread"><h3>DRK Modul 1.1 — Verhalten und Grundfertigkeiten</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk11',DRK_VERHALTEN.map(e=>e.id))}</span></div>
@@ -4268,6 +4334,10 @@ function bindAusbildungPruefung(person){
   if(sel) sel.onchange = e=>{ pruefungHundId = e.target.value; pruefungVorschlag = null; pruefungVorschlagVersucht = false; render(); };
   const verbandSel = document.getElementById('pf-verband');
   if(verbandSel) verbandSel.onchange = e=>{ pruefungVerband = e.target.value; render(); };
+  const btnModulVorlage = document.getElementById('btn-modul-csv-vorlage');
+  if(btnModulVorlage) btnModulVorlage.onclick = ()=>csvModulVorlageHerunterladen();
+  const inModulCsv = document.getElementById('in-modul-csv-import');
+  if(inModulCsv) inModulCsv.onchange = e=>{ const f=e.target.files[0]; e.target.value=''; if(f) csvModulEinlesen(f); };
   const btnVorschlag = document.getElementById('btn-pf-vorschlag');
   if(btnVorschlag) btnVorschlag.onclick = ()=>{
     pruefungVorschlag = pruefungVorschlagZiehen(pruefungHundId);
