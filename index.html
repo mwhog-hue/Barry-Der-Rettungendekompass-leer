@@ -2212,8 +2212,8 @@ function bindTabDatensicherung(){
 }
 
 /* ---------- Schnellstart-Import (CSV): Mitglieder & Hunde für neue Staffeln ---------- */
-const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','HundName','HundRasse','HundGeburtsdatum','Sparten'];
-const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','Bella','Labrador Retriever','2022-03-15','flaeche'];
+const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','HundName','HundRasse','HundGeburtsdatum','HundGeschlecht','HundChipnummer','Sparten','PlaketteFlaeche','PlaketteTruemmer','PlaketteMantrailing'];
+const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','Bella','Labrador Retriever','2022-03-15','huendin','276093400690717','flaeche','','',''];
 function csvZeileEscapen(feld){
   const t = String(feld ?? '');
   return /[;"\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t;
@@ -2225,6 +2225,8 @@ function csvSchnellstartVorlageHerunterladen(){
   ];
   const hinweis = '# Bitte die Beispielzeile oben löschen oder überschreiben. Spalte "Rolle": mitglied, ausbilder oder leitung. '
     + 'Spalte "Sparten": flaeche, truemmer und/oder mantrailing, mit Komma getrennt, kann leer bleiben. '
+    + 'Spalte "HundGeschlecht": ruede oder huendin, kann leer bleiben. '
+    + 'Spalten "PlaketteFlaeche"/"PlaketteTruemmer"/"PlaketteMantrailing": jeweils die Plaketten-/ID-Nr., falls die Prüfung schon bestanden ist, sonst leer lassen. '
     + 'HundName/HundRasse/HundGeburtsdatum/Sparten dürfen leer bleiben, wenn die Person (noch) keinen eigenen Hund führt.';
   const csv = '\uFEFF' + zeilen.join('\r\n') + '\r\n' + hinweis + '\r\n';
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
@@ -2266,7 +2268,12 @@ function csvSchnellstartEinlesen(file){
       const idxHundName = kopf.indexOf('hundname');
       const idxHundRasse = kopf.indexOf('hundrasse');
       const idxHundGeburt = kopf.indexOf('hundgeburtsdatum');
+      const idxHundGeschlecht = kopf.indexOf('hundgeschlecht');
+      const idxHundChip = kopf.indexOf('hundchipnummer');
       const idxSparten = kopf.indexOf('sparten');
+      const idxPlFl = kopf.indexOf('plaketteflaeche');
+      const idxPlTr = kopf.indexOf('plakettetruemmer');
+      const idxPlMt = kopf.indexOf('plakettemantrailing');
       let neuePersonen=0, neueHunde=0, uebersprungen=0;
       const startHash = einfacherHash('start');
       for(let i=1;i<zeilen.length;i++){
@@ -2285,11 +2292,18 @@ function csvSchnellstartEinlesen(file){
         const hundName = idxHundName>-1 ? (f[idxHundName]||'').trim() : '';
         if(hundName){
           const sparten = idxSparten>-1 ? rhsSpartenNormalisieren((f[idxSparten]||'')) : [];
+          const geschlechtRoh = idxHundGeschlecht>-1 ? (f[idxHundGeschlecht]||'').trim().toLowerCase() : '';
+          const geschlecht = ['ruede','huendin'].includes(geschlechtRoh) ? geschlechtRoh : '';
+          const plaketten = [];
+          if(idxPlFl>-1 && (f[idxPlFl]||'').trim()) plaketten.push({sparte:'flaeche', nummer:(f[idxPlFl]||'').trim(), datum:''});
+          if(idxPlTr>-1 && (f[idxPlTr]||'').trim()) plaketten.push({sparte:'truemmer', nummer:(f[idxPlTr]||'').trim(), datum:''});
+          if(idxPlMt>-1 && (f[idxPlMt]||'').trim()) plaketten.push({sparte:'mantrailing', nummer:(f[idxPlMt]||'').trim(), datum:''});
           const hund = {
             id: uid(), name: hundName,
             rasse: idxHundRasse>-1 ? (f[idxHundRasse]||'').trim() : '',
             geburtsdatum: idxHundGeburt>-1 ? (f[idxHundGeburt]||'').trim() : '',
-            hundefuehrerId: person.id, status:'aktiv', sparten, anzeigeart:'', rassegruppe:'',
+            geschlecht, chipnummer: idxHundChip>-1 ? (f[idxHundChip]||'').trim() : '',
+            hundefuehrerId: person.id, status:'aktiv', sparten, anzeigeart:'', rassegruppe:'', plaketten,
           };
           rhsSicherstellen(hund);
           state.hunde.push(hund); neueHunde++;
@@ -2538,14 +2552,22 @@ function bindModalPerson(){
 /* ---- Hund ---- */
 function renderModalHund(){
   const bestehend = modal.id ? state.hunde.find(h=>h.id===modal.id) : null;
-  const h = bestehend || {name:'',rasse:'',geburtsdatum:'',hundefuehrerId:'',status:'aktiv',sparten:[],anzeigeart:'',rassegruppe:''};
+  const h = bestehend || {name:'',rasse:'',geburtsdatum:'',hundefuehrerId:'',status:'aktiv',sparten:[],anzeigeart:'',rassegruppe:'',geschlecht:'',chipnummer:'',plaketten:[]};
   return `
   <div class="modal-back"><div class="modal">
     <div class="modal-head"><h3>${bestehend?'Hund bearbeiten':'Hund anlegen'}</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Name</label><input id="hf-name" value="${esc(h.name)}"></div>
       <div class="field"><label>Rasse</label><input id="hf-rasse" value="${esc(h.rasse)}"></div>
-      <div class="field"><label>Geburtsdatum</label><input id="hf-geb" type="date" value="${esc(h.geburtsdatum)}"></div>
+      <div class="field"><label>Geburtsdatum (Wurftag)</label><input id="hf-geb" type="date" value="${esc(h.geburtsdatum)}"></div>
+      <div class="field"><label>Geschlecht</label>
+        <select id="hf-geschlecht">
+          <option value="" ${!h.geschlecht?'selected':''}>– nicht angegeben –</option>
+          <option value="ruede" ${h.geschlecht==='ruede'?'selected':''}>Rüde</option>
+          <option value="huendin" ${h.geschlecht==='huendin'?'selected':''}>Hündin</option>
+        </select>
+      </div>
+      <div class="field"><label>Chip-/Identifikationsnummer</label><input id="hf-chip" value="${esc(h.chipnummer||'')}" placeholder="z. B. 276093400690717"></div>
       <div class="field"><label>Hundeführer/in</label>
         <select id="hf-fuehrer"><option value="">– keine/r zugeordnet –</option>
         ${state.personen.map(p=>`<option value="${p.id}" ${h.hundefuehrerId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
@@ -2571,6 +2593,22 @@ function renderModalHund(){
         ${RH_ANZEIGEARTEN.map(a=>`<option value="${a.id}" ${h.anzeigeart===a.id?'selected':''}>${esc(a.label)}</option>`).join('')}
         </select>
       </div>
+      <div class="field">
+        <div class="spread"><label style="margin:0">Plaketten (nach bestandener Fläche-/Trümmerprüfung)</label><button class="btn btn-sm btn-ghost" id="hf-plakette-add" type="button">+ Plakette</button></div>
+        <div id="hf-plaketten-liste">
+          ${(h.plaketten||[]).map((pl,i)=>`
+            <div class="row" style="gap:6px;margin-top:6px" data-plakette-row="${i}">
+              <select data-plakette-sparte="${i}" style="width:auto">
+                <option value="flaeche" ${pl.sparte==='flaeche'?'selected':''}>Fläche</option>
+                <option value="truemmer" ${pl.sparte==='truemmer'?'selected':''}>Trümmer</option>
+                <option value="mantrailing" ${pl.sparte==='mantrailing'?'selected':''}>Mantrailing</option>
+              </select>
+              <input data-plakette-nummer="${i}" value="${esc(pl.nummer||'')}" placeholder="Plaketten-/ID-Nr.">
+              <input data-plakette-datum="${i}" type="date" value="${esc(pl.datum||'')}">
+              <button class="btn btn-sm btn-ghost" data-plakette-entfernen="${i}" type="button">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>
       <p class="hint">Sparten und Anzeigeart werden für den Datenaustausch mit den Assistenten-Apps (Mantrailing, Trümmersuche, Fläche/Taktik) verwendet. Rassegruppe und Lebensphase (aus dem Geburtsdatum berechnet) liefern Trainingshinweise unter Ausbildung & Team.</p>
     </div>
     <div class="modal-foot">
@@ -2583,6 +2621,32 @@ function renderModalHund(){
 function bindModalHund(){
   document.getElementById('m-schliessen').onclick = schliesseModal;
   document.getElementById('m-abbrechen').onclick = schliesseModal;
+  let plakettenDraft = (modal.id ? state.hunde.find(h=>h.id===modal.id) : null)?.plaketten ? [...state.hunde.find(h=>h.id===modal.id).plaketten] : [];
+  function plakettenNeuRendern(){
+    document.getElementById('hf-plaketten-liste').innerHTML = plakettenDraft.map((pl,i)=>`
+      <div class="row" style="gap:6px;margin-top:6px" data-plakette-row="${i}">
+        <select data-plakette-sparte="${i}" style="width:auto">
+          <option value="flaeche" ${pl.sparte==='flaeche'?'selected':''}>Fläche</option>
+          <option value="truemmer" ${pl.sparte==='truemmer'?'selected':''}>Trümmer</option>
+          <option value="mantrailing" ${pl.sparte==='mantrailing'?'selected':''}>Mantrailing</option>
+        </select>
+        <input data-plakette-nummer="${i}" value="${esc(pl.nummer||'')}" placeholder="Plaketten-/ID-Nr.">
+        <input data-plakette-datum="${i}" type="date" value="${esc(pl.datum||'')}">
+        <button class="btn btn-sm btn-ghost" data-plakette-entfernen="${i}" type="button">✕</button>
+      </div>`).join('');
+    plakettenWiring();
+  }
+  function plakettenWiring(){
+    document.querySelectorAll('[data-plakette-sparte]').forEach(s=>{ s.onchange=()=>{ plakettenDraft[+s.dataset.plaketteSparte].sparte = s.value; }; });
+    document.querySelectorAll('[data-plakette-nummer]').forEach(s=>{ s.oninput=()=>{ plakettenDraft[+s.dataset.plaketteNummer].nummer = s.value; }; });
+    document.querySelectorAll('[data-plakette-datum]').forEach(s=>{ s.onchange=()=>{ plakettenDraft[+s.dataset.plaketteDatum].datum = s.value; }; });
+    document.querySelectorAll('[data-plakette-entfernen]').forEach(s=>{ s.onclick=()=>{ plakettenDraft.splice(+s.dataset.plaketteEntfernen,1); plakettenNeuRendern(); }; });
+  }
+  plakettenWiring();
+  document.getElementById('hf-plakette-add').onclick = ()=>{
+    plakettenDraft.push({sparte:'flaeche', nummer:'', datum:''});
+    plakettenNeuRendern();
+  };
   if(modal.id){
     document.getElementById('m-loeschen').onclick = ()=>{
       if(hundReferenziert(modal.id)){
@@ -2603,10 +2667,13 @@ function bindModalHund(){
     const daten = {
       name, rasse:document.getElementById('hf-rasse').value.trim(),
       geburtsdatum:document.getElementById('hf-geb').value,
+      geschlecht:document.getElementById('hf-geschlecht').value,
+      chipnummer:document.getElementById('hf-chip').value.trim(),
       hundefuehrerId:document.getElementById('hf-fuehrer').value,
       status:document.getElementById('hf-status').value,
       sparten, anzeigeart: document.getElementById('hf-anzeigeart').value,
       rassegruppe: document.getElementById('hf-rassegruppe').value,
+      plaketten: plakettenDraft.filter(pl=>pl.nummer && pl.nummer.trim()),
     };
     if(modal.id){
       const hundAlt = state.hunde.find(h=>h.id===modal.id);
@@ -3602,6 +3669,7 @@ const WISSEN_TABS = [
   {id:'material', label:'Lehrmaterial'},
 ];
 const LEHRMATERIAL_KATEGORIEN = [
+  { id:'formular', label:'Formular/Vordruck' },
   { id:'uebung', label:'Übung' },
   { id:'trainingseinheit', label:'Trainingseinheit' },
   { id:'karte', label:'Karte/Kartenmaterial' },
