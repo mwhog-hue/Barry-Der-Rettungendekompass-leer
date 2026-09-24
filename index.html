@@ -196,7 +196,10 @@ tr.clickable:hover{background:#fafbfb;cursor:pointer}
   .sidebar.open{transform:translateX(0);box-shadow:8px 0 24px rgba(0,0,0,.15)}
   .topbar{display:flex}
   .content{padding:20px 16px}
-  .grid-2,.grid-3{grid-template-columns:1fr}
+  .grid-2{grid-template-columns:1fr}
+  .grid-3{grid-template-columns:repeat(3,1fr);gap:8px}
+  .grid-3 .card-pad{padding:10px 8px}
+  .grid-3 h2{font-size:1.3rem;margin:2px 0 0}
 }
 </style>
 </head>
@@ -1051,8 +1054,9 @@ function leererState(){
 function nowIso(){ return new Date().toISOString(); }
 // Prüft, ob eine Person oder ein Hund noch in historischen Daten referenziert wird –
 // harte Löschung würde diese Daten sonst verwaisen lassen (siehe Prüfbericht A3).
+function hundGefuehrtVon(h, personId){ return !!personId && (h.hundefuehrerId===personId || h.zweitHundefuehrerId===personId); }
 function personReferenziert(personId){
-  return state.hunde.some(h=>h.hundefuehrerId===personId)
+  return state.hunde.some(h=>hundGefuehrtVon(h, personId))
     || state.trainingseintraege.some(e=>e.personId===personId)
     || state.alltagseintraege.some(e=>e.personId===personId)
     || state.mantrailingEintraege.some(e=>e.personId===personId)
@@ -1117,6 +1121,11 @@ function migriereState(s){
   [['zr_kalender_verwalten','Kalender/Termine verwalten (auch ohne Ausbilder-Rolle)'],['zr_ausbildung_verwalten','Trainingsdokumentation/Prüfstatus verwalten (auch ohne Ausbilder-Rolle)']]
     .forEach(([id,label])=>{ if(!s.zusatzrechteKatalog.some(z=>z.id===id)) s.zusatzrechteKatalog.unshift({id,label}); });
   s.hunde = s.hunde.filter(h=>h && h.id);
+  // Datumsfelder aus älteren Importen (TT.MM.JJJJ als Text) einmalig in ISO umwandeln, damit Datumsfelder sie anzeigen.
+  const datumNormalisieren = v => (typeof v==='string' && v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) ? (parseCsvDatum(v) || v) : v;
+  s.hunde.forEach(h=>{ h.geburtsdatum = datumNormalisieren(h.geburtsdatum); (h.plaketten||[]).forEach(pl=>{ pl.datum = datumNormalisieren(pl.datum); }); });
+  s.personen.forEach(p=>{ p.geburtsdatum = datumNormalisieren(p.geburtsdatum); p.mitgliedSeit = datumNormalisieren(p.mitgliedSeit); });
+  s.personQualifikationen.forEach(pq=>{ pq.datum = datumNormalisieren(pq.datum); pq.gueltigBis = datumNormalisieren(pq.gueltigBis); });
   s.qualifikationen.forEach(q=>{
     if(q.intervallMonate===undefined) q.intervallMonate = null;
     if(q.pflicht===undefined) q.pflicht = false;
@@ -1374,10 +1383,10 @@ function renderStart(person){
   const istLeitung = istLeitungOderAdmin(person);
   const heute = new Date(); heute.setHours(0,0,0,0);
   const naechsteTermine = [...state.termine]
-    .filter(t=>(t.sichtbarkeit||'staff')==='staff' && new Date(t.ende||t.beginn) >= heute)
+    .filter(t=>terminSichtbarFuer(t, person) && !(t.sichtbarkeit==='personal' && t.ownerId!==person.id) && new Date(t.ende||t.beginn) >= heute)
     .sort((a,b)=> new Date(a.beginn)-new Date(b.beginn))
     .slice(0,4);
-  const eigeneHunde = state.hunde.filter(h=>h.status!=='inaktiv' && h.hundefuehrerId===person.id);
+  const eigeneHunde = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
   // Schnellzugriffe: eigene Sparten-Präferenz zuerst, sonst die im Klub übliche Priorität Fläche → Trümmer → Mantrailing.
   const spartenSchnellzugriffe = [
     {id:'flaechensuche', label:RH_DISCIPLINES.flaechensuche.label, art:'rh'},
@@ -1404,12 +1413,12 @@ function renderStart(person){
           const status = r?.status || 'offen';
           return `
           <div class="card-pad" style="border-top:1px solid var(--line);padding-left:0;padding-right:0">
-            <strong>${terminDatumKurz(t)} · ${esc(t.titel)}</strong>
+            <strong>${terminDatumKurz(t)} · ${esc(t.titel)}</strong>${t.sichtbarkeit==='trainer'?' <span class="chip muted">nur Ausbilder</span>':t.sichtbarkeit==='personal'?' <span class="chip muted">persönlich</span>':''}
             ${t.ort?`<div class="hint">${esc(t.ort)}</div>`:''}
-            <div class="row" style="margin-top:6px">
+            ${(t.sichtbarkeit||'staff')==='staff'?`<div class="row" style="margin-top:6px">
               <button class="btn btn-sm ${status==='zusage'?'btn-primary':'btn-ghost'}" data-rm-termin="${t.id}" data-rm-status="zusage">Dabei</button>
               <button class="btn btn-sm ${status==='absage'?'btn-primary':'btn-ghost'}" data-rm-termin="${t.id}" data-rm-status="absage">Nicht dabei</button>
-            </div>
+            </div>`:''}
           </div>`;
         }).join('') || '<p class="hint">Keine anstehenden Termine.</p>'}
       </div>
@@ -1428,7 +1437,9 @@ function renderStart(person){
       </div>
     </div>
 
-    <div class="card card-pad" style="margin-bottom:20px">
+    ${(istLeitung || hatAusbilderRecht(person)) ? renderStartLeitungsHinweise(person) : ''}
+    ${renderUebungDesTages(person, eigeneHunde)}
+    <div class="card card-pad" style="margin:20px 0">
       <div class="hint">Gemeinsam dokumentiert – letzte 30 Tage</div>
       <h2>${trainingsDieserMonat} Trainingseinträge</h2>
       <p class="hint">Jeder dokumentierte Trainingstag bringt die Teams messbar voran – weiter so!</p>
@@ -1439,17 +1450,80 @@ function renderStart(person){
       <div class="card card-pad"><div class="hint">Hunde</div><h2>${state.hunde.filter(h=>h.status!=='inaktiv').length}</h2></div>
       <div class="card card-pad"><div class="hint">Qualifikationen im Katalog</div><h2>${state.qualifikationen.length}</h2></div>
     </div>
-    ${istLeitung?`
-    <div class="card card-pad">
-      <h3>Für Leitung/Admin</h3>
-      <p class="hint" style="max-width:60ch">Neue Mitglieder, Hunde und Rollen pflegst du unter „Verwaltung". Einen eigenen Staffelnamen kannst du dort ebenfalls hinterlegen.</p>
-    </div>`:''}
     ${modal ? renderModal() : ''}
   `;
+}
+function uebungDesTagesWaehlen(eigeneHunde){
+  // Deterministisch pro Tag (gleiche Übung den ganzen Tag), gewichtet nach den Sparten der eigenen Hunde.
+  const sparten = [...new Set(eigeneHunde.flatMap(h=>h.sparten||[]))].map(sp=>({mantrailing:'mantrail'}[sp]||sp));
+  let pool = ALLE_UEBUNGEN.filter(u=>u.levels && u.levels.length);
+  if(sparten.length){
+    const passend = pool.filter(u=>!u.discipline || u.discipline.some(d=>sparten.includes(d)));
+    if(passend.length) pool = passend;
+  }
+  if(!pool.length) return null;
+  const tagSeed = Math.floor(Date.now()/86400000);
+  return pool[tagSeed % pool.length];
+}
+function renderUebungDesTages(person, eigeneHunde){
+  const u = uebungDesTagesWaehlen(eigeneHunde);
+  if(!u) return '';
+  const stufe1 = u.levels[0];
+  return `
+    <div class="card card-pad" style="margin-top:20px;background:var(--t-alltag-soft);border:none;border-left:5px solid var(--t-alltag)">
+      <div class="spread"><h3 style="font-size:1.05rem">🎲 Übung des Tages</h3><span class="chip muted" data-goto-alltag-uebungen style="cursor:pointer">alle Übungen →</span></div>
+      <strong>${esc(u.name)}</strong>${u.goal?`<p class="hint" style="margin:4px 0 6px">${esc(u.goal)}</p>`:''}
+      ${stufe1?`<p class="hint"><strong>${esc(stufe1.param)}:</strong> ${esc(stufe1.desc)}</p>`:''}
+      ${u.everyday?`<p class="hint"><strong>Im Alltag:</strong> ${esc(u.everyday)}</p>`:''}
+      ${eigeneHunde.length?`<button class="btn btn-sm btn-primary" id="btn-udt-uebernehmen" style="margin-top:6px">In Trainingstagebuch übernehmen</button>`:''}
+    </div>`;
+}
+function renderStartLeitungsHinweise(person){
+  const f = fristenAuswertung();
+  const heute = new Date(); heute.setHours(0,0,0,0);
+  const inSiebenTagen = new Date(heute); inSiebenTagen.setDate(inSiebenTagen.getDate()+7);
+  const aktive = state.personen.filter(p=>p.status==='aktiv');
+  const termineBald = state.termine
+    .filter(t=>(t.sichtbarkeit||'staff')==='staff' && new Date(t.beginn)>=heute && new Date(t.beginn)<=inSiebenTagen)
+    .sort((a,b)=>new Date(a.beginn)-new Date(b.beginn));
+  const termineHtml = termineBald.map(t=>{
+    const offen = aktive.filter(p=>!rueckmeldungFuer(t.id,p.id) || rueckmeldungFuer(t.id,p.id).status==='offen').length;
+    const zusagen = aktive.filter(p=>rueckmeldungFuer(t.id,p.id)?.status==='zusage').length;
+    return `<li>${terminDatumKurz(t)} · ${esc(t.titel)} — <strong>${zusagen}</strong> Zusagen, <strong>${offen}</strong> ohne Rückmeldung</li>`;
+  }).join('');
+  const hinweise = [];
+  if(f.abgelaufen.length) hinweise.push({txt:`${f.abgelaufen.length} Qualifikation(en) abgelaufen`, unter:'fristen', warn:true});
+  if(f.baldAblaufend.length) hinweise.push({txt:`${f.baldAblaufend.length} Qualifikation(en) laufen in den nächsten ${FRISTEN_BALD_TAGE} Tagen ab`, unter:'fristen', warn:true});
+  if(f.fehlendePflicht.length) hinweise.push({txt:`${f.fehlendePflicht.length}× Pflichtqualifikation fehlt`, unter:'fristen', warn:true});
+  if(f.hundeKurzDavor.filter(x=>x.anteil>=HUND_KURZ_DAVOR_ANTEIL).length) hinweise.push({txt:`${f.hundeKurzDavor.filter(x=>x.anteil>=HUND_KURZ_DAVOR_ANTEIL).length} Hund/Team-Modul(e) kurz vor Abschluss`, unter:'fristen'});
+  if(f.jubilaeen.length) hinweise.push({txt:`🎉 ${f.jubilaeen.length} Jubiläum/Jubiläen ${f.heuteJahr}`, unter:'fristen'});
+  if(f.duplikate.length && istLeitungOderAdmin(person)) hinweise.push({txt:`⚠️ ${f.duplikate.length} mögliche Personen-Duplikate`, unter:'personen', warn:true});
+  return `
+    <div class="card card-pad" style="border-left:4px solid var(--t-verwaltung)">
+      <div class="spread"><h3>Für Leitung & Ausbildung</h3><span class="chip muted" data-goto-verwaltung="fristen" style="cursor:pointer">Fristen & Lücken →</span></div>
+      ${hinweise.length ? `<ul class="hint" style="margin:8px 0 0 -18px">${hinweise.map(h=>`<li style="${h.warn?'color:var(--accent-ink)':''}"><span data-goto-verwaltung="${h.unter}" style="cursor:pointer;text-decoration:underline dotted">${esc(h.txt)}</span></li>`).join('')}</ul>`
+        : '<p class="hint" style="margin:8px 0 0">Keine offenen Fristen, fehlenden Pflichtqualifikationen oder Jubiläen.</p>'}
+      ${termineBald.length ? `<p class="hint" style="margin:12px 0 4px"><strong>Termine der nächsten 7 Tage</strong></p><ul class="hint" style="margin:0 0 0 -18px">${termineHtml}</ul>` : ''}
+      ${istLeitungOderAdmin(person)?'<p class="hint" style="margin-top:12px">Mitglieder, Hunde, Rollen und den Staffelnamen pflegst du unter „Verwaltung".</p>':''}
+    </div>`;
 }
 function bindStart(person){
   bindZusageButtons(person);
   if(modal) bindModal(person);
+  document.querySelectorAll('[data-goto-verwaltung]').forEach(el=>{
+    el.onclick = ()=>{ route = {bereich:'verwaltung', unter:el.dataset.gotoVerwaltung, id:null}; render(); };
+  });
+  document.querySelectorAll('[data-goto-alltag-uebungen]').forEach(el=>{
+    el.onclick = ()=>{ route = {bereich:'alltag', unter:null, id:null}; alltagTab='bibliothek'; render(); };
+  });
+  const udt = document.getElementById('btn-udt-uebernehmen');
+  if(udt) udt.onclick = ()=>{
+    const eigene = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
+    const u = uebungDesTagesWaehlen(eigene);
+    if(!u) return;
+    alltagVorschlagPreset = { hundId: eigene[0]?.id||'', thema: u.name };
+    route = {bereich:'alltag', unter:null, id:null}; alltagTab='tagebuch'; modal = {type:'alltagseintrag', id:null}; render();
+  };
   document.querySelectorAll('[data-goto-inline]').forEach(el=>{
     el.style.cursor='pointer';
     el.onclick = ()=>{ route = {bereich:el.dataset.gotoInline, unter:null, id:null}; render(); };
@@ -1557,7 +1631,7 @@ function bindVerwaltungTab(tab, person){
 /* ---------- Personen ---------- */
 function personenDuplikatGruppen(){
   const gruppen = {};
-  state.personen.forEach(p=>{
+  state.personen.filter(p=>p.status!=='inaktiv').forEach(p=>{
     const key = p.name.trim().toLowerCase();
     if(!key) return;
     gruppen[key] = gruppen[key] || [];
@@ -1612,7 +1686,7 @@ function bindTabPersonen(){
         behalten.rollen = [...(behalten.rollen||[]), 'admin'];
       }
       rest.forEach(p=>{
-        state.hunde.forEach(h=>{ if(h.hundefuehrerId===p.id) h.hundefuehrerId = behalten.id; });
+        state.hunde.forEach(h=>{ if(h.hundefuehrerId===p.id) h.hundefuehrerId = behalten.id; if(h.zweitHundefuehrerId===p.id) h.zweitHundefuehrerId = behalten.id; });
         state.personQualifikationen.forEach(pq=>{ if(pq.personId===p.id) pq.personId = behalten.id; });
         ['benutzername','geburtsdatum','mitgliedSeit','email','telefon','mitgliedsnummer','strasse','plz','ort'].forEach(feld=>{
           if(!behalten[feld] && p[feld]) behalten[feld] = p[feld];
@@ -1744,21 +1818,63 @@ function rhsPaketEinlesen(hund, paket){
   return {neu,aktualisiert,konflikt,unveraendert,bereitsVerarbeitet:false};
 }
 
+function hundeDuplikatGruppen(){
+  // Gleicher Name + (gleiche Chipnummer oder gleicher Wurftag) = sehr wahrscheinlich derselbe Hund (z. B. zweimal importiert, je Hundeführer/in).
+  const aktiv = state.hunde.filter(h=>h.status!=='inaktiv');
+  const gruppen = [];
+  aktiv.forEach(h=>{
+    if(gruppen.some(g=>g.includes(h))) return;
+    const chip = (h.chipnummer||'').replace(/\s+/g,'').toLowerCase();
+    const gleiche = aktiv.filter(o=>o!==h && o.name.trim().toLowerCase()===h.name.trim().toLowerCase()
+      && ((chip && (o.chipnummer||'').replace(/\s+/g,'').toLowerCase()===chip) || (h.geburtsdatum && o.geburtsdatum===h.geburtsdatum)));
+    if(gleiche.length) gruppen.push([h, ...gleiche]);
+  });
+  return gruppen;
+}
+function hundeZusammenfuehren(gruppe){
+  const [behalten, ...rest] = gruppe;
+  rest.forEach(h=>{
+    // Der andere Hundeführer bleibt als Zweit-Hundeführer/in erhalten.
+    if(h.hundefuehrerId && h.hundefuehrerId!==behalten.hundefuehrerId && !behalten.zweitHundefuehrerId) behalten.zweitHundefuehrerId = h.hundefuehrerId;
+    ['rasse','geburtsdatum','geschlecht','chipnummer','anzeigeart','rassegruppe'].forEach(f=>{ if(!behalten[f] && h[f]) behalten[f]=h[f]; });
+    behalten.sparten = [...new Set([...(behalten.sparten||[]), ...(h.sparten||[])])];
+    behalten.plaketten = [...(behalten.plaketten||[]), ...(h.plaketten||[]).filter(pl=>!(behalten.plaketten||[]).some(x=>x.sparte===pl.sparte && x.nummer===pl.nummer))];
+    behalten.entwicklungsthemen = [...(behalten.entwicklungsthemen||[]), ...(h.entwicklungsthemen||[])];
+    // Alle Verweise auf den doppelten Hund umhängen.
+    ['pruefungsstatus','trainingseintraege','alltagseintraege','hausaufgaben','rhEintraege','mantrailingEintraege','findewilleProfile'].forEach(k=>{
+      (state[k]||[]).forEach(e=>{ if(e.hundId===h.id) e.hundId = behalten.id; });
+    });
+  });
+  const restIds = rest.map(h=>h.id);
+  state.hunde = state.hunde.filter(h=>!restIds.includes(h.id));
+}
 function renderTabHunde(){
   if(state.hunde.length===0){
     return `<div class="card empty"><h3>Noch keine Hunde</h3><p>Lege den ersten Hund an.</p><button class="btn btn-primary" id="btn-neuer-hund">Hund anlegen</button></div>`;
   }
+  const hundDuplikate = hundeDuplikatGruppen();
   const zeilen = state.hunde.map(h=>{
     const fuehrer = state.personen.find(p=>p.id===h.hundefuehrerId);
+    const zweit = h.zweitHundefuehrerId ? state.personen.find(p=>p.id===h.zweitHundefuehrerId) : null;
     return `<tr class="clickable" data-hund="${h.id}">
       <td>${esc(h.name)}</td><td>${esc(h.rasse)||'–'}</td>
-      <td>${fuehrer?esc(fuehrer.name):'–'}</td>
+      <td>${fuehrer?esc(fuehrer.name):'–'}${zweit?` <span class="hint">/ ${esc(zweit.name)}</span>`:''}</td>
       <td>${esc(hundeLebensphase(h.geburtsdatum))||'–'}</td>
       <td>${h.status==='inaktiv'?'<span class="badge off">inaktiv</span>':'<span class="badge ok">aktiv</span>'}</td>
       <td><button class="btn btn-sm btn-ghost" data-austausch="${h.id}">Teamdaten</button></td>
     </tr>`;
   }).join('');
   return `
+    ${hundDuplikate.length?`
+    <div class="card card-pad" style="margin-bottom:14px;background:var(--soft);border:none">
+      <h3>⚠️ Mögliche doppelte Hunde (${hundDuplikate.length})</h3>
+      <p class="hint">Gleicher Name mit gleicher Chipnummer oder gleichem Wurftag. „Zusammenführen" behält den ersten Eintrag; ist der andere Eintrag einer anderen Person zugeordnet, wird diese als Zweit-Hundeführer/in übernommen. Trainings- und Prüfungsdaten werden umgehängt.</p>
+      ${hundDuplikate.map((g,gi)=>`
+        <div class="row" style="justify-content:space-between;align-items:center;padding:6px 0;border-top:1px dashed var(--line)">
+          <span>${esc(g[0].name)} <span class="chip muted">${g.length}×</span> <span class="hint">${g.map(h=>esc(teamLabel(h))).join(' · ')}</span></span>
+          <button class="btn btn-sm" data-hund-duplikat="${gi}">Zusammenführen</button>
+        </div>`).join('')}
+    </div>`:''}
     <div class="spread" style="margin-bottom:14px">
       <p class="hint">${state.hunde.length} Hunde im Bestand · Zum Bearbeiten anklicken</p>
       <button class="btn btn-primary" id="btn-neuer-hund">+ Hund anlegen</button>
@@ -1774,6 +1890,14 @@ function bindTabHunde(){
   });
   document.querySelectorAll('[data-austausch]').forEach(b=>{
     b.onclick = (ev)=>{ ev.stopPropagation(); modal = {type:'austausch', hundId:b.dataset.austausch}; render(); };
+  });
+  document.querySelectorAll('[data-hund-duplikat]').forEach(b=>{
+    b.onclick = ()=>{
+      const g = hundeDuplikatGruppen()[+b.dataset.hundDuplikat];
+      if(!g) return;
+      if(!confirm(`„${g[0].name}" ${g.length}× zusammenführen? Es bleibt ein Hund; weitere Hundeführer/innen werden als Zweit-Hundeführer/in übernommen. Das lässt sich nicht rückgängig machen.`)) return;
+      hundeZusammenfuehren(g); speichereState(); zeigeToast('Hunde zusammengeführt.'); render();
+    };
   });
 }
 
@@ -1854,10 +1978,9 @@ function csvQualifikationenEinlesen(file){
   const reader = new FileReader();
   reader.onload = ()=>{
     try{
-      const text = String(reader.result).replace(/^\uFEFF/, '');
-      const zeilen = text.split(/\r\n|\r|\n/).filter(z=>z.trim() && !z.trim().startsWith('#'));
-      if(zeilen.length < 2) throw new Error('Die Datei enthält außer der Kopfzeile keine Einträge.');
-      const kopf = csvZeileParsen(zeilen[0]).map(h=>h.toLowerCase());
+      const gelesen = csvZeilenLesen(reader.result);
+      const kopf = gelesen.kopf, datenZeilen = gelesen.zeilen;
+      if(!datenZeilen.length) throw new Error('Die Datei enthält außer der Kopfzeile keine Einträge.');
       const idxPerson = kopf.indexOf('person');
       const idxQual = kopf.indexOf('qualifikation');
       if(idxPerson===-1 || idxQual===-1) throw new Error('Spalten "Person" und "Qualifikation" nicht gefunden. Bitte die unveränderte Vorlage verwenden.');
@@ -1865,8 +1988,8 @@ function csvQualifikationenEinlesen(file){
       const idxSeit = kopf.indexOf('seit');
       const idxBis = kopf.indexOf('gueltigbis');
       let neueZuordnungen=0, neueQualis=0, unbekanntePersonen=new Set(), uebersprungen=0;
-      for(let i=1;i<zeilen.length;i++){
-        const f = csvZeileParsen(zeilen[i]);
+      for(let i=0;i<datenZeilen.length;i++){
+        const f = datenZeilen[i];
         const personName = (f[idxPerson]||'').trim();
         const qualLabel = (f[idxQual]||'').trim();
         if(!personName || !qualLabel || (personName===CSV_QUAL_BEISPIEL[0] && qualLabel===CSV_QUAL_BEISPIEL[1])){ uebersprungen++; continue; }
@@ -1937,7 +2060,7 @@ function tageBisHeute(datumStr){
   const d = new Date(datumStr); d.setHours(0,0,0,0);
   return Math.round((d - heute) / 86400000);
 }
-function renderTabFristen(){
+function fristenAuswertung(){
   const aktivePersonen = state.personen.filter(p=>p.status!=='inaktiv');
   const aktiveHunde = state.hunde.filter(h=>h.status!=='inaktiv');
 
@@ -1949,6 +2072,7 @@ function renderTabFristen(){
     const q = state.qualifikationen.find(x=>x.id===pq.qualifikationId);
     if(!p || !q || p.status==='inaktiv') return;
     const tage = tageBisHeute(pq.gueltigBis);
+    if(isNaN(tage)) return;
     if(tage < 0) abgelaufen.push({p,q,pq,tage});
     else if(tage <= FRISTEN_BALD_TAGE) baldAblaufend.push({p,q,pq,tage});
   });
@@ -1988,6 +2112,11 @@ function renderTabFristen(){
     if(jahre>0 && jahre%5===0) jubilaeen.push({p, jahre, mitgliedSeit:p.mitgliedSeit});
   });
   jubilaeen.sort((a,b)=>b.jahre-a.jahre);
+
+  return { abgelaufen, baldAblaufend, fehlendePflicht, pflichtQualis, hundeKurzDavor, jubilaeen, heuteJahr, duplikate: personenDuplikatGruppen() };
+}
+function renderTabFristen(){
+  const { abgelaufen, baldAblaufend, fehlendePflicht, pflichtQualis, hundeKurzDavor, jubilaeen, heuteJahr } = fristenAuswertung();
 
   const zeile = (label, rows) => rows.map(r=>label(r)).join('') || `<tr><td colspan="4" class="hint">Keine Einträge.</td></tr>`;
 
@@ -2223,7 +2352,13 @@ function renderTabDatensicherung(){
     </div>
     <div class="card card-pad stack" style="margin-top:16px">
       <h3>Schnellstart: Mitglieder &amp; Hunde aus Tabelle</h3>
-      <p class="hint">Für eine neue Staffel ohne bestehenden Bestand: Vorlage herunterladen, in Excel/Calc mit echten Namen befüllen und hier wieder einlesen. Anders als der Import oben werden die Zeilen dabei <strong>zum bestehenden Bestand hinzugefügt</strong>, nicht ersetzt. Alle neu angelegten Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Anmelden ändern.</p>
+      <ol class="hint" style="margin:0 0 6px -18px">
+        <li><strong>Vorlage herunterladen</strong> und in Excel/Numbers/Calc öffnen.</li>
+        <li>Pro Person eine Zeile – bei mehreren Hunden eine weitere Zeile mit demselben Namen. Name ist Pflicht, alles andere optional (Hund, Rasse, Wurftag, Geschlecht, Chip, Sparten, Plaketten, Zweit-Hundeführer/in). Datum als TT.MM.JJJJ.</li>
+        <li>Als CSV speichern (Trennzeichen ; oder , – beides wird erkannt) und hier <strong>einlesen</strong>.</li>
+        <li>BARRY zeigt eine <strong>Vorschau</strong>, was neu angelegt bzw. ergänzt wird – erst nach „Jetzt übernehmen" wird gespeichert.</li>
+      </ol>
+      <p class="hint">Der Schnellstart <strong>ergänzt</strong> den Bestand (nichts wird ersetzt). Bereits vorhandene Personen und Hunde werden erkannt: keine Doppelungen, nur leere Felder werden nachgetragen; steht ein Hund bei einer zweiten Person, wird diese als Zweit-Hundeführer/in übernommen. Neue Personen erhalten das Startpasswort <strong>start</strong>.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn" id="btn-csv-vorlage" style="align-self:flex-start">Vorlage herunterladen (CSV)</button>
         <label class="btn" for="in-csv-import" style="align-self:flex-start">Ausgefüllte Tabelle einlesen</label>
@@ -2276,8 +2411,8 @@ function bindTabDatensicherung(){
 }
 
 /* ---------- Schnellstart-Import (CSV): Mitglieder & Hunde für neue Staffeln ---------- */
-const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','Geburtsdatum','MitgliedSeit','HundName','HundRasse','HundGeburtsdatum','HundGeschlecht','HundChipnummer','Sparten','PlaketteFlaeche','PlaketteTruemmer','PlaketteMantrailing'];
-const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','15.06.1990','01.09.2018','Bella','Labrador Retriever','2022-03-15','huendin','276093400690717','flaeche','','',''];
+const CSV_SCHNELLSTART_KOPF = ['Name','Rolle','Benutzername','Geburtsdatum','MitgliedSeit','HundName','HundRasse','HundGeburtsdatum','HundGeschlecht','HundChipnummer','Sparten','PlaketteFlaeche','PlaketteTruemmer','PlaketteMantrailing','ZweitHundefuehrer'];
+const CSV_SCHNELLSTART_BEISPIEL = ['Max Mustermann','mitglied','','15.06.1990','01.09.2018','Bella','Labrador Retriever','15.03.2022','huendin','276093400690717','flaeche','','','',''];
 function parseCsvDatum(s){
   // Erkennt gängige Datumsformate aus Excel/Calc (TT.MM.JJJJ, TT/MM/JJJJ, ISO) und liefert JJJJ-MM-TT oder '' zurück.
   const t = String(s||'').trim();
@@ -2299,12 +2434,7 @@ function csvSchnellstartVorlageHerunterladen(){
     CSV_SCHNELLSTART_KOPF.join(';'),
     CSV_SCHNELLSTART_BEISPIEL.map(csvZeileEscapen).join(';'),
   ];
-  const hinweis = '# Bitte die Beispielzeile oben löschen oder überschreiben. Spalte "Rolle": mitglied, ausbilder oder leitung. '
-    + '"Geburtsdatum" (der Person), "MitgliedSeit" (DRK-Eintrittsdatum) und "HundGeburtsdatum": TT.MM.JJJJ (z. B. 22.03.2021) oder JJJJ-MM-TT. '
-    + 'Spalte "Sparten": flaeche, truemmer und/oder mantrailing (auch mit ä/ü geschrieben), mit Komma getrennt, kann leer bleiben. '
-    + 'Spalte "HundGeschlecht": ruede oder huendin, kann leer bleiben. '
-    + 'Spalten "PlaketteFlaeche"/"PlaketteTruemmer"/"PlaketteMantrailing": jeweils die Plaketten-/ID-Nr., falls die Prüfung schon bestanden ist, sonst leer lassen. '
-    + 'HundName/HundRasse/HundGeburtsdatum/Sparten dürfen leer bleiben, wenn die Person (noch) keinen eigenen Hund führt.';
+  const hinweis = '# Hinweis (diese Zeile wird beim Einlesen ignoriert): Beispielzeile löschen oder überschreiben. Rolle = mitglied/ausbilder/leitung. Datumsfelder als TT.MM.JJJJ. Sparten = flaeche, truemmer, mantrailing (mit Komma). HundGeschlecht = ruede/huendin. ZweitHundefuehrer = Name einer zweiten Person, die diesen Hund ebenfalls führt. Hat eine Person mehrere Hunde: einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund.';
   const csv = '\uFEFF' + zeilen.join('\r\n') + '\r\n' + hinweis + '\r\n';
   const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
@@ -2312,8 +2442,16 @@ function csvSchnellstartVorlageHerunterladen(){
   a.href = url; a.download = 'BARRY_Schnellstart_Vorlage.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
-function csvZeileParsen(zeile){
-  // Einfacher Semikolon-Parser mit Unterstützung für "..."-Quoting (kein externes CSV-Paket nötig).
+function csvTrennzeichenErkennen(kopfzeile){
+  // Excel speichert je nach Ländereinstellung mit ; oder , – beides wird akzeptiert (auch Tab).
+  const z = kopfzeile || '';
+  const semi = (z.match(/;/g)||[]).length, komma = (z.match(/,/g)||[]).length, tab = (z.match(/\t/g)||[]).length;
+  if(tab>semi && tab>komma) return '\t';
+  return komma>semi ? ',' : ';';
+}
+function csvZeileParsen(zeile, sep){
+  // Einfacher Parser mit Unterstützung für "..."-Quoting (kein externes CSV-Paket nötig).
+  sep = sep || ';';
   const felder = []; let aktuell=''; let inQuotes=false;
   for(let i=0;i<zeile.length;i++){
     const c = zeile[i];
@@ -2323,117 +2461,163 @@ function csvZeileParsen(zeile){
       else aktuell+=c;
     }else{
       if(c==='"') inQuotes=true;
-      else if(c===';'){ felder.push(aktuell); aktuell=''; }
+      else if(c===sep){ felder.push(aktuell); aktuell=''; }
       else aktuell+=c;
     }
   }
   felder.push(aktuell);
   return felder.map(f=>f.trim());
 }
+function csvZeilenLesen(text){
+  // Kopfzeile + Datenzeilen; Kommentar-/Hinweiszeilen (beginnen mit #, auch wenn Excel sie in Anführungszeichen setzt) werden übersprungen.
+  const alle = String(text).replace(/^\uFEFF/, '').split(/\r\n|\r|\n/).filter(z=>z.trim());
+  if(!alle.length) return {kopf:[], zeilen:[], sep:';'};
+  const sep = csvTrennzeichenErkennen(alle[0]);
+  const kopf = csvZeileParsen(alle[0], sep).map(h=>h.toLowerCase());
+  const zeilen = alle.slice(1).map(z=>csvZeileParsen(z, sep)).filter(f=>f.length && !(f[0]||'').trim().startsWith('#'));
+  return {kopf, zeilen, sep};
+}
+
+let csvVorschau = null; // Analyse-Ergebnis des Schnellstarts bis zur Bestätigung im Vorschau-Dialog
+function csvSchnellstartAnalysieren(text){
+  const {kopf, zeilen} = csvZeilenLesen(text);
+  if(!kopf.length) throw new Error('Die Datei ist leer.');
+  const idx = name => kopf.indexOf(name);
+  const idxName=idx('name'), idxRolle=idx('rolle'), idxBenutzername=idx('benutzername'), idxGeburt=idx('geburtsdatum'), idxMitgliedSeit=idx('mitgliedseit');
+  const idxHundName=idx('hundname'), idxHundRasse=idx('hundrasse'), idxHundGeburt=idx('hundgeburtsdatum'), idxHundGeschlecht=idx('hundgeschlecht'), idxHundChip=idx('hundchipnummer');
+  const idxSparten=idx('sparten'), idxPlFl=idx('plaketteflaeche'), idxPlTr=idx('plakettetruemmer'), idxPlMt=idx('plakettemantrailing'), idxZweit=idx('zweithundefuehrer');
+  if(idxName===-1) throw new Error('Spalte "Name" nicht gefunden. Bitte die Vorlage verwenden oder die Kopfzeile prüfen (erkannte Spalten: '+(kopf.join(', ')||'keine')+').');
+  const bekannteSpalten = ['name','rolle','benutzername','geburtsdatum','mitgliedseit','hundname','hundrasse','hundgeburtsdatum','hundgeschlecht','hundchipnummer','sparten','plaketteflaeche','plakettetruemmer','plakettemantrailing','zweithundefuehrer'];
+  const unbekannteSpalten = kopf.filter(k=>k && !bekannteSpalten.includes(k));
+  const startHash = einfacherHash('start');
+  const personenNeu=[], hundeNeu=[], personenUpdates=[], hundeUpdates=[], zweitZuordnungen=[], protokoll=[];
+  const feld = (f,i)=> i>-1 ? (f[i]||'').trim() : '';
+  const personFinden = name => state.personen.find(p=>p.status!=='inaktiv' && p.name.trim().toLowerCase()===name.toLowerCase()) || personenNeu.find(p=>p.name.trim().toLowerCase()===name.toLowerCase());
+  zeilen.forEach((f, i)=>{
+    const nr = i+2;
+    const name = feld(f, idxName);
+    if(!name || name===CSV_SCHNELLSTART_BEISPIEL[0]){ protokoll.push({nr, text:name?'Beispielzeile':'(leer)', status:'übersprungen'}); return; }
+    const rolleRoh = feld(f, idxRolle).toLowerCase();
+    const rolle = ['admin','leitung','ausbilder'].includes(rolleRoh) ? rolleRoh : 'mitglied';
+    let person = personFinden(name);
+    let personStatus;
+    if(person){
+      personenUpdates.push({person, benutzername:feld(f,idxBenutzername), geburtsdatum:parseCsvDatum(feld(f,idxGeburt)), mitgliedSeit:parseCsvDatum(feld(f,idxMitgliedSeit))});
+      personStatus = 'vorhanden – nur leere Felder ergänzt';
+    } else {
+      person = { id: uid(), name, benutzername: feld(f,idxBenutzername), mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum: parseCsvDatum(feld(f,idxGeburt)), mitgliedSeit: parseCsvDatum(feld(f,idxMitgliedSeit)),
+        strasse:'', plz:'', ort:'', email:'', telefon:'', rollen:[rolle], zusatzrechte:[], status:'aktiv', passwortHash: startHash, mussPasswortAendern:true, angelegtAm: nowIso() };
+      personenNeu.push(person);
+      personStatus = 'neu (Startpasswort „start")';
+    }
+    let hundStatus = '';
+    const hundName = feld(f, idxHundName);
+    if(hundName){
+      const sparten = idxSparten>-1 ? rhsSpartenNormalisieren(feld(f,idxSparten)) : [];
+      const geschlechtRoh = feld(f,idxHundGeschlecht).toLowerCase();
+      const geschlecht = ['ruede','huendin'].includes(geschlechtRoh) ? geschlechtRoh : (geschlechtRoh.startsWith('r')?'ruede':geschlechtRoh.startsWith('h')||geschlechtRoh.startsWith('w')?'huendin':'');
+      const chip = feld(f,idxHundChip), chipNorm = chip.replace(/\s+/g,'').toLowerCase();
+      const geb = parseCsvDatum(feld(f,idxHundGeburt));
+      const plaketten = [];
+      if(feld(f,idxPlFl)) plaketten.push({sparte:'flaeche', nummer:feld(f,idxPlFl), datum:''});
+      if(feld(f,idxPlTr)) plaketten.push({sparte:'truemmer', nummer:feld(f,idxPlTr), datum:''});
+      if(feld(f,idxPlMt)) plaketten.push({sparte:'mantrailing', nummer:feld(f,idxPlMt), datum:''});
+      const alleHunde = [...state.hunde.filter(h=>h.status!=='inaktiv'), ...hundeNeu];
+      const gleicherName = h => h.name.trim().toLowerCase()===hundName.toLowerCase();
+      // 1) Derselbe Hund bei derselben Person, 2) derselbe Hund (Chip/Wurftag) bei anderer Person → Zweit-Hundeführer/in
+      let hund = alleHunde.find(h=>gleicherName(h) && hundGefuehrtVon(h, person.id))
+        || alleHunde.find(h=>gleicherName(h) && ((chipNorm && (h.chipnummer||'').replace(/\s+/g,'').toLowerCase()===chipNorm) || (geb && h.geburtsdatum===geb)));
+      if(hund){
+        hundeUpdates.push({hund, rasse:feld(f,idxHundRasse), geburtsdatum:geb, geschlecht, chipnummer:chip, sparten, plaketten});
+        if(!hundGefuehrtVon(hund, person.id)){
+          if(!hund.zweitHundefuehrerId) { zweitZuordnungen.push({hund, personId: person.id}); hundStatus = `Hund „${hundName}" bereits vorhanden → ${name} als Zweit-Hundeführer/in`; }
+          else hundStatus = `Hund „${hundName}" bereits vorhanden, hat schon zwei Hundeführer/innen – nicht geändert`;
+        } else hundStatus = `Hund „${hundName}" vorhanden – nur leere Felder ergänzt`;
+      } else {
+        hund = { id: uid(), name: hundName, rasse: feld(f,idxHundRasse), geburtsdatum: geb, geschlecht, chipnummer: chip,
+          hundefuehrerId: person.id, zweitHundefuehrerId:'', status:'aktiv', sparten, anzeigeart:'', rassegruppe:'', plaketten, plakettenHinweis:undefined };
+        delete hund.plakettenHinweis;
+        rhsSicherstellen(hund);
+        hundeNeu.push(hund);
+        hundStatus = `Hund „${hundName}" neu`;
+      }
+      const zweitName = feld(f, idxZweit);
+      if(zweitName && hund){
+        const zp = personFinden(zweitName);
+        if(zp && zp.id!==hund.hundefuehrerId) zweitZuordnungen.push({hund, personId: zp.id});
+        else if(!zp) hundStatus += ` · Zweit-Hundeführer/in „${zweitName}" nicht gefunden`;
+      }
+    }
+    protokoll.push({nr, text:name, status:personStatus + (hundStatus?' · '+hundStatus:'')});
+  });
+  return {personenNeu, hundeNeu, personenUpdates, hundeUpdates, zweitZuordnungen, protokoll, unbekannteSpalten, kopf};
+}
+function csvSchnellstartUebernehmen(a){
+  state.personen.push(...a.personenNeu);
+  state.hunde.push(...a.hundeNeu);
+  a.personenUpdates.forEach(u=>{
+    if(u.benutzername && !u.person.benutzername) u.person.benutzername = u.benutzername;
+    if(u.geburtsdatum && !u.person.geburtsdatum) u.person.geburtsdatum = u.geburtsdatum;
+    if(u.mitgliedSeit && !u.person.mitgliedSeit) u.person.mitgliedSeit = u.mitgliedSeit;
+  });
+  a.hundeUpdates.forEach(u=>{
+    if(u.rasse && !u.hund.rasse) u.hund.rasse = u.rasse;
+    if(u.geburtsdatum && !u.hund.geburtsdatum) u.hund.geburtsdatum = u.geburtsdatum;
+    if(u.geschlecht && !u.hund.geschlecht) u.hund.geschlecht = u.geschlecht;
+    if(u.chipnummer && !u.hund.chipnummer) u.hund.chipnummer = u.chipnummer;
+    if(u.sparten.length) u.hund.sparten = [...new Set([...(u.hund.sparten||[]), ...u.sparten])];
+    if(u.plaketten.length) u.hund.plaketten = [...(u.hund.plaketten||[]), ...u.plaketten.filter(pl=>!(u.hund.plaketten||[]).some(x=>x.sparte===pl.sparte && x.nummer===pl.nummer))];
+  });
+  a.zweitZuordnungen.forEach(z=>{ if(!z.hund.zweitHundefuehrerId && z.hund.hundefuehrerId!==z.personId) z.hund.zweitHundefuehrerId = z.personId; });
+  speichereState();
+}
 function csvSchnellstartEinlesen(file){
   const reader = new FileReader();
   reader.onload = ()=>{
     try{
-      const text = String(reader.result).replace(/^\uFEFF/, '');
-      const zeilen = text.split(/\r\n|\r|\n/).filter(z=>z.trim() && !z.trim().startsWith('#'));
-      if(zeilen.length < 2) throw new Error('Die Datei enthält außer der Kopfzeile keine Einträge.');
-      const kopf = csvZeileParsen(zeilen[0]).map(h=>h.toLowerCase());
-      const idxName = kopf.indexOf('name');
-      if(idxName === -1) throw new Error('Spalte "Name" nicht gefunden. Bitte die unveränderte Vorlage verwenden.');
-      const idxRolle = kopf.indexOf('rolle');
-      const idxBenutzername = kopf.indexOf('benutzername');
-      const idxGeburt = kopf.indexOf('geburtsdatum');
-      const idxMitgliedSeit = kopf.indexOf('mitgliedseit');
-      const idxHundName = kopf.indexOf('hundname');
-      const idxHundRasse = kopf.indexOf('hundrasse');
-      const idxHundGeburt = kopf.indexOf('hundgeburtsdatum');
-      const idxHundGeschlecht = kopf.indexOf('hundgeschlecht');
-      const idxHundChip = kopf.indexOf('hundchipnummer');
-      const idxSparten = kopf.indexOf('sparten');
-      const idxPlFl = kopf.indexOf('plaketteflaeche');
-      const idxPlTr = kopf.indexOf('plakettetruemmer');
-      const idxPlMt = kopf.indexOf('plakettemantrailing');
-      let neuePersonen=0, aktualisiertePersonen=0, neueHunde=0, aktualisierteHunde=0, uebersprungen=0;
-      const startHash = einfacherHash('start');
-      const personenNeu = [], hundeNeu = [];
-      const personenUpdates = [], hundeUpdates = [];
-      for(let i=1;i<zeilen.length;i++){
-        const f = csvZeileParsen(zeilen[i]);
-        const name = (f[idxName]||'').trim();
-        if(!name || name === CSV_SCHNELLSTART_BEISPIEL[0]){ uebersprungen++; continue; }
-        const rolleRoh = (idxRolle>-1 ? f[idxRolle]||'' : '').trim().toLowerCase();
-        const rolle = ['admin','leitung','ausbilder'].includes(rolleRoh) ? rolleRoh : 'mitglied';
-        let person = state.personen.find(p=>p.status!=='inaktiv' && p.name.trim().toLowerCase()===name.toLowerCase())
-          || personenNeu.find(p=>p.name.trim().toLowerCase()===name.toLowerCase());
-        if(person){
-          // Bereits vorhanden (z. B. erneuter Import derselben/erweiterten Tabelle) — nur leere Felder ergänzen, nichts überschreiben.
-          personenUpdates.push({person, benutzername: idxBenutzername>-1?(f[idxBenutzername]||'').trim():'', geburtsdatum: idxGeburt>-1?parseCsvDatum(f[idxGeburt]):'', mitgliedSeit: idxMitgliedSeit>-1?parseCsvDatum(f[idxMitgliedSeit]):''});
-          aktualisiertePersonen++;
-        } else {
-          person = {
-            id: uid(), name, benutzername: idxBenutzername>-1 ? (f[idxBenutzername]||'').trim() : '',
-            mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum: idxGeburt>-1 ? parseCsvDatum(f[idxGeburt]) : '',
-            mitgliedSeit: idxMitgliedSeit>-1 ? parseCsvDatum(f[idxMitgliedSeit]) : '',
-            strasse:'', plz:'', ort:'', email:'', telefon:'',
-            rollen:[rolle], zusatzrechte:[], status:'aktiv',
-            passwortHash: startHash, mussPasswortAendern:true, angelegtAm: nowIso(),
-          };
-          personenNeu.push(person); neuePersonen++;
-        }
-        const hundName = idxHundName>-1 ? (f[idxHundName]||'').trim() : '';
-        if(hundName){
-          const sparten = idxSparten>-1 ? rhsSpartenNormalisieren((f[idxSparten]||'')) : [];
-          const geschlechtRoh = idxHundGeschlecht>-1 ? (f[idxHundGeschlecht]||'').trim().toLowerCase() : '';
-          const geschlecht = ['ruede','huendin'].includes(geschlechtRoh) ? geschlechtRoh : '';
-          const plaketten = [];
-          if(idxPlFl>-1 && (f[idxPlFl]||'').trim()) plaketten.push({sparte:'flaeche', nummer:(f[idxPlFl]||'').trim(), datum:''});
-          if(idxPlTr>-1 && (f[idxPlTr]||'').trim()) plaketten.push({sparte:'truemmer', nummer:(f[idxPlTr]||'').trim(), datum:''});
-          if(idxPlMt>-1 && (f[idxPlMt]||'').trim()) plaketten.push({sparte:'mantrailing', nummer:(f[idxPlMt]||'').trim(), datum:''});
-          let hund = state.hunde.find(h=>h.status!=='inaktiv' && h.hundefuehrerId===person.id && h.name.trim().toLowerCase()===hundName.toLowerCase())
-            || hundeNeu.find(h=>h.hundefuehrerId===person.id && h.name.trim().toLowerCase()===hundName.toLowerCase());
-          if(hund){
-            hundeUpdates.push({hund, rasse: idxHundRasse>-1?(f[idxHundRasse]||'').trim():'', geburtsdatum: idxHundGeburt>-1?parseCsvDatum(f[idxHundGeburt]):'', geschlecht, chipnummer: idxHundChip>-1?(f[idxHundChip]||'').trim():'', sparten, plaketten});
-            aktualisierteHunde++;
-          } else {
-            hund = {
-              id: uid(), name: hundName,
-              rasse: idxHundRasse>-1 ? (f[idxHundRasse]||'').trim() : '',
-              geburtsdatum: idxHundGeburt>-1 ? parseCsvDatum(f[idxHundGeburt]) : '',
-              geschlecht, chipnummer: idxHundChip>-1 ? (f[idxHundChip]||'').trim() : '',
-              hundefuehrerId: person.id, status:'aktiv', sparten, anzeigeart:'', rassegruppe:'', plaketten,
-            };
-            rhsSicherstellen(hund);
-            hundeNeu.push(hund); neueHunde++;
-          }
-        }
+      csvVorschau = csvSchnellstartAnalysieren(String(reader.result));
+      if(!csvVorschau.personenNeu.length && !csvVorschau.personenUpdates.length){
+        alert('Keine gültigen Zeilen gefunden. Bitte Beispielzeile ersetzen und erneut versuchen.'); csvVorschau=null; return;
       }
-      if(neuePersonen===0 && aktualisiertePersonen===0){ alert('Keine gültigen Zeilen gefunden. Bitte Beispielzeile ersetzen und erneut versuchen.'); return; }
-      const meldung = `${neuePersonen} neue Person(en), ${aktualisiertePersonen} bereits vorhandene Person(en) ergänzt, ${neueHunde} neue(r) Hund(e), ${aktualisierteHunde} bereits vorhandene(r) Hund(e) ergänzt`
-        + (uebersprungen ? `, ${uebersprungen} Zeile(n) übersprungen (leer oder Beispiel)` : '') + '. Fortfahren?';
-      if(!confirm(meldung)) return; // Es wurde noch nichts in den echten Bestand geschrieben.
-      state.personen.push(...personenNeu);
-      state.hunde.push(...hundeNeu);
-      personenUpdates.forEach(u=>{
-        if(u.benutzername && !u.person.benutzername) u.person.benutzername = u.benutzername;
-        if(u.geburtsdatum && !u.person.geburtsdatum) u.person.geburtsdatum = u.geburtsdatum;
-        if(u.mitgliedSeit && !u.person.mitgliedSeit) u.person.mitgliedSeit = u.mitgliedSeit;
-      });
-      hundeUpdates.forEach(u=>{
-        if(u.rasse && !u.hund.rasse) u.hund.rasse = u.rasse;
-        if(u.geburtsdatum && !u.hund.geburtsdatum) u.hund.geburtsdatum = u.geburtsdatum;
-        if(u.geschlecht && !u.hund.geschlecht) u.hund.geschlecht = u.geschlecht;
-        if(u.chipnummer && !u.hund.chipnummer) u.hund.chipnummer = u.chipnummer;
-        if(u.sparten.length) u.hund.sparten = [...new Set([...(u.hund.sparten||[]), ...u.sparten])];
-        if(u.plaketten.length) u.hund.plaketten = [...(u.hund.plaketten||[]), ...u.plaketten.filter(pl=>!(u.hund.plaketten||[]).some(x=>x.sparte===pl.sparte && x.nummer===pl.nummer))];
-      });
-      speichereState();
-      zeigeToast(`${neuePersonen} neue Person(en), ${neueHunde} neue(r) Hund(e) angelegt. Bereits vorhandene wurden nur ergänzt. Startpasswort neuer Personen: „start".`);
-      render();
+      modal = {type:'csvVorschau'}; render();
     }catch(err){
       alert('Die Tabelle konnte nicht eingelesen werden: '+err.message);
     }
   };
   reader.readAsText(file, 'UTF-8');
+}
+function renderModalCsvVorschau(){
+  const a = csvVorschau; if(!a) return '';
+  const neueHunde = a.hundeNeu.length, zweit = a.zweitZuordnungen.length;
+  return `
+  <div class="modal-back"><div class="modal" style="max-width:720px">
+    <div class="modal-head"><h3>Vorschau: Mitglieder &amp; Hunde einlesen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
+    <div class="modal-body">
+      <p class="hint">Noch ist nichts gespeichert. So würde BARRY die Tabelle übernehmen:</p>
+      <div class="grid-2" style="gap:8px;margin-bottom:10px">
+        <div class="card" style="padding:10px 12px"><div class="hint">Neue Personen</div><strong>${a.personenNeu.length}</strong></div>
+        <div class="card" style="padding:10px 12px"><div class="hint">Vorhandene Personen (ergänzt)</div><strong>${a.personenUpdates.length}</strong></div>
+        <div class="card" style="padding:10px 12px"><div class="hint">Neue Hunde</div><strong>${neueHunde}</strong></div>
+        <div class="card" style="padding:10px 12px"><div class="hint">Zweit-Hundeführer/innen</div><strong>${zweit}</strong></div>
+      </div>
+      ${a.unbekannteSpalten.length?`<p class="hint" style="color:var(--accent-ink)">Unbekannte Spalten werden ignoriert: ${a.unbekannteSpalten.map(esc).join(', ')}</p>`:''}
+      <div class="table-scroll" style="max-height:40vh;overflow:auto"><table><thead><tr><th>Zeile</th><th>Name</th><th>Ergebnis</th></tr></thead><tbody>
+        ${a.protokoll.map(z=>`<tr><td>${z.nr}</td><td>${esc(z.text)}</td><td class="hint">${esc(z.status)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="hint" style="margin-top:8px">Neue Personen melden sich mit ihrem Namen und dem Startpasswort <strong>start</strong> an und wählen dann ein eigenes Passwort.</p>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button><button class="btn btn-primary" id="m-csv-uebernehmen">Jetzt übernehmen</button></div>
+  </div></div>`;
+}
+function bindModalCsvVorschau(){
+  document.getElementById('m-schliessen').onclick = ()=>{ csvVorschau=null; schliesseModal(); };
+  document.getElementById('m-abbrechen').onclick = ()=>{ csvVorschau=null; schliesseModal(); };
+  document.getElementById('m-csv-uebernehmen').onclick = ()=>{
+    const a = csvVorschau; csvVorschau=null;
+    csvSchnellstartUebernehmen(a);
+    zeigeToast(`${a.personenNeu.length} neue Person(en), ${a.hundeNeu.length} neue(r) Hund(e) angelegt; Vorhandene ergänzt.`);
+    schliesseModal();
+  };
 }
 
 /* Gemeinsame Importlogik für Datensicherung und Erststart – alle Schutzprüfungen an einer Stelle. */
@@ -2483,6 +2667,7 @@ function renderModal(){
   if(!einsatzModalErlaubt()){ modal = null; return ''; }
   if(modal.type==='person') return renderModalPerson();
   if(modal.type==='hund') return renderModalHund();
+  if(modal.type==='csvVorschau') return renderModalCsvVorschau();
   if(modal.type==='qualifikation') return renderModalQualifikation();
   if(modal.type==='zuordnung') return renderModalZuordnung();
   if(modal.type==='zusatzrecht') return renderModalZusatzrecht();
@@ -2506,6 +2691,7 @@ function bindModal(person){
   if(!modal) return;
   if(modal.type==='person') return bindModalPerson(person);
   if(modal.type==='hund') return bindModalHund();
+  if(modal.type==='csvVorschau') return bindModalCsvVorschau();
   if(modal.type==='qualifikation') return bindModalQualifikation();
   if(modal.type==='zuordnung') return bindModalZuordnung();
   if(modal.type==='zusatzrecht') return bindModalZusatzrecht();
@@ -2742,6 +2928,12 @@ function renderModalHund(){
         ${state.personen.map(p=>`<option value="${p.id}" ${h.hundefuehrerId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
         </select>
       </div>
+      <div class="field"><label>Zweite/r Hundeführer/in (optional)</label>
+        <select id="hf-zweitfuehrer"><option value="">– keine/r –</option>
+        ${state.personen.map(p=>`<option value="${p.id}" ${h.zweitHundefuehrerId===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}
+        </select>
+        <div class="hint">Wenn ein Hund von zwei Personen geführt wird. Beide sehen den Hund als eigenes Team und dürfen Trainings eintragen.</div>
+      </div>
       <div class="field"><label>Status</label>
         <select id="hf-status"><option value="aktiv" ${h.status==='aktiv'?'selected':''}>aktiv</option><option value="inaktiv" ${h.status==='inaktiv'?'selected':''}>inaktiv</option></select>
       </div>
@@ -2839,6 +3031,7 @@ function bindModalHund(){
       geschlecht:document.getElementById('hf-geschlecht').value,
       chipnummer:document.getElementById('hf-chip').value.trim(),
       hundefuehrerId:document.getElementById('hf-fuehrer').value,
+      zweitHundefuehrerId:(document.getElementById('hf-zweitfuehrer').value && document.getElementById('hf-zweitfuehrer').value!==document.getElementById('hf-fuehrer').value) ? document.getElementById('hf-zweitfuehrer').value : '',
       status:document.getElementById('hf-status').value,
       sparten, anzeigeart: document.getElementById('hf-anzeigeart').value,
       rassegruppe: document.getElementById('hf-rassegruppe').value,
@@ -3800,10 +3993,12 @@ let wissenTab = 'pruefung';
 function darfTrainingBearbeiten(person){ return hatAusbilderRecht(person) || istLeitungOderAdmin(person) || hatZusatzrecht(person, ZUSATZRECHT_AUSBILDUNG); }
 // Neben Ausbildern darf auch der/die eigene Hundeführer/in eines Teams dessen Trainingsdaten dokumentieren
 // (bisher inkonsistent: im einfachen Trainingstagebuch nur Ausbilder, in Mantrailing/RH-Tagebuch für alle offen).
-function darfEintragFuerHund(person, hund){ return darfTrainingBearbeiten(person) || (hund && hund.hundefuehrerId===person.id); }
+function darfEintragFuerHund(person, hund){ return darfTrainingBearbeiten(person) || (hund && hundGefuehrtVon(hund, person.id)); }
 function teamLabel(hund){
   const f = state.personen.find(p=>p.id===hund.hundefuehrerId);
-  return `${hund.name}${f?' ('+f.name+')':''}${hund.status==='inaktiv'?' – inaktiv':''}`;
+  const z = hund.zweitHundefuehrerId ? state.personen.find(p=>p.id===hund.zweitHundefuehrerId) : null;
+  const namen = [f?.name, z?.name].filter(Boolean).join(' / ');
+  return `${hund.name}${namen?' ('+namen+')':''}${hund.status==='inaktiv'?' – inaktiv':''}`;
 }
 const AUSBILDUNG_TABS = [
   {id:'findewille', label:'Findewille & Anzeigetraining'},
@@ -3838,10 +4033,10 @@ const WISSEN_TABS = [
   {id:'material', label:'Lehrmaterial'},
 ];
 const LEHRMATERIAL_KATEGORIEN = [
-  { id:'formular', label:'Formular/Vordruck' },
   { id:'uebung', label:'Übung' },
   { id:'trainingseinheit', label:'Trainingseinheit' },
   { id:'karte', label:'Karte/Kartenmaterial' },
+  { id:'formular', label:'Formular/Vordruck' },
   { id:'sonstiges', label:'Sonstiges Lehrmaterial' },
 ];
 function lehrmaterialKategorieLabel(id){ return (LEHRMATERIAL_KATEGORIEN.find(k=>k.id===id)||{label:id}).label; }
@@ -4381,16 +4576,15 @@ function csvModulEinlesen(file){
   const reader = new FileReader();
   reader.onload = ()=>{
     try{
-      const text = String(reader.result).replace(/^\uFEFF/, '');
-      const zeilen = text.split(/\r\n|\r|\n/).filter(z=>z.trim() && !z.trim().startsWith('#'));
-      if(zeilen.length < 2) throw new Error('Die Datei enthält außer der Kopfzeile keine Einträge.');
-      const kopf = csvZeileParsen(zeilen[0]).map(h=>h.toLowerCase());
+      const gelesen = csvZeilenLesen(reader.result);
+      const kopf = gelesen.kopf, datenZeilen = gelesen.zeilen;
+      if(!datenZeilen.length) throw new Error('Die Datei enthält außer der Kopfzeile keine Einträge.');
       const idxTeam = kopf.indexOf('team'), idxModul = kopf.indexOf('modul'), idxStatus = kopf.indexOf('status');
       if(idxTeam===-1 || idxModul===-1 || idxStatus===-1) throw new Error('Spalten "Team", "Modul" und "Status" nicht gefunden.');
       const moduleElemente = {drk11:DRK_VERHALTEN, drk12:DRK_GRUNDGEHORSAM, drk13:DRK_GEWANDTHEIT};
       let gesetzt=0, uebersprungen=0; const unbekannteTeams=new Set();
-      for(let i=1;i<zeilen.length;i++){
-        const f = csvZeileParsen(zeilen[i]);
+      for(let i=0;i<datenZeilen.length;i++){
+        const f = datenZeilen[i];
         const teamName=(f[idxTeam]||'').trim(), modul=(f[idxModul]||'').trim(), status=(f[idxStatus]||'').trim();
         if(!teamName || !modul || (teamName===CSV_MODUL_BEISPIEL[0])){ uebersprungen++; continue; }
         if(!moduleElemente[modul] || !MODUL_STATUS_ERLAUBT.includes(status)){ uebersprungen++; continue; }
@@ -6079,6 +6273,7 @@ function bindAlltagHausaufgaben(person){
 /* ---- Übungsbibliothek (Pfotenalltag) ---- */
 let bibliothekKategorie = 'alle';
 let bibliothekSuche = '';
+let bibliothekSucheTippt = false; // nur nach eigener Eingabe den Fokus zurücksetzen (sonst springt am Handy die Tastatur auf)
 function renderUebungsbibliothekKarte(u){
   const vertiefung = u.excelId ? VERTIEFUNG_INDEX[u.excelId] : null;
   return `
@@ -6215,14 +6410,7 @@ function renderAlltagBibliothek(person){
     abschnitte.push(`
       <details class="card card-pad" style="margin-bottom:12px" open>
         <summary style="cursor:pointer;font-weight:700;font-size:.98rem">Übungen <span class="chip muted">${ALLE_UEBUNGEN.length}</span></summary>
-        <div class="row" style="margin:12px 0">
-          <select id="bib-kategorie" style="width:auto" ${bibliothekSuche?'disabled':''}>
-            <option value="alle">Alle Kategorien</option>
-            ${PFA_CATS_LIST.map(c=>`<option value="${c.id}" ${bibliothekKategorie===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
-          </select>
-          <input id="bib-suche" placeholder="Suche nach Übung oder Ziel…" value="${esc(bibliothekSuche)}" style="flex:1;min-width:200px;padding:9px 10px;border:1px solid var(--line);border-radius:8px">
-        </div>
-        <p class="hint">${liste.length} Übung(en) gefunden${liste.length>120?' – die ersten 120 angezeigt, bitte weiter eingrenzen':''}.</p>
+        <p class="hint" style="margin-top:10px">${liste.length} Übung(en) gefunden${liste.length>120?' – die ersten 120 angezeigt, bitte weiter eingrenzen':''}.</p>
         ${anzeigeListe.map(renderUebungsbibliothekKarte).join('') || '<div class="card empty"><p>Keine Übungen gefunden.</p></div>'}
       </details>
     `);
@@ -6248,7 +6436,14 @@ function renderAlltagBibliothek(person){
       ` : ''}
     </div>
     <div class="card card-pad" style="margin-bottom:14px">
-      <p class="hint" style="margin:0 0 8px"><strong>Quellen anzeigen</strong> (mehrere möglich):</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <input id="bib-suche" placeholder="Suche nach Übung, Ziel oder Fachfrage…" value="${esc(bibliothekSuche)}" style="flex:1;min-width:180px;padding:9px 10px;border:1px solid var(--line);border-radius:8px">
+        <select id="bib-kategorie" style="width:auto" ${bibliothekSuche?'disabled':''} title="Kategorie (nur für Übungen)">
+          <option value="alle">Alle Kategorien</option>
+          ${PFA_CATS_LIST.map(c=>`<option value="${c.id}" ${bibliothekKategorie===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <p class="hint" style="margin:0 0 6px"><strong>Quellen anzeigen</strong> (mehrere möglich):</p>
       ${renderBibQuelleCheckboxen()}
     </div>
     ${abschnitte.join('') || '<div class="card empty"><p>Bitte mindestens eine Quelle auswählen.</p></div>'}
@@ -6293,9 +6488,12 @@ function bindAlltagBibliothek(person){
   if(kat) kat.onchange = e=>{ bibliothekKategorie = e.target.value; render(); };
   const suche = document.getElementById('bib-suche');
   if(suche){
-    suche.oninput = ()=>{ bibliothekSuche = suche.value; render(); };
-    suche.focus();
-    suche.selectionStart = suche.selectionEnd = suche.value.length;
+    suche.oninput = ()=>{ bibliothekSuche = suche.value; bibliothekSucheTippt = true; render(); };
+    if(bibliothekSucheTippt){
+      bibliothekSucheTippt = false;
+      suche.focus();
+      suche.selectionStart = suche.selectionEnd = suche.value.length;
+    }
   }
 }
 
@@ -6785,8 +6983,8 @@ function renderModalSuchtrupps(){
       <p class="hint">WS = Wegesuche · FL = Flächensuche · MT = Mantrailing · TR = Trümmersuche. Die Suchgebietsnummer sollte mit der Einsatzkarte übereinstimmen.</p>
       ${einsatz.suchtrupps.map((s,i)=>{
         const sa = s.suchart||{};
-        const eigeneHundefuehrer = state.personen.filter(p=>p.status!=='inaktiv' && state.hunde.some(h=>h.status!=='inaktiv' && h.hundefuehrerId===p.id));
-        const hundeDesFuehrers = state.hunde.filter(h=>h.status!=='inaktiv' && h.hundefuehrerId===s.hundefuehrerId);
+        const eigeneHundefuehrer = state.personen.filter(p=>p.status!=='inaktiv' && state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, p.id)));
+        const hundeDesFuehrers = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, s.hundefuehrerId));
         const helferListe = s.helferIds||[];
         return `
         <div class="card card-pad" style="margin-bottom:10px">
@@ -6876,7 +7074,7 @@ function bindModalSuchtrupps(){
       s.hundefuehrerId = sel.value || null;
       // Beim Wechsel des Hundeführers automatisch dessen (ersten) aktiven Hund vorbelegen,
       // damit kein Trupp versehentlich mit dem falschen Hund verknüpft bleibt.
-      const hund = state.hunde.find(h=>h.status!=='inaktiv' && h.hundefuehrerId===s.hundefuehrerId);
+      const hund = state.hunde.find(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, s.hundefuehrerId));
       s.hundId = hund ? hund.id : null;
       speichereState(); render();
     };
@@ -7378,7 +7576,7 @@ function bindModalAustausch(){
 /* ---- Mein Profil (für alle Rollen: eigenes Passwort, Km-Standard, Sparten-Präferenz) ---- */
 function renderModalMeinProfil(){
   const p = aktuellePerson();
-  const eigeneHunde = state.hunde.filter(h=>h.hundefuehrerId===p.id);
+  const eigeneHunde = state.hunde.filter(h=>hundGefuehrtVon(h, p.id));
   return `
   <div class="modal-back"><div class="modal">
     <div class="modal-head"><h3>Mein Profil – ${esc(p.name)}</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
@@ -7502,24 +7700,29 @@ const HILFE_ARTIKEL = [
   {id:"mein-profil", kategorie:"Erste Schritte", titel:"Mein Profil: eigenes Passwort, Sparten, Kilometer", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Ein Klick auf den eigenen Namen unten links in der Seitenleiste \u00f6ffnet <strong>Mein Profil</strong>.\nDas kann jede Person f\u00fcr sich selbst nutzen, unabh\u00e4ngig von der Rolle:</p>\n<ul>\n<li><strong>Eigenes Passwort \u00e4ndern</strong> \u2013 zweimal das neue Passwort eintippen, speichern.</li>\n<li><strong>Meine Sparte(n)</strong> ausw\u00e4hlen (Fl\u00e4che, Tr\u00fcmmer, Mantrailing). Das bestimmt, welche\nSchnellzugriffe auf der Startseite zuerst angezeigt werden.</li>\n<li><strong>Standard-Kilometer</strong> zum \u00dcbungsort hinterlegen, damit dieser Wert beim Dienstnachweis\nautomatisch vorgeschlagen wird.</li>\n</ul>\n"},
   {id:"rollen", kategorie:"Rollen & Rechte", titel:"Rollen\u00fcbersicht: Wer darf was?", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Die genaue Tabelle steht oben auf dieser Seite fest angepinnt. Kurz zusammengefasst:</p>\n<ul>\n<li><strong>Mitglied:</strong> eigene Trainings f\u00fcr das eigene Team eintragen, Termine ansehen und\nzu-/absagen, Hausaufgaben des eigenen Teams erledigen, Wissen &amp; Material nachlesen.</li>\n<li><strong>Ausbilder, Ausbilder-Anw\u00e4rter, Ausbilder-Helfer:</strong> zus\u00e4tzlich Trainings f\u00fcr\n<em>jedes</em> Team eintragen, Pr\u00fcfstatus setzen, Termine anlegen, Hausaufgaben an mehrere/alle Teams\nverteilen, sowie Hunde, Qualifikationen, Anwesenheit und Orte in der Verwaltung pflegen. Alle drei\nAusbilder-Rollen haben fachlich exakt dieselben Rechte \u2013 nur die Bezeichnung unterscheidet sich.</li>\n<li><strong>Staffelleitung, Bereitschaftsleitung, Admin:</strong> zus\u00e4tzlich Personen, Rollen &amp;\nRechte, Datensicherung, den Staffelnamen und den kompletten Einsatzbereich (reale Eins\u00e4tze).</li>\n<li><strong>Individuelle Zusatzrechte:</strong> Die Leitung kann einzelnen Personen unter\n<strong>Verwaltung \u2192 Rollen &amp; Rechte</strong> gezielt das Recht \u201eKalender verwalten\" oder\n\u201eAusbildung verwalten\" geben, auch ohne dass diese Person offiziell Ausbilder/-in ist.</li>\n</ul>\n"},
   {id:"uebungsleitung", kategorie:"Rollen & Rechte", titel:"Einsatzleitung f\u00fcr eine \u00dcbung \u00fcbernehmen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>F\u00fcr \u00dcbungseins\u00e4tze kann die Leitung ein <strong>normales Mitglied vor\u00fcbergehend als\nEinsatzleitung</strong> einsetzen. Diese Person sieht dann den Bereich <strong>Einsatz</strong> und kann\nf\u00fcr genau diese eine \u00dcbung alle Funktionen nutzen (Suchtrupps, Kr\u00e4fte, Risikobewertung, Karten,\nAbschluss) \u2013 ohne dass sich dadurch ihre Rolle oder ihre Rechte in der \u00fcbrigen App \u00e4ndern. Nach der\n\u00dcbung kann die n\u00e4chste \u00dcbung an eine ganz andere Person vergeben werden. Reale Eins\u00e4tze bleiben davon\nunber\u00fchrt und sind weiterhin nur f\u00fcr Leitung/Admin sichtbar.</p>\n"},
-  {id:"start", kategorie:"Start", titel:"Die Startseite verstehen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Die Startseite zeigt auf einen Blick:</p>\n<ul>\n<li><strong>N\u00e4chste Termine</strong> mit Direkt-Buttons \u201eDabei\" / \u201eNicht dabei\" \u2013 ohne extra in den\nKalender wechseln zu m\u00fcssen.</li>\n<li><strong>Mein Team</strong>: die eigenen Hunde mit Schnellzugriffen \u201e+ Fl\u00e4chensuche\", \u201e+ Tr\u00fcmmersuche\",\n\u201e+ Mantrailing\", in der Reihenfolge der eigenen Sparten-Pr\u00e4ferenz aus \u201eMein Profil\". Ein Klick \u00f6ffnet\ndirekt das passende Eintragsformular.</li>\n<li>Einen Hinweis, wenn f\u00fcr das eigene Team <strong>offene Hausaufgaben</strong> vorliegen \u2013 ein Klick\nf\u00fchrt direkt dorthin.</li>\n<li>Eine kleine Kennzahl, wie viele Trainings die Staffel in den letzten 30 Tagen gemeinsam dokumentiert\nhat.</li>\n</ul>\n"},
+  {id:"start", kategorie:"Start", titel:"Die Startseite verstehen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Die Startseite zeigt auf einen Blick:</p>\n<ul>\n<li><strong>N\u00e4chste Termine</strong> mit Direkt-Buttons \u201eDabei\" / \u201eNicht dabei\" \u2013 ohne extra in den\nKalender wechseln zu m\u00fcssen.</li>\n<li><strong>Mein Team</strong>: die eigenen Hunde mit Schnellzugriffen \u201e+ Fl\u00e4chensuche\", \u201e+ Tr\u00fcmmersuche\",\n\u201e+ Mantrailing\", in der Reihenfolge der eigenen Sparten-Pr\u00e4ferenz aus \u201eMein Profil\". Ein Klick \u00f6ffnet\ndirekt das passende Eintragsformular.</li>\n<li>Einen Hinweis, wenn f\u00fcr das eigene Team <strong>offene Hausaufgaben</strong> vorliegen \u2013 ein Klick\nf\u00fchrt direkt dorthin.</li>\n<li>Eine kleine Kennzahl, wie viele Trainings die Staffel in den letzten 30 Tagen gemeinsam dokumentiert\nhat.</li>\n<li>Für Leitung und Ausbilder/-innen zusätzlich die Karte <strong>Für Leitung &amp; Ausbildung</strong>: offene Fristen, fehlende Pflichtqualifikationen, Jubiläen, mögliche Duplikate und die Termine der nächsten sieben Tage mit Zusagen und fehlenden Rückmeldungen.</li>\n</ul>\n"},
   {id:"organisation-kalender", kategorie:"Organisation & Termine", titel:"Kalender ansehen und zu-/absagen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Organisation &amp; Termine \u2192 Kalender</strong> stehen alle Staffeltermine. Mit dem Filter\noben l\u00e4sst sich zwischen \u201eKommende\", \u201eAlle\" und einzelnen Kategorien wechseln. Ein Klick auf einen Termin\n\u00f6ffnet die Details.</p>\n<p>Die eigene R\u00fcckmeldung (\u201eDabei\"/\u201eNicht dabei\"/\u201eNoch offen\") gibt jede Person im Reiter\n<strong>Teilnahme</strong> selbst ab \u2013 das geht auch direkt von der Startseite aus f\u00fcr die n\u00e4chsten\nTermine. Bei Zusage k\u00f6nnen optional gefahrene Kilometer und anrechenbare Stunden f\u00fcr den sp\u00e4teren\nDienstnachweis eingetragen werden.</p>\n"},
   {id:"organisation-termin-anlegen", kategorie:"Organisation & Termine", titel:"Termin anlegen (Ausbilder/Leitung)", rollen:["ausbilder", "leitung"], text:"\n<p>\u00dcber <strong>+ Termin anlegen</strong> lassen sich Titel, Datum/Uhrzeit, Ort, Kategorie (z. B.\nRHS-Ausbildung, Einsatz\u00fcbung, Fortbildung, Pr\u00fcfung) und weitere Angaben festlegen. Wer das Recht\n\u201eKalender verwalten\" hat \u2013 als Ausbilder-Rolle automatisch, oder als individuell vergebenes Zusatzrecht \u2013\nkann Termine anlegen und bearbeiten.</p>\n<p>Ein ganzer Jahresplan l\u00e4sst sich au\u00dferdem bequem aus einer vorbereiteten Excel-Tabelle einlesen\n(Button <strong>Jahresplan (Excel)</strong>): BARRY zeigt vor der \u00dcbernahme eine Vorschau und\n\u00fcberspringt automatisch bereits vorhandene Termine.</p>\n"},
   {id:"organisation-planung", kategorie:"Organisation & Termine", titel:"Planung & Themenb\u00f6rse", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Zu geplanten Terminen k\u00f6nnen Inhalte, Verantwortliche, ben\u00f6tigtes Material und Absprachen hinterlegt\nwerden \u2013 sichtbar f\u00fcr die ganze Staffel. So wei\u00df jede/r vorab, worum es bei einem Termin geht und wer\nwas mitbringt.</p>\n"},
-  {id:"ausbildung-ueberblick", kategorie:"Ausbildung & Team", titel:"Die vier Trainingstageb\u00fccher im \u00dcberblick", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Der Bereich <strong>Ausbildung &amp; Team</strong> enth\u00e4lt vier Reiter, in dieser Reihenfolge, weil\nFl\u00e4che und Tr\u00fcmmer bei den meisten Staffeln den L\u00f6wenanteil der Arbeit ausmachen:</p>\n<ol>\n<li><strong>Trainingstagebuch</strong> \u2013 ein kurzer, formloser Eintrag f\u00fcr den Alltag (Thema, Notizen).</li>\n<li><strong>RH-Tagebuch Fl\u00e4che/Tr\u00fcmmer</strong> \u2013 die ausf\u00fchrliche Fachdokumentation je Sparte.</li>\n<li><strong>Mantrailing-Tagebuch</strong> \u2013 die ausf\u00fchrliche Fachdokumentation f\u00fcr Mantrailing.</li>\n<li><strong>Finde- &amp; Anzeigewille</strong> \u2013 Motivations- und Beobachtungsfragebogen je Hund.</li>\n</ol>\n<p>Ein Trainingseintrag darf von Ausbildern/Leitung f\u00fcr jedes Team angelegt werden, und zus\u00e4tzlich von\nder eigenen Hundef\u00fchrerin/dem eigenen Hundef\u00fchrer f\u00fcr das eigene Team. Bereits gespeicherte Eintr\u00e4ge\nlassen sich sp\u00e4ter wieder \u00f6ffnen, erg\u00e4nzen oder l\u00f6schen \u2013 dazu einfach in der Liste auf den\ngew\u00fcnschten Eintrag klicken.</p>\n"},
+  {id:"ausbildung-ueberblick", kategorie:"Ausbildung & Team", titel:"Ausbildung & Team: Aufbau des Bereichs", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Der Bereich <strong>Ausbildung &amp; Team</strong> hat zwei Reiter:</p>\n<ol>\n<li><strong>Findewille &amp; Anzeigetraining</strong> – die Hauptessenz der Ausbildung: Motivations-Fragebogen, Opferbindungs-Übungen, Beobachtung der Anzeigeart und der Anzeigeaufbau für alle fünf Anzeigearten (Standardkette in vier Bausteinen). Oben lässt sich mit <strong>🎲 Übung vorschlagen</strong> eine zufällige Anzeige-/Suchübung ziehen und direkt ins Trainingstagebuch übernehmen.</li>\n<li><strong>Trainingstagebücher</strong> – mit drei Unterreitern: <strong>Allgemein</strong> (kurzer formloser Eintrag), <strong>Fläche &amp; Trümmer</strong> (ausführliche Fachdokumentation je Sparte) und <strong>Mantrailing</strong> (Fachdokumentation inkl. GPS-Track).</li>\n</ol>\n<p>Ein Trainingseintrag darf von Ausbildern/Leitung für jedes Team angelegt werden, und zusätzlich von der eigenen Hundeführerin/dem eigenen Hundeführer für das eigene Team. Gespeicherte Einträge lassen sich später öffnen, ergänzen oder löschen – dazu in der Liste auf den Eintrag klicken.</p>\n"},
   {id:"rh-tagebuch", kategorie:"Ausbildung & Team", titel:"RH-Tagebuch Fl\u00e4che/Tr\u00fcmmer ausf\u00fcllen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Team ausw\u00e4hlen, dann eine Sparte w\u00e4hlen (z. B. \u201e+ Fl\u00e4chensuche\" oder \u201e+ Tr\u00fcmmersuche\"). Das Formular\ngliedert sich in Abschnitte: Rahmendaten (Ort, Datum), Wetter, Gel\u00e4nde, eine oder mehrere\n<strong>Versteck-/Zielpersonen (VP)</strong> mit jeweils eigener, komplett getrennter Bewertung, und am\nEnde ein Gesamtergebnis. \u00dcber <strong>+ Person hinzuf\u00fcgen</strong> lassen sich beliebig viele VP f\u00fcr\ndasselbe Training anlegen \u2013 jede VP wird einzeln bewertet, sodass sich z. B. eine leicht und eine\nschwierig gefundene Person klar unterscheiden lassen.</p>\n<p>Bewertungsfelder stehen standardm\u00e4\u00dfig auf \u201enicht bewertet\", damit versehentlich nicht ausgef\u00fcllte\nFelder nicht wie ein gutes Ergebnis aussehen.</p>\n"},
   {id:"mantrailing-tagebuch", kategorie:"Ausbildung & Team", titel:"Mantrailing-Tagebuch und GPS-Track", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Erfasst Geruchsartikel, Ansatzsuche/PLS, Trailverlauf, Entscheidungen, Negativarbeit, Endpool und\nAuffindesituation. \u00dcber <strong>Track starten</strong> zeichnet BARRY bei erteilter Standortfreigabe\nlive den zur\u00fcckgelegten Weg auf; <strong>Stoppen</strong> beendet die Aufzeichnung. Wird der Standort\nverweigert, bleiben alle \u00fcbrigen Eingaben erhalten und lassen sich normal weiter ausf\u00fcllen.</p>\n"},
-  {id:"findewille", kategorie:"Ausbildung & Team", titel:"Finde- & Anzeigewille", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Ein Fragebogen zu Motivation, Konzentration und Anzeigeverhalten je Hund, um die Entwicklung \u00fcber die\nZeit im Blick zu behalten.</p>\n"},
-  {id:"alltag", kategorie:"Alltag & Zuhause", titel:"Alltagstraining und \u00dcbungsbibliothek", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Im <strong>Trainingstagebuch (Alltag)</strong> dokumentieren Hundef\u00fchrer/-innen private \u00dcbungen\nzwischen den Staffelterminen \u2013 klar getrennt von der offiziellen Rettungshundeausbildung. Die\n<strong>\u00dcbungsbibliothek</strong> bietet dazu passende \u00dcbungsideen zum Nachschlagen, u. a. nach\nFitness, Anzeigeart-Programmen und Fachfragen sortiert.</p>\n"},
+  {id:"findewille", kategorie:"Ausbildung & Team", titel:"Findewille & Anzeigetraining", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Je Hund: ein Fragebogen zu Motivation und Findewille (ergibt einen Motivationstyp mit passenden Übungen), Opferbindungs-Übungen, ein Beobachtungs-Fragebogen zur passenden Anzeigeart sowie der <strong>Anzeigeaufbau</strong> – per Auswahl für Verbeller, Pendler, Rückverweiser, Freiverweiser oder Bringsel, jeweils als Standardkette mit vier Bausteinen. Der aktuell trainierte Baustein lässt sich markieren.</p>\n<p>Die Karte <strong>Rasse &amp; Lebensphase</strong> ist standardmäßig zugeklappt; ein Klick öffnet die Hinweise. Passen Rassegruppe oder Lebensphase des Hundes zu einer Übung, erscheinen direkt an der Übungskarte automatische Hinweis-Kästchen 🐾.</p>\n"},
+  {id:"alltag", kategorie:"Alltag & Zuhause", titel:"Übungen, Alltagstraining und Übungsbibliothek", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Der Bereich startet mit dem Reiter <strong>Übungen</strong>: Über <strong>🎲 Übung vorschlagen</strong> zieht BARRY eine zufällige Übung aus der aktuellen Auswahl – wahlweise passend zu den Sparten eines gewählten Teams. „Neu würfeln“ liefert die nächste, <strong>In Trainingstagebuch übernehmen</strong> öffnet direkt den Eintrags-Dialog mit vorausgefüllter Übung. So lässt sich zwischen den Staffelterminen selbstständig mit dem eigenen Hund arbeiten.</p>\n<p>Darunter die Suche (Übungen und Fachfragen), ein Kategorie-Filter und die Quellen-Auswahl mit Mehrfachauswahl: Übungen, Fitness-Übungen, Anzeigeart-Programme und Fachfragen – jede Quelle als eigener aufklappbarer Abschnitt.</p>\n<p>Im <strong>Trainingstagebuch (Alltag)</strong> dokumentieren Hundeführer/-innen ihre privaten Übungen – klar getrennt von der offiziellen Ausbildung. <strong>Hausaufgaben</strong> siehe eigener Artikel.</p>\n"},
   {id:"hausaufgaben", kategorie:"Alltag & Zuhause", titel:"Hausaufgaben zuweisen und erledigen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Zuweisen</strong> (Ausbilder/-in, Leitung oder die/der eigene Hundef\u00fchrer/in f\u00fcr das eigene\nTeam): im Reiter <strong>Hausaufgaben</strong> auf <strong>+ Hausaufgabe zuweisen</strong> klicken. Im\nDialog l\u00e4sst sich <strong>ein Team, mehrere Teams gezielt oder mit einem Klick \u201eAllen Teams\nzuweisen\"</strong> ausw\u00e4hlen \u2013 praktisch, wenn alle Teams dieselbe \u00dcbung bis zum n\u00e4chsten Termin machen\nsollen. Titel, Beschreibung und optional ein F\u00e4lligkeitsdatum ausf\u00fcllen und speichern: BARRY legt dann\nf\u00fcr jedes ausgew\u00e4hlte Team einen eigenen, unabh\u00e4ngigen Eintrag an.</p>\n<p>Ausbilder/-innen sehen und k\u00f6nnen dabei alle Teams ausw\u00e4hlen; ein normales Mitglied sieht dort nur\ndie eigenen Teams.</p>\n<p><strong>Erledigen</strong> (Hundef\u00fchrer/-in): offene Hausaufgaben erscheinen sowohl auf der\nStartseite als auch im Reiter selbst. Mit <strong>Als erledigt markieren</strong> und einer optionalen\nkurzen R\u00fcckmeldung wird die Aufgabe abgehakt. Wer eine Hausaufgabe zugewiesen hat, oder ein Ausbilder/\neine Ausbilderin, kann sie \u00fcber <strong>Entfernen</strong> auch wieder l\u00f6schen.</p>\n"},
-  {id:"wissen", kategorie:"Wissen & Material", titel:"Nachschlagewerk: Pr\u00fcfungen, Fehlersuche, Lehrmaterial", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Dieser Bereich dient zum Nachlesen, nicht zum laufenden Dokumentieren:</p>\n<ul>\n<li><strong>Pr\u00fcfungsordnungen</strong> \u2013 DRK-Module und Pr\u00fcfungselemente je Hund; den Status\n(\u201ebestanden\" usw.) d\u00fcrfen nur Ausbilder/-innen und Leitung setzen.</li>\n<li><strong>Fehlerdiagnose</strong> \u2013 Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste,\nSelbstcheck und eine \u201eWenn X, dann pr\u00fcfe Y\"-Fehlersuche.</li>\n<li><strong>Sparten, Helfer &amp; Erste Hilfe</strong> \u2013 \u00dcbungskataloge f\u00fcr Mantrailing und\nTr\u00fcmmersuche, Helferschulung, Erste-Hilfe-Wissen.</li>\n<li><strong>Lehrmaterial</strong> \u2013 Dateien (PDF, Bilder u. a.), die Ausbilder/-innen hochladen und die\nf\u00fcr alle sichtbar sind.</li>\n</ul>\n"},
+  {id:"wissen", kategorie:"Wissen & Material", titel:"Nachschlagewerk: Prüfungen, Fehlersuche, Lehrmaterial", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Dieser Bereich dient zum Nachlesen und zum Pflegen des Prüfstatus:</p>\n<ul>\n<li><strong>Prüfungsordnungen</strong> – DRK-Module 1.1/1.2/1.3 sowie VDH BH-VT je Hund mit allen Elementen (Durchführung, Bewertung, Aufbau-Tipps). Über jedem Modul eine Sprungleiste zu den Elementen; „Allgemeine Grundsätze“ sind zugeklappt. Der Status je Element hat fünf Stufen (Nicht bewertet · Im Aufbau · Gefestigt · Sicher beherrscht · Geprüft/bestanden) und darf nur von Ausbildern/Leitung gesetzt werden. Oben: <strong>🎯 Nächste Übung vorschlagen</strong> zieht ein offenes Element und dazu eine passende Übung aus der Bibliothek. Über <strong>Modulprüfungen aus Tabelle übernehmen</strong> lassen sich bestandene Module für viele Teams per CSV eintragen.</li>\n<li><strong>Fehlerdiagnose</strong> – Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste und Selbstcheck (klappen nach dem Beantworten zu), HF-Kompetenz-Themen und eine „Wenn X, dann prüfe Y“-Fehlersuche. Dort kann pro Symptom <strong>„Das betrifft uns“</strong> gewählt werden – das Thema erscheint dann als 🎯-Hinweis an genau den betroffenen Übungskarten.</li>\n<li><strong>Sparten, Helfer &amp; Erste Hilfe</strong> – Übungskataloge für Mantrailing und Trümmersuche, Helferschulung, Erste-Hilfe-Wissen.</li>\n<li><strong>Lehrmaterial</strong> – Dateien (PDF, Word, Bilder u. a.), die Ausbilder/-innen hochladen; mit der Kategorie <strong>Formular/Vordruck</strong> lassen sich z. B. die offiziellen Bewertungsbögen und Anmeldeformulare griffbereit ablegen.</li>\n</ul>\n"},
   {id:"einsatz-grundlagen", kategorie:"Einsatz", titel:"Realeinsatz und \u00dcbung: der Unterschied", rollen:["ausbilder", "leitung"], text:"\n<p>Beim Anlegen eines neuen Einsatzes wird zuerst die <strong>Art</strong> gew\u00e4hlt: <strong>Realeinsatz</strong>\n(nur f\u00fcr Leitung/Admin sichtbar und bearbeitbar) oder <strong>\u00dcbung</strong> (mit frei w\u00e4hlbarer,\nvor\u00fcbergehender Einsatzleitung, siehe Artikel \u201eEinsatzleitung f\u00fcr eine \u00dcbung \u00fcbernehmen\"). F\u00fcr beide\nArten lassen sich Alarmierungszeit, Einsatzort, Angaben zur vermissten Person, eine\nKarten-/Einsatzreferenz (z. B. ein CalTopo-Link als reine Notiz) und ein chronologisches\nEreignisprotokoll mit Typ (Statusmeldung, Fund, \u00dcbergabe, Nachforderung, Erste Hilfe) und Bezug zu\neinem Suchtrupp erfassen.</p>\n"},
   {id:"einsatz-suchtrupps", kategorie:"Einsatz", titel:"Suchtrupps, Kr\u00e4fte und Risikobewertung", rollen:["ausbilder", "leitung"], text:"\n<p>\u00dcber die Schaltfl\u00e4che <strong>Suchtrupps</strong> im ge\u00f6ffneten Einsatz lassen sich Trupps mit echten\nPersonen anlegen: Hundef\u00fchrer/-in ausw\u00e4hlen (der zugeh\u00f6rige Hund wird automatisch vorgeschlagen),\nweitere Helfer aus der Staffel per Mehrfachauswahl erg\u00e4nzen, oder der Trupp als <strong>externes\nTeam</strong> (z. B. eine andere Staffel) markieren. Rufname, Suchart, Status, Suchauftrag und Ergebnis\nwerden je Trupp erfasst; die letzten Ereignisprotokoll-Meldungen zu einem Trupp werden direkt in seiner\nKarte angezeigt.</p>\n<p><strong>Kr\u00e4fte</strong> listet alle vor Ort eingesetzten Personen und Fahrzeuge.\n<strong>Risikobewertung</strong> berechnet nach dem festen Bewertungsraster automatisch eine Einstufung\n(NIEDRIG/MITTEL/HOCH) aus den eingegebenen Werten.</p>\n"},
   {id:"einsatz-tracks", kategorie:"Einsatz", titel:"Karten & Tracks: GPX/KML importieren", rollen:["ausbilder", "leitung"], text:"\n<p>Tracks und Suchgebiete aus einer Karten-App (z. B. Gaia GPS oder CalTopo) lassen sich als\n<strong>GPX- oder KML-Datei</strong> exportieren und \u00fcber <strong>Karten &amp; Tracking \u2192\nGPX-/KML-Track importieren</strong> einlesen \u2013 offline, ohne Verbindung zu einem externen Dienst.\nWegpunkte/Marker (z. B. eine Fundstelle) werden mit \u00fcbernommen. Jeder Track l\u00e4sst sich anschlie\u00dfend\neinem Suchtrupp zuordnen; BARRY setzt dabei automatisch den Hundef\u00fchrer als prim\u00e4re Position, damit die\nKarte nicht von mehreren fast identischen Positionen \u00fcberf\u00fcllt wird. Weitere Truppmitglieder lassen\nsich bei Bedarf \u00fcber einen Schalter zus\u00e4tzlich einblenden. GeoJSON-Dateien werden aktuell nicht\nunterst\u00fctzt.</p>\n"},
   {id:"einsatz-abschluss", kategorie:"Einsatz", titel:"Einsatz abschlie\u00dfen", rollen:["ausbilder", "leitung"], text:"\n<p>Im Reiter <strong>Abschluss</strong> werden beteiligte Hilfsorganisationen, Kartenmaterial,\nKommunikationswege, Wetterlage und besondere Vorkommnisse zusammengefasst \u2013 als abschlie\u00dfende\nDokumentation des Einsatzes bzw. der \u00dcbung.</p>\n"},
-  {id:"verwaltung-ueberblick", kategorie:"Verwaltung", titel:"Verwaltung: Wer sieht was?", rollen:["ausbilder", "leitung"], text:"\n<p>Ausbilder/-innen (alle drei Ausbilder-Rollen) sehen die Reiter <strong>Hunde, Qualifikationen,\nAnwesenheit, Orte &amp; Gebiete</strong> \u2013 die f\u00fcr den laufenden Trainingsbetrieb wichtigen Bereiche.\nNur Staffel-/Bereitschaftsleitung und Admin sehen zus\u00e4tzlich <strong>Personen, Rollen &amp; Rechte</strong>\nund <strong>Datensicherung</strong>, sowie das Feld f\u00fcr den Staffelnamen oben auf dieser Seite.</p>\n"},
+  {id:"verwaltung-ueberblick", kategorie:"Verwaltung", titel:"Verwaltung: Wer sieht was?", rollen:["ausbilder", "leitung"], text:"\n<p>Ausbilder/-innen (alle drei Ausbilder-Rollen) sehen die Reiter <strong>Hunde, Qualifikationen, Fristen &amp; Lücken,\nAnwesenheit, Orte &amp; Gebiete</strong> \u2013 die f\u00fcr den laufenden Trainingsbetrieb wichtigen Bereiche.\nNur Staffel-/Bereitschaftsleitung und Admin sehen zus\u00e4tzlich <strong>Personen, Rollen &amp; Rechte</strong>\nund <strong>Datensicherung</strong>, sowie das Feld f\u00fcr den Staffelnamen oben auf dieser Seite.</p>\n"},
   {id:"verwaltung-personen", kategorie:"Verwaltung", titel:"Personen und Hunde anlegen und pflegen", rollen:["leitung"], text:"\n<p>Unter <strong>Personen</strong> werden neue Mitglieder mit Name, Rolle(n) und einem ersten Passwort\nangelegt. Der Status l\u00e4sst sich auf <strong>inaktiv</strong> setzen, wenn jemand pausiert oder die\nStaffel verl\u00e4sst, oder auf <strong>extern</strong> f\u00fcr G\u00e4ste/Einsatzkr\u00e4fte anderer Einheiten. Wichtig:\nIst eine Person oder ein Hund bereits in Trainings, Terminen o. \u00c4. verwendet, bietet BARRY statt\nL\u00f6schen automatisch \u201eauf inaktiv setzen\" an, damit keine historischen Daten verloren gehen. Ein\nHundef\u00fchrer-Wechsel wird zus\u00e4tzlich in einer kleinen Historie am Hund festgehalten.</p>\n"},
   {id:"verwaltung-rechte", kategorie:"Verwaltung", titel:"Rollen und individuelle Zusatzrechte vergeben", rollen:["leitung"], text:"\n<p>Beim Anlegen oder Bearbeiten einer Person werden die Rollen per H\u00e4kchen vergeben. Zus\u00e4tzlich lassen\nsich unter <strong>Rollen &amp; Rechte</strong> einzelne, frei benannte Zusatzrechte definieren; die\nbeiden vorbelegten Eintr\u00e4ge \u201eKalender verwalten\" und \u201eAusbildung verwalten\" wirken sich tats\u00e4chlich auf\ndie Berechtigung aus, auch wenn die Person keine Ausbilder-Rolle hat.</p>\n"},
+  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen (Rettungshundearbeit, DRK-Grundausbildung, KatS-Zusatzausbildung, Fachausbildungen Sanität/Technik/Verpflegung/Betreuung, Führung). Beim ersten Start ist er bereits vorbelegt und lässt sich ergänzen. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
+  {id:"fristen", kategorie:"Verwaltung", titel:"Fristen & Lücken, Jubiläen und Erinnerungen", rollen:["ausbilder", "leitung"], text:"\n<p><strong>Verwaltung → Fristen &amp; Lücken</strong> wertet automatisch aus: abgelaufene und bald ablaufende Qualifikationen (auf Basis der „Gültig bis“-Daten), Personen ohne eine als Pflicht markierte Qualifikation, Hund/Team-Module, die kurz vor dem Abschluss stehen, sowie <strong>Jubiläen</strong> (5/10/15/… Jahre im DRK, aus „Mitglied im DRK seit“ im Personen-Dialog).</p>\n<p>Weil BARRY offline arbeitet, gibt es keine Push-Benachrichtigungen. Stattdessen zeigt die <strong>Startseite</strong> für Leitung und Ausbilder/-innen eine Karte „Für Leitung &amp; Ausbildung“ mit den wichtigsten offenen Punkten und den Terminen der nächsten sieben Tage inklusive Zusagen und fehlender Rückmeldungen – ein Klick führt zur jeweiligen Verwaltungsseite.</p>\n"},
+  {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte. Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
+  {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Die Leitung oder ein Admin vergibt unter Verwaltung → Personen → Person öffnen → „Passwort zurücksetzen“ ein neues Startpasswort.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
+  {id:"hund-felder", kategorie:"Verwaltung", titel:"Hundeprofil: Geschlecht, Chipnummer, Plaketten", rollen:["ausbilder", "leitung"], text:"\n<p>Im Dialog <strong>Verwaltung → Hunde → Hund bearbeiten</strong> lassen sich neben Name, Rasse und Wurftag auch <strong>Geschlecht</strong> (Rüde/Hündin), die <strong>Chip-/Identifikationsnummer</strong> und beliebig viele <strong>Plaketten</strong> (Sparte, Plaketten-/ID-Nr., Datum) erfassen – genau die Angaben, die die offiziellen Bewertungsbögen und Anmeldeformulare abfragen. Zusätzlich: Sparten, Rassegruppe (für automatische Trainingshinweise) und die festgelegte Anzeigeart.</p>\n"},
   {id:"datensicherung", kategorie:"Daten sichern & teilen", titel:"Backup exportieren und einspielen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung \u2192 Datensicherung</strong> l\u00e4sst sich der komplette Datenbestand als eine\neinzelne Datei <strong>exportieren</strong> \u2013 das sollte regelm\u00e4\u00dfig geschehen, am besten vor gr\u00f6\u00dferen\n\u00c4nderungen. Beim <strong>Import</strong> einer solchen Datei zeigt BARRY vorher eine Vorschau (Inhalt,\nHerkunft, Datum) und legt automatisch eine Sicherheitskopie des bisherigen Standes an, die sich bei\nBedarf mit einem Klick wiederherstellen l\u00e4sst. Eine Datei ohne anmeldef\u00e4hige Admin-Person wird\ngrunds\u00e4tzlich abgelehnt, damit sich niemand versehentlich aussperrt.</p>\n"},
   {id:"keine-automatische-sync", kategorie:"Daten sichern & teilen", titel:"Wichtig: Keine automatische Synchronisation zwischen Ger\u00e4ten", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>BARRY speichert alle Daten <strong>ausschlie\u00dflich lokal auf dem jeweiligen Ger\u00e4t</strong>. Es gibt\nkeinen Server im Hintergrund, der die Daten automatisch zwischen mehreren Handys oder Tablets abgleicht.\nMeldet sich jemand auf einem <em>anderen</em> Ger\u00e4t an, sieht diese Person eine eigenst\u00e4ndige,\nunabh\u00e4ngige Kopie \u2013 neue Eintr\u00e4ge auf dem einen Ger\u00e4t erscheinen nicht von selbst auf dem anderen.</p>\n<p><strong>F\u00fcr die Praxis bedeutet das:</strong> BARRY funktioniert am besten auf einem\n<strong>gemeinsam genutzten Ger\u00e4t</strong> (z. B. ein Staffel-Tablet), auf dem sich alle mit dem\neigenen Login anmelden. Soll BARRY auf mehreren eigenen Handys parallel genutzt werden, m\u00fcssen Daten\nbewusst per Export/Import \u00fcbertragen werden \u2013 siehe Artikel \u201eBackup exportieren und einspielen\".</p>\n"},
   {id:"austauschpaket", kategorie:"Daten sichern & teilen", titel:"Team-Stammdaten mit eigenst\u00e4ndigen Apps austauschen", rollen:["ausbilder", "leitung"], text:"\n<p>F\u00fcr einzelne Hundeteams l\u00e4sst sich unter <strong>Verwaltung \u2192 Hunde \u2192 Teamdaten</strong> eine kleine\nTeamdaten-Datei (Name, Rasse, Geburtsdatum, Sparten, Anzeigeart) exportieren und in eine der\neigenst\u00e4ndigen RHS-Apps (z. B. Tr\u00fcmmersuchassistent) importieren, und umgekehrt. Es handelt sich\nbewusst nur um Stammdaten, nicht um Trainings- oder Einsatzdaten; ein Import zeigt vorher immer eine\nVorschau inklusive Warnung, falls Name oder Hundef\u00fchrer/-in nicht zum gew\u00e4hlten Team passen.</p>\n"},
@@ -7528,6 +7731,7 @@ const HILFE_ARTIKEL = [
 
 const HILFE_KATEGORIEN = [...new Set(HILFE_ARTIKEL.map(a=>a.kategorie))];
 let hilfeSuche = '';
+let hilfeSucheTippt = false;
 let hilfeRolleFilter = null; // null = alle
 function hilfeRollenLabel(rollen){ return rollen.map(r=>(HILFE_ROLLEN.find(x=>x.id===r)||{label:r}).label).join(', '); }
 function hilfeTrifftSuche(a, q){
@@ -7582,8 +7786,8 @@ function renderHilfe(person){
 function bindHilfe(person){
   const suche = document.getElementById('hf-suche');
   if(suche){
-    suche.oninput = ()=>{ hilfeSuche = suche.value; render(); };
-    suche.focus(); suche.setSelectionRange(hilfeSuche.length, hilfeSuche.length);
+    suche.oninput = ()=>{ hilfeSuche = suche.value; hilfeSucheTippt = true; render(); };
+    if(hilfeSucheTippt){ hilfeSucheTippt = false; suche.focus(); suche.setSelectionRange(hilfeSuche.length, hilfeSuche.length); }
   }
   document.querySelectorAll('[data-hf-rolle]').forEach(r=>{
     r.onchange = ()=>{ hilfeRolleFilter = r.dataset.hfRolle || null; render(); };
@@ -7616,7 +7820,23 @@ render();
     if(!document.querySelector('link[rel="manifest"]')){
       const l = document.createElement('link'); l.rel='manifest'; l.href='manifest.webmanifest'; document.head.appendChild(l);
     }
-    if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Service Worker nicht registriert:', e));
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js').then(reg=>{
+        // Neue Version erkannt: kurz hinweisen und neu laden, damit niemand mit einem alten Stand weiterarbeitet.
+        reg.addEventListener('updatefound', ()=>{
+          const neu = reg.installing;
+          if(!neu) return;
+          neu.addEventListener('statechange', ()=>{
+            if(neu.state==='installed' && navigator.serviceWorker.controller){
+              if(confirm('Eine neue BARRY-Version ist verfügbar. Jetzt neu laden? (Noch nicht gespeicherte Eingaben in offenen Formularen gehen dabei verloren.)')) location.reload();
+              else zeigeToast('Neue Version wird beim nächsten Öffnen aktiv.');
+            }
+          });
+        });
+        // Beim Öffnen immer nach einer neueren Version fragen (sonst prüft der Browser nur gelegentlich).
+        reg.update().catch(()=>{});
+      }).catch(e=>console.warn('Service Worker nicht registriert:', e));
+    }
     // Browser bitten, den lokalen Datenbestand nicht automatisch zu löschen (z. B. bei Speicherknappheit).
     if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
   }catch(e){ console.warn('PWA-Vorbereitung übersprungen', e); }
