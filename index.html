@@ -907,13 +907,15 @@ const QUALI_KATEGORIEN = [
   'RHA · Fachdienstausbildung Rettungshund (RHd, 35 UE)',
   'RHA · Prüfung, Einsatzfähigkeit & jährliche Unterweisungen',
   'RHA · Empfohlen & staffelinterne Ergänzungen',
+  'RHA · Ausbilder:innen & Lehrkräfte',
   'Führung (GF-RHA / ZF-RHA)',
   'Sanitätsdienst',
   'Betreuungsdienst & Verpflegung',
   'Technik & Logistik',
   'Weitere KatS-Module',
+  'Sonstige Ausbildungen',
 ];
-const [K_GA, K_FA, K_RHD, K_PR, K_EMP, K_FUE, K_SAN, K_BT, K_TL, K_KATS] = QUALI_KATEGORIEN;
+const [K_GA, K_FA, K_RHD, K_PR, K_EMP, K_AUS, K_FUE, K_SAN, K_BT, K_TL, K_KATS, K_SONST] = QUALI_KATEGORIEN;
 const QUALI_HINWEIS_KBL = 'Wiederholungsfrist bitte bei der KBL bestätigen lassen.';
 const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   // 1) Grundausbildung Einsatzkraft Bereitschaft – Pflicht für Rettungshundehelfende und -führende
@@ -959,6 +961,10 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'abseilen', label:'Abseilen von Mensch und Hund (Trümmer)', kategorie:K_EMP },
   { code:'mt_sichtung', label:'Mantrailing – Sichtung/Vorprüfung vor DRK-Prüfung', kategorie:K_EMP },
   { code:'mt_polizei', label:'Mantrailing – Prüfung Polizei Hessen (einmalig nach DRK-Prüfung)', kategorie:K_EMP },
+  // 5b) Ausbilder:innen & Lehrkräfte der Rettungshundearbeit
+  { code:'eug', label:'EUG – Erwachsenengerechte Unterrichtsgestaltung', kategorie:K_AUS, aliase:['Erwachsenengerechte Unterrichtsgestaltung'] },
+  { code:'ausb_fl', label:'Rettungshunde-Ausbilderschein Fläche', kategorie:K_AUS, aliase:['Ausbilderschein Fläche','RH-Ausbilderschein Fläche'] },
+  { code:'ausb_tr', label:'Rettungshunde-Ausbilderschein Trümmer', kategorie:K_AUS, aliase:['Ausbilderschein Trümmer','RH-Ausbilderschein Trümmer'] },
   // 6) Führung
   { code:'rkas', label:'RKAS – Rotkreuz-Aufbauseminar', kategorie:K_FUE, ue:16 },
   { code:'teukm', label:'TEuKM – Teamentwicklung und Konfliktmanagement', kategorie:K_FUE, ue:16 },
@@ -1023,7 +1029,9 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'psu', label:'PSU – Psycho-Soziale Unterstützung', kategorie:K_KATS, ue:4 },
   { code:'at', label:'AT# – Aktuelle Themen (alle FachD)', kategorie:K_KATS, ue:2 },
 ].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null, aliase:[], ...q }));
-const QUALI_KATALOG_VERSION = 2;
+const QUALI_KATALOG_VERSION = 3;
+// Vorbelegte Ordner (entsprechen der bestehenden Ordnerstruktur der Staffel); jederzeit umbenenn-, lösch- und erweiterbar.
+const LEHRMATERIAL_STANDARD_ORDNER = ['Flächensuche','Mantrailing','Trümmerkunde','Kynologie','Geruch und Geruchsverteilung','Orientierung und Kartenkunde','EH Hund','UVV, Sicherheit im Einsatz, Transport','Funk','PSNV','Wasserrettung, Wassersuche','Organisation','Rechtliches und Grundlagen','Geschichte und Entwicklung','Hospitationen','Formulare & Vordrucke'];
 function qualiNorm(t){ return String(t||'').toLowerCase().replace(/[‐-–—]/g,'-').replace(/\s+/g,' ').trim(); }
 function qualiKatalogEintragFuer(label){
   const n = qualiNorm(label);
@@ -1037,7 +1045,7 @@ function qualiFindenNachBezeichnung(label){
   return c ? state.qualifikationen.find(q=>q.code===c.code) || null : null;
 }
 function qualiSortSchluessel(q){
-  const ki = QUALI_KATEGORIEN.indexOf(q.kategorie);
+  const ki = QUALI_KATEGORIEN.includes(q.kategorie) ? QUALI_KATEGORIEN.indexOf(q.kategorie) : QUALI_KATEGORIEN.indexOf(K_SONST);
   const ci = q.code ? QUALIFIKATIONEN_KATALOG_VORSCHLAG.findIndex(c=>c.code===q.code) : -1;
   return [(ki===-1?999:ki), (ci===-1?9999:ci), q.label];
 }
@@ -1050,7 +1058,7 @@ function qualiSortiert(){
 function qualiGruppiert(){
   const gruppen = [];
   qualiSortiert().forEach(q=>{
-    const k = QUALI_KATEGORIEN.includes(q.kategorie) ? q.kategorie : (q.kategorie ? 'Eigene Einträge · '+q.kategorie : 'Eigene Einträge');
+    const k = QUALI_KATEGORIEN.includes(q.kategorie) ? q.kategorie : K_SONST;
     let g = gruppen.find(x=>x.kategorie===k); if(!g){ g={kategorie:k, eintraege:[]}; gruppen.push(g); }
     g.eintraege.push(q);
   });
@@ -1150,7 +1158,9 @@ function leererState(){
                     //  tracks:[{id,name,format:'GPX'|'KML',typ:'track'|'gebiet',distanzKm,flaecheHa,points,notiz}]}
     findewilleProfile: [], // {id,hundId,motivationsAntworten:{},beobachtungAntworten:{},aktualisiertAm}
     pruefungsstatus: [], // {id,hundId,modul,elementId,status:'bestanden'|'nicht_bestanden'|'offen',notiz}
-    lehrmaterial: [], // {id,titel,kategorie,beschreibung,dateiName,mimeType,groesse,datenUrl,hochgeladenVon,hochgeladenAm}
+    lehrmaterial: [], // {id,titel,kategorie,ordner,typ:'datei'|'link',url,beschreibung,dateiName,mimeType,groesse,datenUrl,hochgeladenVon,hochgeladenAm}
+    lehrmaterialOrdner: [], // benutzerdefinierte Ordnernamen (auch leere Ordner bleiben so erhalten)
+    hospitationen: [], // {id,personId,thema,datum,betreuung,notiz,typ,url,dateiName,mimeType,groesse,datenUrl,angelegtAm}
     orte: [], // {id,name,art,adresse,lat,lon,hinweis,geometrie:{format,typ,distanzKm,flaecheHa,points}|null,erstelltVon}
     mantrailingEintraege: [], // {id,hundId,personId,datum, ...Felder (siehe MT_FELDER), chips:{trailType,env,disturb,work},
                               //  gpsPunkte:[{lat,lon,zeit}], gpsEreignisse:[{zeit,typ}], erstelltVon}
@@ -1243,6 +1253,13 @@ function migriereState(s){
   });
   if(s.qualifikationen.length===0) s.qualifikationen = QUALIFIKATIONEN_KATALOG_VORSCHLAG.map(({aliase, ...q})=>({id:uid(), ...q}));
   qualiKatalogMigrieren(s);
+  if(!Array.isArray(s.lehrmaterialOrdner)) s.lehrmaterialOrdner = [];
+  if(!Array.isArray(s.hospitationen)) s.hospitationen = [];
+  if(!s.meta.lehrOrdnerVorbelegt){
+    LEHRMATERIAL_STANDARD_ORDNER.forEach(o=>{ if(!s.lehrmaterialOrdner.includes(o)) s.lehrmaterialOrdner.push(o); });
+    s.meta.lehrOrdnerVorbelegt = true;
+  }
+  s.lehrmaterial.forEach(m=>{ if(m.ordner===undefined) m.ordner=''; if(!m.typ) m.typ = m.url && !m.datenUrl ? 'link' : 'datei'; if(m.ordner && !s.lehrmaterialOrdner.includes(m.ordner)) s.lehrmaterialOrdner.push(m.ordner); });
   s.meta = s.meta || {};
   s.meta.schemaVersion = BARRY_SCHEMA_VERSION;
   return s;
@@ -1801,6 +1818,7 @@ function bindTabPersonen(){
       rest.forEach(p=>{
         state.hunde.forEach(h=>{ if(h.hundefuehrerId===p.id) h.hundefuehrerId = behalten.id; if(h.zweitHundefuehrerId===p.id) h.zweitHundefuehrerId = behalten.id; });
         state.personQualifikationen.forEach(pq=>{ if(pq.personId===p.id) pq.personId = behalten.id; });
+        (state.hospitationen||[]).forEach(h=>{ if(h.personId===p.id) h.personId = behalten.id; });
         ['benutzername','geburtsdatum','mitgliedSeit','email','telefon','mitgliedsnummer','strasse','plz','ort'].forEach(feld=>{
           if(!behalten[feld] && p[feld]) behalten[feld] = p[feld];
         });
@@ -2576,7 +2594,7 @@ const CSV_HUND_SPALTEN = ['HundName','HundRasse','HundGeburtsdatum','HundGeschle
 const CSV_AUSB_PRAEFIX = 'Ausb: ';
 // Ausbildungsspalten: alle Einträge der Rettungshundearbeit (Pflicht + empfohlen) und der Führungslehrgänge – alles Weitere wird in der App je Person gepflegt.
 function csvAusbildungsQualis(){
-  return qualiSortiert().filter(q=>[K_GA,K_FA,K_RHD,K_PR,K_EMP,K_FUE].includes(q.kategorie));
+  return qualiSortiert().filter(q=>[K_GA,K_FA,K_RHD,K_PR,K_EMP,K_AUS,K_FUE].includes(q.kategorie));
 }
 function csvSchnellstartKopf(){
   return ['Name','Rolle', ...CSV_PERSON_SPALTEN.map(s=>s[1]), ...CSV_HUND_SPALTEN, ...csvAusbildungsQualis().map(q=>CSV_AUSB_PRAEFIX+q.label)];
@@ -2940,6 +2958,75 @@ function bindModal(person){
 }
 
 /* ---- Person ---- */
+/* ---- Hospitationen je Person (Nachweise auf dem Weg zum Ausbilderschein) ---- */
+let hospitationFehler = '';
+function renderPersonHospitationenBereich(p){
+  const eintraege = state.hospitationen.filter(h=>h.personId===p.id).sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
+  const themen = hospitationThemen();
+  const zeilen = eintraege.map(h=>{
+    const doc = h.typ==='link' && h.url ? ` · <a href="${esc(h.url)}" target="_blank" rel="noopener">🔗 Unterlage</a>`
+      : h.datenUrl ? ` · <a href="${h.datenUrl}" download="${esc(h.dateiName)}">📎 ${esc(h.dateiName)}</a>` : '';
+    return `<div class="row" style="justify-content:space-between;align-items:flex-start;padding:6px 0;border-top:1px dashed var(--line)">
+      <span><strong>${esc(h.thema)}</strong> <span class="hint">${h.datum?fmtDatum(h.datum):'ohne Datum'}${h.betreuung?' · bei '+esc(h.betreuung):''}${doc}</span>${h.notiz?`<br><span class="hint">${esc(h.notiz)}</span>`:''}</span>
+      <button class="btn btn-sm btn-ghost" data-hosp-entfernen="${h.id}" type="button">✕</button>
+    </div>`;
+  }).join('') || '<p class="hint" style="margin:6px 0">Noch keine Hospitation eingetragen.</p>';
+  const jeThema = themen.map(t=>({t, n: eintraege.filter(h=>h.thema===t).length})).filter(x=>x.n);
+  return `
+  <div class="field">
+    <label>Hospitationen ${eintraege.length?`<span class="chip muted">${eintraege.length}</span>`:''}</label>
+    ${jeThema.length?`<p class="hint" style="margin:0 0 4px">${jeThema.map(x=>esc(x.t)+': '+x.n).join(' · ')}</p>`:''}
+    <div>${zeilen}</div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">+ Hospitation eintragen</summary>
+      <div class="grid-2" style="margin-top:8px">
+        <div class="field"><label>Thema</label><select id="hp-thema">${themen.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('')}<option value="__eigen">➕ Eigenes Thema …</option></select>
+          <input id="hp-thema-eigen" placeholder="Thema" style="display:none;margin-top:6px"></div>
+        <div class="field"><label>Datum</label><input id="hp-datum" type="date" value="${new Date().toISOString().slice(0,10)}"></div>
+      </div>
+      <div class="grid-2">
+        <div class="field"><label>Bei (Ausbilder/in, optional)</label><input id="hp-betreuung"></div>
+        <div class="field"><label>Notiz (optional)</label><input id="hp-notiz"></div>
+      </div>
+      <div class="field"><label>Unterlage (optional): Datei bis ${formatDateigroesse(LEHRMATERIAL_MAX_BYTES)} oder Link</label>
+        <input id="hp-datei" type="file"><input id="hp-url" type="url" placeholder="oder Link: https://…" style="margin-top:6px"></div>
+      ${hospitationFehler?`<p class="hint" style="color:var(--accent-ink)">${esc(hospitationFehler)}</p>`:''}
+      <button class="btn btn-sm btn-primary" id="hp-speichern" type="button">Hospitation speichern</button>
+    </details>
+  </div>`;
+}
+function bindPersonHospitationenBereich(p){
+  const sel = document.getElementById('hp-thema'); if(!sel) return;
+  const eigen = document.getElementById('hp-thema-eigen');
+  sel.onchange = ()=>{ eigen.style.display = sel.value==='__eigen' ? '' : 'none'; };
+  document.querySelectorAll('[data-hosp-entfernen]').forEach(b=>{
+    b.onclick = ()=>{
+      if(!confirm('Diese Hospitation (inkl. Unterlage) löschen?')) return;
+      state.hospitationen = state.hospitationen.filter(h=>h.id!==b.dataset.hospEntfernen);
+      speichereState(); render();
+    };
+  });
+  document.getElementById('hp-speichern').onclick = ()=>{
+    const thema = sel.value==='__eigen' ? eigen.value.trim() : sel.value;
+    if(!thema){ hospitationFehler='Bitte ein Thema angeben.'; render(); return; }
+    const eintrag = { id:uid(), personId:p.id, thema, datum:document.getElementById('hp-datum').value,
+      betreuung:document.getElementById('hp-betreuung').value.trim(), notiz:document.getElementById('hp-notiz').value.trim(), angelegtAm: nowIso() };
+    const url = document.getElementById('hp-url').value.trim();
+    const datei = document.getElementById('hp-datei').files[0];
+    const fertig = ()=>{ state.hospitationen.push(eintrag); hospitationFehler=''; speichereState(); zeigeToast('Hospitation gespeichert.'); render(); };
+    if(datei){
+      if(datei.size > LEHRMATERIAL_MAX_BYTES){ hospitationFehler = `Datei zu groß (${formatDateigroesse(datei.size)}) – bitte als Link hinterlegen.`; render(); return; }
+      const reader = new FileReader();
+      reader.onload = ()=>{ Object.assign(eintrag, {typ:'datei', dateiName:datei.name, mimeType:datei.type, groesse:datei.size, datenUrl:reader.result}); fertig(); };
+      reader.onerror = ()=>{ hospitationFehler='Datei konnte nicht gelesen werden.'; render(); };
+      reader.readAsDataURL(datei); return;
+    }
+    if(url){
+      if(!/^https?:\/\//i.test(url)){ hospitationFehler='Bitte eine vollständige Adresse eingeben (beginnt mit https://).'; render(); return; }
+      Object.assign(eintrag, {typ:'link', url});
+    }
+    fertig();
+  };
+}
 function renderPersonQualifikationenBereich(p){
   const zuordnungen = state.personQualifikationen.filter(pq=>pq.personId===p.id);
   const zeilen = zuordnungen.map(pq=>{
@@ -2958,7 +3045,9 @@ function renderPersonQualifikationenBereich(p){
       <select id="pf-qual-neu" style="flex:1;min-width:160px">
         <option value="">– Qualifikation wählen –</option>
         ${qualiOptionenHtml()}
+        <option value="__sonstige">➕ Sonstige Ausbildung (eigener Name) …</option>
       </select>
+      <input id="pf-qual-eigen" placeholder="Name der Ausbildung" style="flex:1;min-width:160px;display:none">
       <input id="pf-qual-datum" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:auto">
       <input id="pf-qual-bis" type="date" placeholder="Gültig bis (optional)" style="width:auto">
       <button class="btn btn-sm btn-primary" id="pf-qual-hinzufuegen" type="button">+ Hinzufügen</button>
@@ -2976,11 +3065,20 @@ function bindPersonQualifikationenBereich(p){
     const d = new Date(von.value); d.setMonth(d.getMonth()+monate);
     bis.value = d.toISOString().slice(0,10);
   };
-  sel.onchange = vorschlagen;
+  const eigen = document.getElementById('pf-qual-eigen');
+  sel.onchange = ()=>{ eigen.style.display = sel.value==='__sonstige' ? '' : 'none'; if(sel.value==='__sonstige') eigen.focus(); vorschlagen(); };
   von.onchange = vorschlagen;
   document.getElementById('pf-qual-hinzufuegen').onclick = ()=>{
     if(!sel.value){ alert('Bitte eine Qualifikation auswählen.'); return; }
-    state.personQualifikationen.push({id:uid(), personId:p.id, qualifikationId:sel.value, datum:von.value, gueltigBis:bis.value||null});
+    let qualId = sel.value;
+    if(qualId==='__sonstige'){
+      const name = eigen.value.trim();
+      if(!name){ alert('Bitte den Namen der Ausbildung eintragen.'); return; }
+      let q = qualiFindenNachBezeichnung(name);
+      if(!q){ q = {id:uid(), label:name, kategorie:K_SONST, intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null}; state.qualifikationen.push(q); }
+      qualId = q.id;
+    }
+    state.personQualifikationen.push({id:uid(), personId:p.id, qualifikationId:qualId, datum:von.value, gueltigBis:bis.value||null});
     speichereState();
     zeigeToast('Qualifikation zugeordnet.');
     render();
@@ -3047,6 +3145,7 @@ function renderModalPerson(){
         <div class="hint" id="pf-pw-reset-hint"></div>
       </div>`}
       ${bestehend?renderPersonQualifikationenBereich(bestehend):''}
+      ${bestehend?renderPersonHospitationenBereich(bestehend):''}
     </div>
     <div class="modal-foot">
       ${bestehend?`<button class="btn btn-danger" id="m-loeschen" style="margin-right:auto">Löschen</button>`:''}
@@ -3058,7 +3157,7 @@ function renderModalPerson(){
 function bindModalPerson(){
   document.getElementById('m-schliessen').onclick = schliesseModal;
   document.getElementById('m-abbrechen').onclick = schliesseModal;
-  if(modal.id) bindPersonQualifikationenBereich(state.personen.find(x=>x.id===modal.id));
+  if(modal.id){ const pp = state.personen.find(x=>x.id===modal.id); bindPersonQualifikationenBereich(pp); bindPersonHospitationenBereich(pp); }
   if(!modal.id){
     const nameFeld = document.getElementById('pf-name');
     const buFeld = document.getElementById('pf-benutzername');
@@ -3089,8 +3188,10 @@ function bindModalPerson(){
         p.status = 'inaktiv';
         speichereState(); zeigeToast('Person auf inaktiv gesetzt.'); schliesseModal(); return;
       }
-      if(!confirm('Diese Person wirklich löschen?')) return;
+      if(!confirm('Diese Person wirklich löschen? Zugeordnete Qualifikationen und Hospitationen werden mit gelöscht.')) return;
       state.personen = state.personen.filter(p=>p.id!==modal.id);
+      state.personQualifikationen = state.personQualifikationen.filter(pq=>pq.personId!==modal.id);
+      state.hospitationen = (state.hospitationen||[]).filter(h=>h.personId!==modal.id);
       speichereState(); schliesseModal();
     };
   }
@@ -3286,7 +3387,7 @@ function renderModalQualifikation(){
     <div class="modal-head"><h3>Qualifikation anlegen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
     <div class="modal-body">
       <div class="field"><label>Bezeichnung</label><input id="qf-label" placeholder="z. B. Rettungshundeführer RH-Fläche"></div>
-      <div class="field"><label>Kategorie</label><select id="qf-kategorie">${QUALI_KATEGORIEN.map(k=>`<option value="${esc(k)}" ${k===QUALI_KATEGORIEN[4]?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
+      <div class="field"><label>Kategorie</label><select id="qf-kategorie">${QUALI_KATEGORIEN.map(k=>`<option value="${esc(k)}" ${k===K_SONST?'selected':''}>${esc(k)}</option>`).join('')}</select></div>
       <div class="field"><label class="row" style="gap:8px;align-items:center"><input id="qf-pflichtrhf" type="checkbox"> Pflicht für Rettungshundeführende (★)</label></div>
       <div class="field"><label>Wiederholung/Auffrischung alle … Monate (optional)</label><input id="qf-intervall" type="number" min="1" placeholder="z. B. 24"></div>
       <div class="field"><label class="row" style="gap:8px;align-items:center"><input id="qf-pflicht" type="checkbox"> Pflichtqualifikation (erscheint unter „Fristen & Lücken", wenn einer aktiven Person diese fehlt)</label></div>
@@ -4262,6 +4363,10 @@ const WISSEN_TABS = [
   {id:'sparten', label:'Sparten, Helfer & Erste Hilfe'},
   {id:'material', label:'Lehrmaterial'},
 ];
+const HOSPITATION_ZUSATZTHEMEN = ['Praxis Fläche','Praxis Trümmer','Praxis Mantrailing','Gehorsam / Unterordnung','Gewandtheit','Anzeigeaufbau','Sanitätsausbildung','Einsatzübung'];
+function hospitationThemen(){
+  return [...new Set([...state.lehrmaterialOrdner.filter(o=>!['Hospitationen','Formulare & Vordrucke'].includes(o)), ...HOSPITATION_ZUSATZTHEMEN])];
+}
 const LEHRMATERIAL_KATEGORIEN = [
   { id:'uebung', label:'Übung' },
   { id:'trainingseinheit', label:'Trainingseinheit' },
@@ -5033,42 +5138,83 @@ function bindAusbildungPruefung(person){
 const LEHRMATERIAL_MAX_BYTES = 4 * 1024 * 1024; // 4 MB je Datei – Grenze des lokalen Speichers im Blick behalten
 let lehrmaterialFilter = 'alle';
 let lehrmaterialFehler = '';
+let lehrmaterialOffeneOrdner = null; // Set der aufgeklappten Ordner (null = Standard: alle zu außer dem zuletzt benutzten)
+let lehrmaterialZuletztOrdner = '';
+let lehrmaterialUploadTyp = 'datei';
+let lehrmaterialFormOffen = false;
+function lehrmaterialOrdnerListe(){ return [...state.lehrmaterialOrdner]; }
+function renderLehrmaterialEintrag(m, darf){
+  const link = m.typ==='link'
+    ? `<a href="${esc(m.url)}" target="_blank" rel="noopener"><strong>${esc(m.titel)}</strong></a> <span class="chip muted">🔗 Link</span>`
+    : `<a href="${m.datenUrl}" download="${esc(m.dateiName)}"><strong>${esc(m.titel)}</strong></a>`;
+  return `<div style="padding:8px 0;border-top:1px dashed var(--line)">
+    <div class="spread" style="gap:8px;align-items:flex-start">
+      <div style="min-width:0">${link}${m.beschreibung?`<div class="hint">${esc(m.beschreibung)}</div>`:''}
+        <div class="hint">${esc(lehrmaterialKategorieLabel(m.kategorie))}${m.typ!=='link'?' · '+formatDateigroesse(m.groesse):''} · ${fmtDatum(m.hochgeladenAm)}</div></div>
+      ${darf?`<div class="row" style="gap:4px;flex-wrap:nowrap">
+        <select data-material-ordner="${m.id}" style="width:auto;max-width:150px;font-size:.8rem" title="In anderen Ordner verschieben">
+          <option value="" ${!m.ordner?'selected':''}>– ohne Ordner –</option>
+          ${lehrmaterialOrdnerListe().map(o=>`<option value="${esc(o)}" ${m.ordner===o?'selected':''}>${esc(o)}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm btn-ghost" data-del-material="${m.id}" title="Löschen">✕</button></div>`:''}
+    </div></div>`;
+}
 function renderAusbildungMaterial(person){
   const darf = darfTrainingBearbeiten(person);
-  let liste = [...state.lehrmaterial].sort((a,b)=> new Date(b.hochgeladenAm) - new Date(a.hochgeladenAm));
+  let liste = [...state.lehrmaterial].sort((a,b)=> String(a.titel).localeCompare(String(b.titel),'de'));
   if(lehrmaterialFilter!=='alle') liste = liste.filter(m=>m.kategorie===lehrmaterialFilter);
   const gesamtBytes = state.lehrmaterial.reduce((s,m)=>s+(m.groesse||0),0);
-
-  const zeilen = liste.map(m=>`
-    <tr>
-      <td><a href="${m.datenUrl}" download="${esc(m.dateiName)}"><strong>${esc(m.titel)}</strong></a>${m.beschreibung?`<div class="hint">${esc(m.beschreibung)}</div>`:''}</td>
-      <td><span class="chip muted">${esc(lehrmaterialKategorieLabel(m.kategorie))}</span></td>
-      <td class="hint" style="white-space:nowrap">${formatDateigroesse(m.groesse)}</td>
-      <td class="hint" style="white-space:nowrap">${fmtDatum(m.hochgeladenAm)}</td>
-      <td>${darf?`<button class="btn btn-sm btn-ghost" data-del-material="${m.id}">Löschen</button>`:''}</td>
-    </tr>`).join('') || `<tr><td colspan="5" class="hint">Noch kein Lehrmaterial für diese Auswahl.</td></tr>`;
-
+  const ordner = [...lehrmaterialOrdnerListe(), ''];
+  const offen = lehrmaterialOffeneOrdner || new Set([lehrmaterialZuletztOrdner]);
+  const ordnerHtml = ordner.map(o=>{
+    const inhalt = liste.filter(m=>(m.ordner||'')===o);
+    if(o==='' && !inhalt.length) return '';
+    return `<details class="card" style="margin-bottom:8px;padding:10px 14px" data-lm-ordner-details="${esc(o)}" ${offen.has(o)?'open':''}>
+      <summary style="cursor:pointer;font-weight:700">📁 ${esc(o||'Ohne Ordner')} <span class="chip muted">${inhalt.length}</span></summary>
+      ${inhalt.map(m=>renderLehrmaterialEintrag(m, darf)).join('') || '<p class="hint" style="margin:8px 0 0">Noch leer.</p>'}
+      ${darf && o?`<div class="row" style="gap:6px;margin-top:8px"><button class="btn btn-sm btn-ghost" data-lm-ordner-umbenennen="${esc(o)}">Umbenennen</button><button class="btn btn-sm btn-ghost" data-lm-ordner-loeschen="${esc(o)}">Ordner löschen</button></div>`:''}
+    </details>`;
+  }).join('');
   return `
-    <p class="lead">Übungsbeschreibungen, Trainingseinheiten, Karten/Kartenmaterial oder sonstiges Lehrmaterial als Datei ablegen – für die ganze Staffel an einem Ort. Dateien werden lokal auf dem Gerät gespeichert (bis ${formatDateigroesse(LEHRMATERIAL_MAX_BYTES)} je Datei); aktuell belegt: ${formatDateigroesse(gesamtBytes)}.</p>
+    <p class="lead">Lehrunterlagen, Übungsbeschreibungen, Karten, Formulare und Hospitationsunterlagen – in eigenen Ordnern für die ganze Staffel an einem Ort.</p>
     ${darf?`
-    <div class="card card-pad" style="margin-bottom:18px">
-      <h3>Neues Material hochladen</h3>
+    <details class="card card-pad" style="margin-bottom:12px" ${lehrmaterialFehler||lehrmaterialFormOffen?'open':''} id="lm-form">
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">➕ Neues Material ablegen</summary>
+      <div style="margin-top:10px"></div>
+      <div class="row" style="gap:6px;margin-bottom:8px">
+        <button class="btn btn-sm ${lehrmaterialUploadTyp==='datei'?'btn-primary':'btn-ghost'}" data-lm-typ="datei">Datei hochladen</button>
+        <button class="btn btn-sm ${lehrmaterialUploadTyp==='link'?'btn-primary':'btn-ghost'}" data-lm-typ="link">Link hinterlegen (z. B. OneDrive/Teams)</button>
+      </div>
       <div class="grid-2">
         <div class="field"><label>Titel</label><input id="lm-titel" placeholder="z. B. Übungskarte Freiverweisen"></div>
-        <div class="field"><label>Kategorie</label><select id="lm-kategorie">${LEHRMATERIAL_KATEGORIEN.map(k=>`<option value="${k.id}">${esc(k.label)}</option>`).join('')}</select></div>
+        <div class="field"><label>Ordner</label>
+          <select id="lm-ordner">
+            ${lehrmaterialOrdnerListe().map(o=>`<option value="${esc(o)}" ${o===lehrmaterialZuletztOrdner?'selected':''}>${esc(o)}</option>`).join('')}
+            <option value="">– ohne Ordner –</option>
+            <option value="__neu">➕ Neuer Ordner …</option>
+          </select>
+          <input id="lm-ordner-neu" placeholder="Name des neuen Ordners" style="display:none;margin-top:6px">
+        </div>
       </div>
-      <div class="field"><label>Beschreibung (optional)</label><input id="lm-beschreibung"></div>
-      <div class="field"><label>Datei</label><input id="lm-datei" type="file"></div>
+      <div class="grid-2">
+        <div class="field"><label>Art</label><select id="lm-kategorie">${LEHRMATERIAL_KATEGORIEN.map(k=>`<option value="${k.id}">${esc(k.label)}</option>`).join('')}</select></div>
+        <div class="field"><label>Beschreibung (optional)</label><input id="lm-beschreibung"></div>
+      </div>
+      ${lehrmaterialUploadTyp==='link'
+        ? `<div class="field"><label>Adresse (Link)</label><input id="lm-url" type="url" placeholder="https://…"></div>`
+        : `<div class="field"><label>Datei</label><input id="lm-datei" type="file"></div>`}
       ${lehrmaterialFehler?`<p class="hint" style="color:var(--accent-ink)">${esc(lehrmaterialFehler)}</p>`:''}
-      <button class="btn btn-primary" id="lm-hochladen">Hochladen</button>
-    </div>`:''}
+      <p class="hint">Dateien werden im Gerätespeicher abgelegt (bis ${formatDateigroesse(LEHRMATERIAL_MAX_BYTES)} je Datei, aktuell belegt: ${formatDateigroesse(gesamtBytes)}). Der Browser-Speicher ist insgesamt nur wenige Megabyte groß – große Unterlagen (Präsentationen, Videos, ganze Ordner) bitte als <strong>Link</strong> auf OneDrive, Teams o. Ä. hinterlegen.</p>
+      <button class="btn btn-primary" id="lm-hochladen">${lehrmaterialUploadTyp==='link'?'Link speichern':'Hochladen'}</button>
+    </details>
+    <div class="row" style="gap:6px;margin-bottom:12px"><input id="lm-ordner-anlegen-name" placeholder="Neuer Ordner" style="flex:1;min-width:150px"><button class="btn btn-sm" id="lm-ordner-anlegen">+ Ordner anlegen</button></div>`:''}
     <div class="row" style="margin-bottom:12px">
       <select id="lm-filter" style="width:auto">
-        <option value="alle" ${lehrmaterialFilter==='alle'?'selected':''}>Alle Kategorien</option>
+        <option value="alle" ${lehrmaterialFilter==='alle'?'selected':''}>Alle Arten</option>
         ${LEHRMATERIAL_KATEGORIEN.map(k=>`<option value="${k.id}" ${lehrmaterialFilter===k.id?'selected':''}>${esc(k.label)}</option>`).join('')}
       </select>
     </div>
-    <div class="card table-scroll"><table><thead><tr><th>Titel</th><th>Kategorie</th><th>Größe</th><th>Hochgeladen</th><th></th></tr></thead><tbody>${zeilen}</tbody></table></div>
+    ${ordnerHtml}
   `;
 }
 /* ---- Fehlerdiagnose ---- */
@@ -6281,6 +6427,17 @@ function bindAusbildungRH(person){
 function bindAusbildungMaterial(person){
   const filt = document.getElementById('lm-filter');
   if(filt) filt.onchange = e=>{ lehrmaterialFilter = e.target.value; render(); };
+  // Auf-/Zuklappzustand der Ordner über Neuaufbauten hinweg merken
+  document.querySelectorAll('[data-lm-ordner-details]').forEach(d=>{
+    d.ontoggle = ()=>{
+      lehrmaterialOffeneOrdner = lehrmaterialOffeneOrdner || new Set([lehrmaterialZuletztOrdner]);
+      if(d.open) lehrmaterialOffeneOrdner.add(d.dataset.lmOrdnerDetails); else lehrmaterialOffeneOrdner.delete(d.dataset.lmOrdnerDetails);
+    };
+  });
+  const lmForm = document.getElementById('lm-form'); if(lmForm) lmForm.ontoggle = ()=>{ lehrmaterialFormOffen = lmForm.open; };
+  document.querySelectorAll('[data-lm-typ]').forEach(b=>{ b.onclick = ()=>{ lehrmaterialUploadTyp = b.dataset.lmTyp; lehrmaterialFehler=''; lehrmaterialFormOffen = true; render(); }; });
+  const ordSel = document.getElementById('lm-ordner'), ordNeu = document.getElementById('lm-ordner-neu');
+  if(ordSel) ordSel.onchange = ()=>{ ordNeu.style.display = ordSel.value==='__neu' ? '' : 'none'; if(ordSel.value==='__neu') ordNeu.focus(); };
   document.querySelectorAll('[data-del-material]').forEach(b=>{
     b.onclick = ()=>{
       if(!confirm('Dieses Lehrmaterial wirklich löschen?')) return;
@@ -6288,26 +6445,75 @@ function bindAusbildungMaterial(person){
       speichereState(); render();
     };
   });
+  document.querySelectorAll('[data-material-ordner]').forEach(sel=>{
+    sel.onchange = ()=>{
+      const m = state.lehrmaterial.find(x=>x.id===sel.dataset.materialOrdner); if(!m) return;
+      m.ordner = sel.value; speichereState();
+      lehrmaterialOffeneOrdner = lehrmaterialOffeneOrdner || new Set(); lehrmaterialOffeneOrdner.add(sel.value);
+      zeigeToast('Verschoben nach „'+(sel.value||'ohne Ordner')+'“.'); render();
+    };
+  });
+  const neuName = document.getElementById('lm-ordner-anlegen-name');
+  const anlegen = document.getElementById('lm-ordner-anlegen');
+  if(anlegen) anlegen.onclick = ()=>{
+    const n = neuName.value.trim(); if(!n) return;
+    if(state.lehrmaterialOrdner.includes(n)){ zeigeToast('Diesen Ordner gibt es schon.'); return; }
+    state.lehrmaterialOrdner.push(n); speichereState(); zeigeToast('Ordner angelegt.'); render();
+  };
+  document.querySelectorAll('[data-lm-ordner-umbenennen]').forEach(b=>{
+    b.onclick = (ev)=>{
+      ev.preventDefault();
+      const alt = b.dataset.lmOrdnerUmbenennen;
+      const neu = (prompt('Neuer Name für den Ordner „'+alt+'“:', alt)||'').trim();
+      if(!neu || neu===alt) return;
+      if(state.lehrmaterialOrdner.includes(neu)){ alert('Ein Ordner mit diesem Namen existiert bereits.'); return; }
+      state.lehrmaterialOrdner = state.lehrmaterialOrdner.map(o=>o===alt?neu:o);
+      state.lehrmaterial.forEach(m=>{ if(m.ordner===alt) m.ordner = neu; });
+      state.hospitationen.forEach(h=>{ if(h.thema===alt) h.thema = neu; });
+      speichereState(); render();
+    };
+  });
+  document.querySelectorAll('[data-lm-ordner-loeschen]').forEach(b=>{
+    b.onclick = (ev)=>{
+      ev.preventDefault();
+      const o = b.dataset.lmOrdnerLoeschen;
+      const anz = state.lehrmaterial.filter(m=>m.ordner===o).length;
+      if(!confirm(`Ordner „${o}“ löschen?`+(anz?` Die ${anz} enthaltenen Unterlagen bleiben erhalten und landen unter „Ohne Ordner“.`:''))) return;
+      state.lehrmaterialOrdner = state.lehrmaterialOrdner.filter(x=>x!==o);
+      state.lehrmaterial.forEach(m=>{ if(m.ordner===o) m.ordner=''; });
+      speichereState(); render();
+    };
+  });
   const hochladen = document.getElementById('lm-hochladen');
   if(hochladen) hochladen.onclick = ()=>{
     const titel = document.getElementById('lm-titel').value.trim();
-    const datei = document.getElementById('lm-datei').files[0];
     if(!titel){ lehrmaterialFehler='Bitte einen Titel eingeben.'; render(); return; }
-    if(!datei){ lehrmaterialFehler='Bitte eine Datei auswählen.'; render(); return; }
-    if(datei.size > LEHRMATERIAL_MAX_BYTES){
-      lehrmaterialFehler = `Datei zu groß (${formatDateigroesse(datei.size)}). Maximal ${formatDateigroesse(LEHRMATERIAL_MAX_BYTES)} je Datei, da alles lokal gespeichert wird.`;
-      render(); return;
+    let ordner = ordSel.value;
+    if(ordner==='__neu'){
+      ordner = ordNeu.value.trim();
+      if(!ordner){ lehrmaterialFehler='Bitte einen Namen für den neuen Ordner eingeben.'; render(); return; }
+      if(!state.lehrmaterialOrdner.includes(ordner)) state.lehrmaterialOrdner.push(ordner);
     }
     const kategorie = document.getElementById('lm-kategorie').value;
     const beschreibung = document.getElementById('lm-beschreibung').value.trim();
+    const fertig = ()=>{ lehrmaterialZuletztOrdner = ordner; lehrmaterialOffeneOrdner = lehrmaterialOffeneOrdner || new Set(); lehrmaterialOffeneOrdner.add(ordner); speichereState(); lehrmaterialFehler=''; zeigeToast('Abgelegt in „'+(ordner||'ohne Ordner')+'“.'); render(); };
+    if(lehrmaterialUploadTyp==='link'){
+      const url = document.getElementById('lm-url').value.trim();
+      if(!/^https?:\/\//i.test(url)){ lehrmaterialFehler='Bitte eine vollständige Adresse eingeben (beginnt mit https://).'; render(); return; }
+      state.lehrmaterial.push({ id: uid(), titel, kategorie, ordner, typ:'link', url, beschreibung, groesse:0, hochgeladenVon: person.id, hochgeladenAm: nowIso() });
+      fertig(); return;
+    }
+    const datei = document.getElementById('lm-datei').files[0];
+    if(!datei){ lehrmaterialFehler='Bitte eine Datei auswählen.'; render(); return; }
+    if(datei.size > LEHRMATERIAL_MAX_BYTES){
+      lehrmaterialFehler = `Datei zu groß (${formatDateigroesse(datei.size)}). Maximal ${formatDateigroesse(LEHRMATERIAL_MAX_BYTES)} je Datei – bitte stattdessen als Link hinterlegen.`;
+      render(); return;
+    }
     const reader = new FileReader();
     reader.onload = ()=>{
-      state.lehrmaterial.push({
-        id: uid(), titel, kategorie, beschreibung,
-        dateiName: datei.name, mimeType: datei.type, groesse: datei.size,
-        datenUrl: reader.result, hochgeladenVon: person.id, hochgeladenAm: nowIso(),
-      });
-      speichereState(); lehrmaterialFehler=''; zeigeToast('Hochgeladen.'); render();
+      state.lehrmaterial.push({ id: uid(), titel, kategorie, ordner, typ:'datei', beschreibung,
+        dateiName: datei.name, mimeType: datei.type, groesse: datei.size, datenUrl: reader.result, hochgeladenVon: person.id, hochgeladenAm: nowIso() });
+      fertig();
     };
     reader.onerror = ()=>{ lehrmaterialFehler = 'Datei konnte nicht gelesen werden.'; render(); };
     reader.readAsDataURL(datei);
@@ -7940,7 +8146,7 @@ const HILFE_ARTIKEL = [
   {id:"findewille", kategorie:"Ausbildung & Team", titel:"Findewille & Anzeigetraining", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Je Hund: ein Fragebogen zu Motivation und Findewille (ergibt einen Motivationstyp mit passenden Übungen), Opferbindungs-Übungen, ein Beobachtungs-Fragebogen zur passenden Anzeigeart sowie der <strong>Anzeigeaufbau</strong> – per Auswahl für Verbeller, Pendler, Rückverweiser, Freiverweiser oder Bringsel, jeweils als Standardkette mit vier Bausteinen. Der aktuell trainierte Baustein lässt sich markieren.</p>\n<p>Die Karte <strong>Rasse &amp; Lebensphase</strong> ist standardmäßig zugeklappt; ein Klick öffnet die Hinweise. Passen Rassegruppe oder Lebensphase des Hundes zu einer Übung, erscheinen direkt an der Übungskarte automatische Hinweis-Kästchen 🐾.</p>\n"},
   {id:"alltag", kategorie:"Alltag & Zuhause", titel:"Übungen, Alltagstraining und Übungsbibliothek", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Der Bereich startet mit dem Reiter <strong>Übungen</strong>: Über <strong>🎲 Übung vorschlagen</strong> zieht BARRY eine zufällige Übung aus der aktuellen Auswahl – wahlweise passend zu den Sparten eines gewählten Teams. „Neu würfeln“ liefert die nächste, <strong>In Trainingstagebuch übernehmen</strong> öffnet direkt den Eintrags-Dialog mit vorausgefüllter Übung. So lässt sich zwischen den Staffelterminen selbstständig mit dem eigenen Hund arbeiten.</p>\n<p>Darunter die Suche (Übungen und Fachfragen), ein Kategorie-Filter und die Quellen-Auswahl mit Mehrfachauswahl: Übungen, Fitness-Übungen, Anzeigeart-Programme und Fachfragen – jede Quelle als eigener aufklappbarer Abschnitt.</p>\n<p>Im <strong>Trainingstagebuch (Alltag)</strong> dokumentieren Hundeführer/-innen ihre privaten Übungen – klar getrennt von der offiziellen Ausbildung. <strong>Hausaufgaben</strong> siehe eigener Artikel.</p>\n"},
   {id:"hausaufgaben", kategorie:"Alltag & Zuhause", titel:"Hausaufgaben zuweisen und erledigen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Zuweisen</strong> (Ausbilder/-in, Leitung oder die/der eigene Hundef\u00fchrer/in f\u00fcr das eigene\nTeam): im Reiter <strong>Hausaufgaben</strong> auf <strong>+ Hausaufgabe zuweisen</strong> klicken. Im\nDialog l\u00e4sst sich <strong>ein Team, mehrere Teams gezielt oder mit einem Klick \u201eAllen Teams\nzuweisen\"</strong> ausw\u00e4hlen \u2013 praktisch, wenn alle Teams dieselbe \u00dcbung bis zum n\u00e4chsten Termin machen\nsollen. Titel, Beschreibung und optional ein F\u00e4lligkeitsdatum ausf\u00fcllen und speichern: BARRY legt dann\nf\u00fcr jedes ausgew\u00e4hlte Team einen eigenen, unabh\u00e4ngigen Eintrag an.</p>\n<p>Ausbilder/-innen sehen und k\u00f6nnen dabei alle Teams ausw\u00e4hlen; ein normales Mitglied sieht dort nur\ndie eigenen Teams.</p>\n<p><strong>Erledigen</strong> (Hundef\u00fchrer/-in): offene Hausaufgaben erscheinen sowohl auf der\nStartseite als auch im Reiter selbst. Mit <strong>Als erledigt markieren</strong> und einer optionalen\nkurzen R\u00fcckmeldung wird die Aufgabe abgehakt. Wer eine Hausaufgabe zugewiesen hat, oder ein Ausbilder/\neine Ausbilderin, kann sie \u00fcber <strong>Entfernen</strong> auch wieder l\u00f6schen.</p>\n"},
-  {id:"wissen", kategorie:"Wissen & Material", titel:"Nachschlagewerk: Prüfungen, Fehlersuche, Lehrmaterial", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Dieser Bereich dient zum Nachlesen und zum Pflegen des Prüfstatus:</p>\n<ul>\n<li><strong>Prüfungsordnungen</strong> – DRK-Module 1.1/1.2/1.3 sowie VDH BH-VT je Hund mit allen Elementen (Durchführung, Bewertung, Aufbau-Tipps). Über jedem Modul eine Sprungleiste zu den Elementen; „Allgemeine Grundsätze“ sind zugeklappt. Der Status je Element hat fünf Stufen (Nicht bewertet · Im Aufbau · Gefestigt · Sicher beherrscht · Geprüft/bestanden) und darf nur von Ausbildern/Leitung gesetzt werden. Oben: <strong>🎯 Nächste Übung vorschlagen</strong> zieht ein offenes Element und dazu eine passende Übung aus der Bibliothek. Über <strong>Modulprüfungen aus Tabelle übernehmen</strong> lassen sich bestandene Module für viele Teams per CSV eintragen.</li>\n<li><strong>Fehlerdiagnose</strong> – Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste und Selbstcheck (klappen nach dem Beantworten zu), HF-Kompetenz-Themen und eine „Wenn X, dann prüfe Y“-Fehlersuche. Dort kann pro Symptom <strong>„Das betrifft uns“</strong> gewählt werden – das Thema erscheint dann als 🎯-Hinweis an genau den betroffenen Übungskarten.</li>\n<li><strong>Sparten, Helfer &amp; Erste Hilfe</strong> – Übungskataloge für Mantrailing und Trümmersuche, Helferschulung, Erste-Hilfe-Wissen.</li>\n<li><strong>Lehrmaterial</strong> – Dateien (PDF, Word, Bilder u. a.), die Ausbilder/-innen hochladen; mit der Kategorie <strong>Formular/Vordruck</strong> lassen sich z. B. die offiziellen Bewertungsbögen und Anmeldeformulare griffbereit ablegen.</li>\n</ul>\n"},
+  {id:"wissen", kategorie:"Wissen & Material", titel:"Nachschlagewerk: Prüfungen, Fehlersuche, Lehrmaterial", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Dieser Bereich dient zum Nachlesen und zum Pflegen des Prüfstatus:</p>\n<ul>\n<li><strong>Prüfungsordnungen</strong> – DRK-Module 1.1/1.2/1.3 sowie VDH BH-VT je Hund mit allen Elementen (Durchführung, Bewertung, Aufbau-Tipps). Über jedem Modul eine Sprungleiste zu den Elementen; „Allgemeine Grundsätze“ sind zugeklappt. Der Status je Element hat fünf Stufen (Nicht bewertet · Im Aufbau · Gefestigt · Sicher beherrscht · Geprüft/bestanden) und darf nur von Ausbildern/Leitung gesetzt werden. Oben: <strong>🎯 Nächste Übung vorschlagen</strong> zieht ein offenes Element und dazu eine passende Übung aus der Bibliothek. Über <strong>Modulprüfungen aus Tabelle übernehmen</strong> lassen sich bestandene Module für viele Teams per CSV eintragen.</li>\n<li><strong>Fehlerdiagnose</strong> – Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste und Selbstcheck (klappen nach dem Beantworten zu), HF-Kompetenz-Themen und eine „Wenn X, dann prüfe Y“-Fehlersuche. Dort kann pro Symptom <strong>„Das betrifft uns“</strong> gewählt werden – das Thema erscheint dann als 🎯-Hinweis an genau den betroffenen Übungskarten.</li>\n<li><strong>Sparten, Helfer &amp; Erste Hilfe</strong> – Übungskataloge für Mantrailing und Trümmersuche, Helferschulung, Erste-Hilfe-Wissen.</li>\n<li><strong>Lehrmaterial</strong> – Dateien (PDF, Word, Bilder u. a.), die Ausbilder/-innen hochladen; Unterlagen liegen in <strong>eigenen Ordnern</strong> (vorbelegt nach den Themen der Staffel, frei anlegbar, umbenennbar und löschbar; Einträge lassen sich per Auswahl in einen anderen Ordner verschieben). Große Unterlagen werden besser als <strong>Link</strong> (z. B. OneDrive/Teams) hinterlegt, da der Gerätespeicher begrenzt ist.</li>\n</ul>\n"},
   {id:"einsatz-grundlagen", kategorie:"Einsatz", titel:"Realeinsatz und \u00dcbung: der Unterschied", rollen:["ausbilder", "leitung"], text:"\n<p>Beim Anlegen eines neuen Einsatzes wird zuerst die <strong>Art</strong> gew\u00e4hlt: <strong>Realeinsatz</strong>\n(nur f\u00fcr Leitung/Admin sichtbar und bearbeitbar) oder <strong>\u00dcbung</strong> (mit frei w\u00e4hlbarer,\nvor\u00fcbergehender Einsatzleitung, siehe Artikel \u201eEinsatzleitung f\u00fcr eine \u00dcbung \u00fcbernehmen\"). F\u00fcr beide\nArten lassen sich Alarmierungszeit, Einsatzort, Angaben zur vermissten Person, eine\nKarten-/Einsatzreferenz (z. B. ein CalTopo-Link als reine Notiz) und ein chronologisches\nEreignisprotokoll mit Typ (Statusmeldung, Fund, \u00dcbergabe, Nachforderung, Erste Hilfe) und Bezug zu\neinem Suchtrupp erfassen.</p>\n"},
   {id:"einsatz-suchtrupps", kategorie:"Einsatz", titel:"Suchtrupps, Kr\u00e4fte und Risikobewertung", rollen:["ausbilder", "leitung"], text:"\n<p>\u00dcber die Schaltfl\u00e4che <strong>Suchtrupps</strong> im ge\u00f6ffneten Einsatz lassen sich Trupps mit echten\nPersonen anlegen: Hundef\u00fchrer/-in ausw\u00e4hlen (der zugeh\u00f6rige Hund wird automatisch vorgeschlagen),\nweitere Helfer aus der Staffel per Mehrfachauswahl erg\u00e4nzen, oder der Trupp als <strong>externes\nTeam</strong> (z. B. eine andere Staffel) markieren. Rufname, Suchart, Status, Suchauftrag und Ergebnis\nwerden je Trupp erfasst; die letzten Ereignisprotokoll-Meldungen zu einem Trupp werden direkt in seiner\nKarte angezeigt.</p>\n<p><strong>Kr\u00e4fte</strong> listet alle vor Ort eingesetzten Personen und Fahrzeuge.\n<strong>Risikobewertung</strong> berechnet nach dem festen Bewertungsraster automatisch eine Einstufung\n(NIEDRIG/MITTEL/HOCH) aus den eingegebenen Werten.</p>\n"},
   {id:"einsatz-tracks", kategorie:"Einsatz", titel:"Karten & Tracks: GPX/KML importieren", rollen:["ausbilder", "leitung"], text:"\n<p>Tracks und Suchgebiete aus einer Karten-App (z. B. Gaia GPS oder CalTopo) lassen sich als\n<strong>GPX- oder KML-Datei</strong> exportieren und \u00fcber <strong>Karten &amp; Tracking \u2192\nGPX-/KML-Track importieren</strong> einlesen \u2013 offline, ohne Verbindung zu einem externen Dienst.\nWegpunkte/Marker (z. B. eine Fundstelle) werden mit \u00fcbernommen. Jeder Track l\u00e4sst sich anschlie\u00dfend\neinem Suchtrupp zuordnen; BARRY setzt dabei automatisch den Hundef\u00fchrer als prim\u00e4re Position, damit die\nKarte nicht von mehreren fast identischen Positionen \u00fcberf\u00fcllt wird. Weitere Truppmitglieder lassen\nsich bei Bedarf \u00fcber einen Schalter zus\u00e4tzlich einblenden. GeoJSON-Dateien werden aktuell nicht\nunterst\u00fctzt.</p>\n"},
@@ -7948,7 +8154,7 @@ const HILFE_ARTIKEL = [
   {id:"verwaltung-ueberblick", kategorie:"Verwaltung", titel:"Verwaltung: Wer sieht was?", rollen:["ausbilder", "leitung"], text:"\n<p>Ausbilder/-innen (alle drei Ausbilder-Rollen) sehen die Reiter <strong>Hunde, Qualifikationen, Fristen &amp; Lücken,\nAnwesenheit, Orte &amp; Gebiete</strong> \u2013 die f\u00fcr den laufenden Trainingsbetrieb wichtigen Bereiche.\nNur Staffel-/Bereitschaftsleitung und Admin sehen zus\u00e4tzlich <strong>Personen, Rollen &amp; Rechte</strong>\nund <strong>Datensicherung</strong>, sowie das Feld f\u00fcr den Staffelnamen oben auf dieser Seite.</p>\n"},
   {id:"verwaltung-personen", kategorie:"Verwaltung", titel:"Personen und Hunde anlegen und pflegen", rollen:["leitung"], text:"\n<p>Unter <strong>Personen</strong> werden neue Mitglieder mit Name, Rolle(n) und einem ersten Passwort\nangelegt. Der Status l\u00e4sst sich auf <strong>inaktiv</strong> setzen, wenn jemand pausiert oder die\nStaffel verl\u00e4sst, oder auf <strong>extern</strong> f\u00fcr G\u00e4ste/Einsatzkr\u00e4fte anderer Einheiten. Wichtig:\nIst eine Person oder ein Hund bereits in Trainings, Terminen o. \u00c4. verwendet, bietet BARRY statt\nL\u00f6schen automatisch \u201eauf inaktiv setzen\" an, damit keine historischen Daten verloren gehen. Ein\nHundef\u00fchrer-Wechsel wird zus\u00e4tzlich in einer kleinen Historie am Hund festgehalten.</p>\n"},
   {id:"verwaltung-rechte", kategorie:"Verwaltung", titel:"Rollen und individuelle Zusatzrechte vergeben", rollen:["leitung"], text:"\n<p>Beim Anlegen oder Bearbeiten einer Person werden die Rollen per H\u00e4kchen vergeben. Zus\u00e4tzlich lassen\nsich unter <strong>Rollen &amp; Rechte</strong> einzelne, frei benannte Zusatzrechte definieren; die\nbeiden vorbelegten Eintr\u00e4ge \u201eKalender verwalten\" und \u201eAusbildung verwalten\" wirken sich tats\u00e4chlich auf\ndie Berechtigung aus, auch wenn die Person keine Ausbilder-Rolle hat.</p>\n"},
-  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt und lässt sich um eigene Einträge ergänzen. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
+  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt, enthält auch die Ausbilder-Qualifikationen (Erwachsenengerechte Unterrichtsgestaltung, Rettungshunde-Ausbilderschein Fläche/Trümmer) und lässt sich um eigene Einträge ergänzen: Im Personen-Dialog über „➕ Sonstige Ausbildung (eigener Name)“ – diese landen in der Rubrik „Sonstige Ausbildungen“. Im selben Dialog werden auch <strong>Hospitationen</strong> je Thema mit Datum, Ausbilder/in und Unterlage (Datei oder Link) festgehalten. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
   {id:"fristen", kategorie:"Verwaltung", titel:"Fristen & Lücken, Jubiläen und Erinnerungen", rollen:["ausbilder", "leitung"], text:"\n<p><strong>Verwaltung → Fristen &amp; Lücken</strong> wertet automatisch aus: abgelaufene und bald ablaufende Qualifikationen (auf Basis der „Gültig bis“-Daten), Personen ohne eine als Pflicht markierte Qualifikation, Hund/Team-Module, die kurz vor dem Abschluss stehen, sowie <strong>Jubiläen</strong> (5/10/15/… Jahre im DRK, aus „Mitglied im DRK seit“ im Personen-Dialog).</p>\n<p>Weil BARRY offline arbeitet, gibt es keine Push-Benachrichtigungen. Stattdessen zeigt die <strong>Startseite</strong> für Leitung und Ausbilder/-innen eine Karte „Für Leitung &amp; Ausbildung“ mit den wichtigsten offenen Punkten und den Terminen der nächsten sieben Tage inklusive Zusagen und fehlender Rückmeldungen – ein Klick führt zur jeweiligen Verwaltungsseite.</p>\n"},
   {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Mitgliedsnummer, Adresse, E-Mail, Telefon, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte und je eine Spalte „Ausb: …“ für jede Ausbildung der Rettungshundearbeit (Pflicht und empfohlen) sowie die Führungslehrgänge (Datum oder x). Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
   {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Die Leitung oder ein Admin vergibt unter Verwaltung → Personen → Person öffnen → „Passwort zurücksetzen“ ein neues Startpasswort.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
