@@ -1143,6 +1143,7 @@ function leererState(){
     termine: [],         // {id,titel,kategorie,beginn,ende,ganztags,ort,beschreibung,erstelltVon,
                           //  sichtbarkeit:'staff'|'personal'|'trainer',ownerId,
                           //  thema,verantwortlich,themeninhalte,helferAnzahl,material,planungsnotiz}
+    geloeschteTermine: [], // Löschvermerke für den Terminplan-Austausch: {id,titel,beginn,ganztags,vermerk,geloeschtAm,geloeschtVon}
     ruckmeldungen: [],   // {id,terminId,personId,status:'zusage'|'absage'|'offen',km,stunden,aktualisiertAm}
     themenboerse: [],    // {id,titel,datum,hinweis,status,erstelltVon,erstelltAm}
     anwesenheiten: [],   // {id,terminId,personId,status:'anwesend'|'entschuldigt'|'unentschuldigt'}
@@ -1259,6 +1260,7 @@ function migriereState(s){
   qualiKatalogMigrieren(s);
   if(!Array.isArray(s.lehrmaterialOrdner)) s.lehrmaterialOrdner = [];
   if(!Array.isArray(s.hospitationen)) s.hospitationen = [];
+  if(!Array.isArray(s.geloeschteTermine)) s.geloeschteTermine = [];
   s.hunde.forEach(h=>{
     if(!Array.isArray(h.einschaetzungen)) h.einschaetzungen = [];
     if(h.ausbilderNotiz && !h.einschaetzungen.length){
@@ -2935,7 +2937,8 @@ function zugangspaketErstellen(person, startpasswort){
     meta: Object.assign({}, state.meta, {erstelltAm: nowIso(), qualiKatalogVersion: state.meta.qualiKatalogVersion, lehrOrdnerVorbelegt:true}),
     organisation: state.organisation,
     personen: personenReduziert, hunde: hundeReduziert,
-    termine: state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff'),
+    termine: state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff').map(t=>{ const {planungsnotiz, ...rest} = t; return rest; }),
+    geloeschteTermine: state.geloeschteTermine||[],
     ruckmeldungen: (state.ruckmeldungen||[]).filter(r=>r.personId===person.id),
     qualifikationen: state.qualifikationen, personQualifikationen: [], hospitationen: [],
     pruefungsstatus: nurEigene(state.pruefungsstatus), findewilleProfile: nurEigene(state.findewilleProfile),
@@ -2957,6 +2960,7 @@ function bestandAusDateiImportieren(file){
   reader.onload = ()=>{
     try{
       const parsed = JSON.parse(reader.result);
+      if(parsed.exportInfo && parsed.exportInfo.format==='barry-termine') throw new Error('Das ist ein Terminplan, keine Datensicherung. Bitte unter Organisation & Termine → Kalender → „Terminplan einlesen“ einspielen – dort werden nur die Termine abgeglichen.');
       if(!parsed.personen || !Array.isArray(parsed.personen)) throw new Error('Kein gültiges Bestandspaket.');
       if(parsed.exportInfo && parsed.exportInfo.format && parsed.exportInfo.format!=='barry-bestand') throw new Error('Diese Datei ist kein BARRY-Bestand (Format: '+parsed.exportInfo.format+').');
       if(parsed.meta && Number(parsed.meta.schemaVersion) > BARRY_SCHEMA_VERSION) throw new Error('Die Datei stammt aus einer neueren BARRY-Version und kann hier noch nicht gelesen werden.');
@@ -2999,6 +3003,7 @@ function renderModal(){
   if(modal.type==='person') return renderModalPerson();
   if(modal.type==='hund') return renderModalHund();
   if(modal.type==='csvVorschau') return renderModalCsvVorschau();
+  if(modal.type==='terminImport') return renderModalTerminImport();
   if(modal.type==='qualifikation') return renderModalQualifikation();
   if(modal.type==='zuordnung') return renderModalZuordnung();
   if(modal.type==='zusatzrecht') return renderModalZusatzrecht();
@@ -3023,6 +3028,7 @@ function bindModal(person){
   if(modal.type==='person') return bindModalPerson(person);
   if(modal.type==='hund') return bindModalHund();
   if(modal.type==='csvVorschau') return bindModalCsvVorschau();
+  if(modal.type==='terminImport') return bindModalTerminImport();
   if(modal.type==='qualifikation') return bindModalQualifikation();
   if(modal.type==='zuordnung') return bindModalZuordnung();
   if(modal.type==='zusatzrecht') return bindModalZusatzrecht();
@@ -4022,11 +4028,22 @@ function renderOrganisationKalender(person){
         ${darf?`<button class="btn btn-primary" id="btn-neuer-termin">+ Termin anlegen</button>`:''}
       </div>
     </div>
+    <details class="card card-pad" style="margin-top:12px">
+      <summary style="cursor:pointer;font-weight:600">🔄 Terminplan ${darf?'verteilen / ':''}aktualisieren</summary>
+      <p class="hint" style="margin-top:8px">${darf
+        ? 'Nach Änderungen am Jahresplan den <strong>Terminplan exportieren</strong> und die Datei an die Mitglieder schicken (z. B. per Messenger oder E-Mail). Sie enthält nur die Staffeltermine und die Löschvermerke – keine Personen-, Planungs- oder Ausbilderdaten.'
+        : 'Hat die Leitung einen neuen Terminplan geschickt, hier einlesen. Neue Termine kommen hinzu, geänderte werden aktualisiert, entfallene entfernt – nichts wird doppelt angelegt, eigene Zusagen bleiben erhalten.'}</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        ${darf?`<button class="btn btn-sm btn-primary" id="btn-terminplan-export">Terminplan exportieren</button>`:''}
+        <label class="btn btn-sm" style="cursor:pointer">Terminplan einlesen<input type="file" id="in-terminplan-import" accept="application/json,.json" style="display:none"></label>
+      </div>
+    </details>
     <div class="row" style="margin:14px 0 4px">
       <button class="btn btn-sm ${orgFilter==='kommend'?'btn-primary':'btn-ghost'}" data-filter="kommend">Kommende</button>
       <button class="btn btn-sm ${orgFilter==='alle'?'btn-primary':'btn-ghost'}" data-filter="alle">Alle</button>
       ${TERMIN_KATEGORIEN.map(k=>`<button class="btn btn-sm ${orgFilter===k.id?'btn-primary':'btn-ghost'}" data-filter="${k.id}">${esc(k.label)}</button>`).join('')}
     </div>
+    ${renderEntfalleneTermineHinweis()}
     ${gruppenHtml}
   `;
 }
@@ -4153,12 +4170,124 @@ function bindOrganisation(person){
   if(neu) neu.onclick = ()=>{ modal={type:'termin', id:null}; render(); };
   const jp = document.getElementById('btn-jahresplan');
   if(jp) jp.onclick = ()=>{ modal={type:'jahresplan'}; render(); };
+  const tpExp = document.getElementById('btn-terminplan-export');
+  if(tpExp) tpExp.onclick = ()=> terminplanExportieren();
+  const tpImp = document.getElementById('in-terminplan-import');
+  if(tpImp) tpImp.onchange = e=>{ const f=e.target.files[0]; e.target.value=''; if(f) terminplanEinlesen(f); };
   document.querySelectorAll('[data-termin]').forEach(tr=>{
     tr.onclick = ()=>{ modal={type:'termin', id:tr.dataset.termin, readOnly:!darfTermineBearbeiten(person)}; render(); };
   });
   if(orgTab==='teilnahme') bindOrganisationTeilnahme(person);
   if(orgTab==='planung') bindOrganisationPlanung(person);
   if(modal) bindModal(person);
+}
+
+/* ---- Terminplan-Austausch: nur Staffeltermine + Löschvermerke, ohne Personendaten ----
+   Leitung/Ausbildung exportiert den aktuellen Plan, Mitglieder spielen ihn ein. Abgleich über die Termin-ID
+   (Fallback: gleicher Titel + gleicher Beginn), sodass nichts doppelt angelegt wird. Gelöschte Termine werden
+   als Vermerk (Löschliste) mitgegeben und beim Einspielen auch bei den Mitgliedern entfernt. */
+let terminImportVorschau = null;
+function terminSchluessel(t){ return String(t.titel||'').trim().toLowerCase().replace(/\s+/g,' ')+'|'+String(t.beginn||'').slice(0,16); }
+function terminplanExportieren(){
+  const termine = state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff').map(t=>{ const {planungsnotiz, ...rest} = t; return rest; });
+  const grenze = Date.now() - 400*86400000; // Löschvermerke gut ein Jahr mitgeben
+  const geloescht = (state.geloeschteTermine||[]).filter(g=>new Date(g.geloeschtAm).getTime() >= grenze);
+  const daten = { exportInfo:{ format:'barry-termine', app:'BARRY', appVersion:BARRY_APP_VERSION, exportiertAm:nowIso(), organisation: state.organisation.name||'', anzahlTermine: termine.length, anzahlGeloescht: geloescht.length },
+    termine, geloeschteTermine: geloescht };
+  const blob = new Blob([JSON.stringify(daten)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `BARRY_Terminplan_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast(`Terminplan exportiert: ${termine.length} Termine, ${geloescht.length} Löschvermerk(e).`);
+}
+function terminplanAnalysieren(daten){
+  if(!daten || !daten.exportInfo || daten.exportInfo.format!=='barry-termine' || !Array.isArray(daten.termine))
+    throw new Error('Diese Datei ist kein BARRY-Terminplan. (Eine komplette Datensicherung wird unter Verwaltung → Datensicherung eingespielt.)');
+  const neu=[], aktualisiert=[], unveraendert=[], uebersprungen=[], loeschen=[];
+  const lokalGeloescht = new Map((state.geloeschteTermine||[]).map(g=>[g.id,g]));
+  const eingehendGeloescht = new Map((daten.geloeschteTermine||[]).map(g=>[g.id,g]));
+  const vergleichsFelder = ['titel','kategorie','beginn','ende','ganztags','ort','beschreibung','thema','verantwortlich','themeninhalte','helferAnzahl','material'];
+  daten.termine.forEach(t=>{
+    if(!t || !t.id || !t.titel || !t.beginn) return;
+    if((t.sichtbarkeit||'staff')!=='staff') return;
+    if(eingehendGeloescht.has(t.id)) return; // im selben Paket als gelöscht markiert
+    const lok = state.termine.find(x=>x.id===t.id);
+    if(lok){
+      const anders = vergleichsFelder.some(f=>String(lok[f]??'')!==String(t[f]??''));
+      if(!anders){ unveraendert.push(t); return; }
+      if(lok.aktualisiertAm && t.aktualisiertAm && lok.aktualisiertAm > t.aktualisiertAm){ uebersprungen.push({t, grund:'auf diesem Gerät neuer bearbeitet'}); return; }
+      aktualisiert.push({lok, t}); return;
+    }
+    const g = lokalGeloescht.get(t.id);
+    if(g && (!t.aktualisiertAm || g.geloeschtAm >= t.aktualisiertAm)){ uebersprungen.push({t, grund:'wurde hier bereits gelöscht'}); return; }
+    const dublette = state.termine.find(x=>terminSchluessel(x)===terminSchluessel(t));
+    if(dublette){ uebersprungen.push({t, grund:'bereits vorhanden (gleicher Titel und Beginn)'}); return; }
+    neu.push(t);
+  });
+  (daten.geloeschteTermine||[]).forEach(g=>{
+    const treffer = state.termine.find(x=>x.id===g.id) || (g.titel && g.beginn ? state.termine.find(x=>(x.sichtbarkeit||'staff')==='staff' && terminSchluessel(x)===terminSchluessel(g)) : null);
+    if(treffer) loeschen.push({lok:treffer, g});
+  });
+  return {neu, aktualisiert, unveraendert, uebersprungen, loeschen, geloeschteListe: daten.geloeschteTermine||[], info: daten.exportInfo};
+}
+function terminplanUebernehmen(a){
+  a.neu.forEach(t=>state.termine.push(Object.assign({}, t)));
+  a.aktualisiert.forEach(({lok,t})=>{ const {planungsnotiz, ...rest} = t; Object.assign(lok, rest); });
+  const ids = new Set(a.loeschen.map(x=>x.lok.id));
+  state.termine = state.termine.filter(t=>!ids.has(t.id));
+  state.geloeschteTermine = state.geloeschteTermine || [];
+  a.geloeschteListe.forEach(g=>{ if(!state.geloeschteTermine.some(x=>x.id===g.id)) state.geloeschteTermine.push(g); });
+  speichereState();
+}
+function terminplanEinlesen(file){
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      terminImportVorschau = terminplanAnalysieren(JSON.parse(reader.result));
+      modal = {type:'terminImport'}; render();
+    }catch(err){ alert('Der Terminplan konnte nicht eingelesen werden: '+err.message); }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+function renderModalTerminImport(){
+  const a = terminImportVorschau; if(!a) return '';
+  const zeile = (t, zusatz)=>`<li>${terminDatumKurz(t)} · ${esc(t.titel)}${zusatz?` <span class="hint">– ${esc(zusatz)}</span>`:''}</li>`;
+  const nichts = !a.neu.length && !a.aktualisiert.length && !a.loeschen.length;
+  return `
+  <div class="modal-back"><div class="modal" style="max-width:680px">
+    <div class="modal-head"><h3>Terminplan einlesen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
+    <div class="modal-body">
+      <p class="hint">Terminplan ${a.info.organisation?'von '+esc(a.info.organisation)+' ':''}vom ${fmtDatum(a.info.exportiertAm)}. Noch ist nichts gespeichert. Eigene Rückmeldungen (Zusagen/Absagen) und persönliche Termine bleiben erhalten.</p>
+      ${nichts?'<p class="hint" style="color:var(--accent-ink)"><strong>Der Kalender auf diesem Gerät ist bereits auf dem Stand dieses Terminplans.</strong></p>':''}
+      ${a.neu.length?`<p style="margin:10px 0 4px"><strong>➕ Neue Termine (${a.neu.length})</strong></p><ul class="hint" style="margin:0 0 0 -18px">${a.neu.sort((x,y)=>new Date(x.beginn)-new Date(y.beginn)).map(t=>zeile(t)).join('')}</ul>`:''}
+      ${a.aktualisiert.length?`<p style="margin:10px 0 4px"><strong>✏️ Geänderte Termine (${a.aktualisiert.length})</strong></p><ul class="hint" style="margin:0 0 0 -18px">${a.aktualisiert.map(x=>zeile(x.t, x.lok.beginn!==x.t.beginn?'neuer Zeitpunkt (bisher '+terminDatumKurz(x.lok)+')':'Angaben geändert')).join('')}</ul>`:''}
+      ${a.loeschen.length?`<p style="margin:10px 0 4px"><strong>❌ Entfallene Termine (${a.loeschen.length})</strong></p><ul class="hint" style="margin:0 0 0 -18px">${a.loeschen.map(x=>zeile(x.lok, x.g.vermerk||'ohne Vermerk')).join('')}</ul>`:''}
+      ${a.uebersprungen.length?`<details style="margin-top:10px"><summary class="hint" style="cursor:pointer">Nicht übernommen (${a.uebersprungen.length})</summary><ul class="hint" style="margin:4px 0 0 -18px">${a.uebersprungen.map(x=>zeile(x.t, x.grund)).join('')}</ul></details>`:''}
+      ${a.unveraendert.length?`<p class="hint" style="margin-top:8px">${a.unveraendert.length} Termin(e) unverändert.</p>`:''}
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button>${nichts?'':'<button class="btn btn-primary" id="m-termine-uebernehmen">Jetzt übernehmen</button>'}</div>
+  </div></div>`;
+}
+function bindModalTerminImport(){
+  const zu = ()=>{ terminImportVorschau = null; schliesseModal(); };
+  document.getElementById('m-schliessen').onclick = zu;
+  document.getElementById('m-abbrechen').onclick = zu;
+  const ok = document.getElementById('m-termine-uebernehmen');
+  if(ok) ok.onclick = ()=>{
+    const a = terminImportVorschau; terminImportVorschau = null;
+    terminplanUebernehmen(a);
+    zeigeToast(`Kalender aktualisiert: ${a.neu.length} neu, ${a.aktualisiert.length} geändert, ${a.loeschen.length} entfallen.`);
+    schliesseModal();
+  };
+}
+function renderEntfalleneTermineHinweis(){
+  const heute = new Date(); heute.setHours(0,0,0,0);
+  const liste = (state.geloeschteTermine||[]).filter(g=>g.beginn && new Date(g.beginn) >= heute).sort((a,b)=>new Date(a.beginn)-new Date(b.beginn));
+  if(!liste.length) return '';
+  return `<details class="card card-pad" style="margin-top:14px;border-left:4px solid var(--accent)">
+    <summary style="cursor:pointer;font-weight:700">❌ Entfallene Termine (${liste.length})</summary>
+    <ul class="hint" style="margin:8px 0 0 -18px">${liste.map(g=>`<li><span style="text-decoration:line-through">${terminDatumKurz(g)} · ${esc(g.titel)}</span>${g.vermerk?` – ${esc(g.vermerk)}`:''}</li>`).join('')}</ul>
+  </details>`;
 }
 
 /* ---- Termin ---- */
@@ -4254,9 +4383,20 @@ function bindModalTermin(person){
   if(modal.id){
     const del = document.getElementById('m-loeschen');
     if(del) del.onclick = ()=>{
-      if(!confirm('Diesen Termin wirklich löschen?')) return;
+      const alt = state.termine.find(t=>t.id===modal.id);
+      const istStaffel = alt && (alt.sichtbarkeit||'staff')==='staff';
+      let vermerk = '';
+      if(istStaffel){
+        const antwort = prompt('Termin löschen.\n\nVermerk für die Mitglieder (optional), z. B. „fällt wegen Unwetter aus – Ersatz am 12.10.“.\nDer Vermerk wird mit dem nächsten Terminplan-Export verteilt, damit der Termin auch bei den Mitgliedern entfernt wird.', '');
+        if(antwort===null) return;
+        vermerk = antwort.trim();
+      } else if(!confirm('Diesen Termin wirklich löschen?')) return;
       state.termine = state.termine.filter(t=>t.id!==modal.id);
-      speichereState(); schliesseModal();
+      if(istStaffel){
+        state.geloeschteTermine = state.geloeschteTermine || [];
+        state.geloeschteTermine.push({id:alt.id, titel:alt.titel, beginn:alt.beginn, ganztags:!!alt.ganztags, vermerk, geloeschtAm:nowIso(), geloeschtVon:person.id});
+      }
+      speichereState(); zeigeToast(istStaffel?'Termin gelöscht – der Löschvermerk geht mit dem nächsten Terminplan-Export an die Mitglieder.':'Termin gelöscht.'); schliesseModal();
     };
   }
   const speichern = document.getElementById('m-speichern');
@@ -4285,6 +4425,7 @@ function bindModalTermin(person){
       daten.material = document.getElementById('tf-material').value.trim();
       daten.planungsnotiz = document.getElementById('tf-planungsnotiz').value.trim();
     }
+    daten.aktualisiertAm = nowIso();
     if(modal.id){ Object.assign(state.termine.find(t=>t.id===modal.id), daten); }
     else { state.termine.push(Object.assign({id:uid(), erstelltVon:person.id}, daten)); }
     speichereState(); zeigeToast('Gespeichert.'); schliesseModal();
@@ -8211,7 +8352,7 @@ function bindModalJahresplan(person){
         id: uid(), titel: en.title, kategorie: jahresplanTypZuKategorie(en.type, en.detail),
         beginn: en.date + (en.start?('T'+en.start):'T00:00'),
         ende: en.date + (en.end?('T'+en.end):(en.start?('T'+en.start):'T23:59')),
-        ganztags: !en.start, ort: en.place||'', beschreibung:'', erstelltVon: person.id,
+        ganztags: !en.start, ort: en.place||'', beschreibung:'', erstelltVon: person.id, aktualisiertAm: nowIso(),
       });
     });
     speichereState();
@@ -8464,6 +8605,7 @@ const HILFE_ARTIKEL = [
   {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Mitgliedsnummer, Adresse, E-Mail, Telefon, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte und je eine Spalte „Ausb: …“ für jede Ausbildung der Rettungshundearbeit (Pflicht und empfohlen) sowie die Führungslehrgänge (Datum oder x). Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
   {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Ohne Synchronisation liegt das Passwort nur auf dem eigenen Gerät. Die Leitung erstellt deshalb unter Verwaltung → Personen → Person öffnen ein <strong>Zugangspaket</strong> mit neuem Startpasswort (enthält nur Namen, Termine und die Daten des eigenen Teams – keine Kontaktdaten oder internen Notizen anderer). Das Mitglied spielt die Datei am Anmeldebildschirm unter „Kein Zugang mehr? Datei von der Leitung einspielen“ ein und meldet sich mit dem Startpasswort an. Auf einem gemeinsam genutzten Gerät genügt „Passwort zurücksetzen“ im Personen-Dialog.</p>\n<p><strong>Gerät zurücksetzen:</strong> Am Anmeldebildschirm im selben Kasten „Alle BARRY-Daten auf diesem Gerät löschen“ – entfernt Bestand, Sicherheitskopien und Zwischenspeicher; das Home-Icon kann danach gelöscht werden.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
   {id:"hund-felder", kategorie:"Verwaltung", titel:"Hundeprofil: Geschlecht, Chipnummer, Plaketten", rollen:["ausbilder", "leitung"], text:"\n<p>Im Dialog <strong>Verwaltung → Hunde → Hund bearbeiten</strong> lassen sich neben Name, Rasse und Wurftag auch <strong>Geschlecht</strong> (Rüde/Hündin), die <strong>Chip-/Identifikationsnummer</strong> und beliebig viele <strong>Plaketten</strong> (Sparte, Plaketten-/ID-Nr., Datum) erfassen – genau die Angaben, die die offiziellen Bewertungsbögen und Anmeldeformulare abfragen. Zusätzlich: Sparten, Rassegruppe (für automatische Trainingshinweise) und die festgelegte Anzeigeart.</p>\n"},
+  {id:"terminplan", kategorie:"Organisation & Termine", titel:"Terminplan an Mitglieder verteilen und aktualisieren", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Leitung/Ausbildung:</strong> Nach Änderungen am Jahresplan unter Organisation &amp; Termine → Kalender → „🔄 Terminplan verteilen / aktualisieren“ auf <strong>Terminplan exportieren</strong> tippen und die Datei an die Mitglieder schicken. Sie enthält nur die Staffeltermine (keine Ausbilder-internen oder persönlichen Termine, keine Planungsnotizen, keine Personendaten) sowie die Löschvermerke.</p>\n<p>Wird ein Staffeltermin gelöscht, fragt BARRY nach einem kurzen <strong>Vermerk</strong> (z. B. „fällt wegen Unwetter aus – Ersatz am 17.10.“). Der Vermerk wird mit dem nächsten Export verteilt; der Termin verschwindet dann auch bei den Mitgliedern und erscheint dort unter „Entfallene Termine“.</p>\n<p><strong>Mitglieder:</strong> Im selben Kasten auf <strong>Terminplan einlesen</strong> tippen und die Datei auswählen. Eine Vorschau zeigt neue, geänderte und entfallene Termine. Abgeglichen wird über eine feste Termin-Kennung (zusätzlich über Titel + Beginn), deshalb entsteht nichts doppelt; eigene Zusagen/Absagen und persönliche Termine bleiben erhalten. Ein älterer Plan holt bereits gelöschte Termine nicht zurück.</p>\n"},
   {id:"datensicherung", kategorie:"Daten sichern & teilen", titel:"Backup exportieren und einspielen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung \u2192 Datensicherung</strong> l\u00e4sst sich der komplette Datenbestand als eine\neinzelne Datei <strong>exportieren</strong> \u2013 das sollte regelm\u00e4\u00dfig geschehen, am besten vor gr\u00f6\u00dferen\n\u00c4nderungen. Beim <strong>Import</strong> einer solchen Datei zeigt BARRY vorher eine Vorschau (Inhalt,\nHerkunft, Datum) und legt automatisch eine Sicherheitskopie des bisherigen Standes an, die sich bei\nBedarf mit einem Klick wiederherstellen l\u00e4sst. Eine Datei ohne anmeldef\u00e4hige Admin-Person wird\ngrunds\u00e4tzlich abgelehnt, damit sich niemand versehentlich aussperrt.</p>\n"},
   {id:"keine-automatische-sync", kategorie:"Daten sichern & teilen", titel:"Wichtig: Keine automatische Synchronisation zwischen Ger\u00e4ten", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>BARRY speichert alle Daten <strong>ausschlie\u00dflich lokal auf dem jeweiligen Ger\u00e4t</strong>. Es gibt\nkeinen Server im Hintergrund, der die Daten automatisch zwischen mehreren Handys oder Tablets abgleicht.\nMeldet sich jemand auf einem <em>anderen</em> Ger\u00e4t an, sieht diese Person eine eigenst\u00e4ndige,\nunabh\u00e4ngige Kopie \u2013 neue Eintr\u00e4ge auf dem einen Ger\u00e4t erscheinen nicht von selbst auf dem anderen.</p>\n<p><strong>F\u00fcr die Praxis bedeutet das:</strong> BARRY funktioniert am besten auf einem\n<strong>gemeinsam genutzten Ger\u00e4t</strong> (z. B. ein Staffel-Tablet), auf dem sich alle mit dem\neigenen Login anmelden. Soll BARRY auf mehreren eigenen Handys parallel genutzt werden, m\u00fcssen Daten\nbewusst per Export/Import \u00fcbertragen werden \u2013 siehe Artikel \u201eBackup exportieren und einspielen\".</p>\n"},
   {id:"austauschpaket", kategorie:"Daten sichern & teilen", titel:"Team-Stammdaten mit eigenst\u00e4ndigen Apps austauschen", rollen:["ausbilder", "leitung"], text:"\n<p>F\u00fcr einzelne Hundeteams l\u00e4sst sich unter <strong>Verwaltung \u2192 Hunde \u2192 Teamdaten</strong> eine kleine\nTeamdaten-Datei (Name, Rasse, Geburtsdatum, Sparten, Anzeigeart) exportieren und in eine der\neigenst\u00e4ndigen RHS-Apps (z. B. Tr\u00fcmmersuchassistent) importieren, und umgekehrt. Es handelt sich\nbewusst nur um Stammdaten, nicht um Trainings- oder Einsatzdaten; ein Import zeigt vorher immer eine\nVorschau inklusive Warnung, falls Name oder Hundef\u00fchrer/-in nicht zum gew\u00e4hlten Team passen.</p>\n"},
