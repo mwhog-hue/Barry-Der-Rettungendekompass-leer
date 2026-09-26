@@ -1255,6 +1255,14 @@ function migriereState(s){
   qualiKatalogMigrieren(s);
   if(!Array.isArray(s.lehrmaterialOrdner)) s.lehrmaterialOrdner = [];
   if(!Array.isArray(s.hospitationen)) s.hospitationen = [];
+  s.hunde.forEach(h=>{
+    if(!Array.isArray(h.einschaetzungen)) h.einschaetzungen = [];
+    if(h.ausbilderNotiz && !h.einschaetzungen.length){
+      h.einschaetzungen.push({id:uid(), datum:(h.ausbilderNotizAm||nowIso()).slice(0,10), text:h.ausbilderNotiz, sichtbarkeit:'intern', vonPersonId:h.ausbilderNotizVon||'', am:h.ausbilderNotizAm||nowIso()});
+    }
+    delete h.ausbilderNotiz; delete h.ausbilderNotizAm; delete h.ausbilderNotizVon;
+    (h.ziele||[]).forEach(z=>{ if(!z.sichtbarkeit) z.sichtbarkeit = 'intern'; });
+  });
   if(!s.meta.lehrOrdnerVorbelegt){
     LEHRMATERIAL_STANDARD_ORDNER.forEach(o=>{ if(!s.lehrmaterialOrdner.includes(o)) s.lehrmaterialOrdner.push(o); });
     s.meta.lehrOrdnerVorbelegt = true;
@@ -1278,6 +1286,7 @@ function ladeState(){
     return seedState();
   }
 }
+function renderErhalteScroll(){ const y = window.scrollY; render(); window.scrollTo(0, y); }
 function speichereState(){
   state.meta.letzteAenderung = nowIso();
   try{
@@ -1558,7 +1567,8 @@ function renderStart(person){
           <div style="border-top:1px solid var(--line);padding:10px 0">
             <strong>${esc(teamLabel(h))}</strong>
             ${(()=>{ const n = state.hausaufgaben.filter(a=>a.hundId===h.id && a.status!=='erledigt').length; return n?`<div><span class="chip" data-goto-hausaufgaben="${h.id}" style="cursor:pointer">📝 ${n} offene Hausaufgabe${n===1?'':'n'}</span></div>`:''; })()}
-            <div class="row" style="margin-top:8px;flex-wrap:wrap">
+            <div class="hint" style="margin-top:6px">Training eintragen:</div>
+            <div class="row" style="margin-top:4px;flex-wrap:wrap">
               ${spartenSortiert.map(s=>`<button class="btn btn-sm" data-start-art="${s.art}" data-start-sparte="${s.id}" data-start-hund="${h.id}">+ ${esc(s.label)}</button>`).join('')}
             </div>
           </div>
@@ -1567,6 +1577,7 @@ function renderStart(person){
     </div>
 
     ${(istLeitung || hatAusbilderRecht(person)) ? renderStartLeitungsHinweise(person) : ''}
+    ${renderStartGeteilteZiele(eigeneHunde)}
     ${renderUebungDesTages(person, eigeneHunde)}
     <div class="card card-pad" style="margin:20px 0">
       <div class="hint">Gemeinsam dokumentiert – letzte 30 Tage</div>
@@ -1977,7 +1988,7 @@ function hundeZusammenfuehren(gruppe){
     behalten.plaketten = [...(behalten.plaketten||[]), ...(h.plaketten||[]).filter(pl=>!(behalten.plaketten||[]).some(x=>x.sparte===pl.sparte && x.nummer===pl.nummer))];
     behalten.entwicklungsthemen = [...(behalten.entwicklungsthemen||[]), ...(h.entwicklungsthemen||[])];
     behalten.ziele = [...(behalten.ziele||[]), ...(h.ziele||[])];
-    if(h.ausbilderNotiz) behalten.ausbilderNotiz = [behalten.ausbilderNotiz, h.ausbilderNotiz].filter(Boolean).join('\n\n');
+    behalten.einschaetzungen = [...(behalten.einschaetzungen||[]), ...(h.einschaetzungen||[])];
     // Alle Verweise auf den doppelten Hund umhängen.
     ['pruefungsstatus','trainingseintraege','alltagseintraege','hausaufgaben','rhEintraege','mantrailingEintraege','findewilleProfile'].forEach(k=>{
       (state[k]||[]).forEach(e=>{ if(e.hundId===h.id) e.hundId = behalten.id; });
@@ -4389,73 +4400,111 @@ function formatDateigroesse(bytes){
   return (bytes/1024/1024).toFixed(1)+' MB';
 }
 
-/* ---- Stand & Planung: Ausbilder-Notizen und Zielliste je Team (nur Ausbilder/-innen und Leitung) ---- */
+/* ---- Stand & Planung: datierte Einschätzungen und Ziele je Team, jeweils „intern“ oder „für das Team“ sichtbar ---- */
 let planungHundId = null;
 function zielUeberfaellig(z){ return !z.erledigt && z.bis && tageBisHeute(z.bis) < 0; }
+function einschaetzungenVon(h){ return [...(h.einschaetzungen||[])].sort((a,b)=>String(b.datum).localeCompare(String(a.datum)) || String(b.am).localeCompare(String(a.am))); }
+function sichtbarkeitChip(item, art){
+  const team = item.sichtbarkeit==='team';
+  return `<button class="chip ${team?'':'muted'}" data-${art}-sicht="${item.id}" type="button" title="Sichtbarkeit umschalten" style="cursor:pointer;border:none">${team?'👥 für das Team':'🔒 intern'}</button>`;
+}
 function renderAusbildungPlanung(person){
-  const hunde = state.hunde.filter(h=>h.status!=='inaktiv');
-  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.</p></div>`;
+  const istAusbilder = darfTrainingBearbeiten(person);
+  const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && (istAusbilder || hundGefuehrtVon(h, person.id)));
+  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>${istAusbilder?'Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.':'Dir ist noch kein eigener Hund zugeordnet.'}</p></div>`;
   if(!hunde.some(h=>h.id===planungHundId)) planungHundId = hunde[0].id;
   const hund = hunde.find(h=>h.id===planungHundId);
-  const ziele = [...(hund.ziele||[])].sort((a,b)=> (a.erledigt-b.erledigt) || String(a.bis||'9999').localeCompare(String(b.bis||'9999')));
+  const sichtbar = x => istAusbilder || x.sichtbarkeit==='team';
+  const eins = einschaetzungenVon(hund).filter(sichtbar);
+  const ziele = [...(hund.ziele||[])].filter(sichtbar).sort((a,b)=> (a.erledigt-b.erledigt) || String(a.bis||'9999').localeCompare(String(b.bis||'9999')));
   const offen = ziele.filter(z=>!z.erledigt), erledigt = ziele.filter(z=>z.erledigt);
-  const bearbeiter = hund.ausbilderNotizVon ? state.personen.find(p=>p.id===hund.ausbilderNotizVon) : null;
+  const nameVon = id => state.personen.find(p=>p.id===id)?.name || '';
+  const einsZeile = (e, i)=>`
+    <div style="padding:8px 0;border-top:1px dashed var(--line)">
+      <div class="spread" style="gap:6px;align-items:flex-start">
+        <span class="hint"><strong>${fmtDatum(e.datum)}</strong>${e.vonPersonId?' · '+esc(nameVon(e.vonPersonId)):''}${i===0?' · <span class="chip">aktuell</span>':''}</span>
+        ${istAusbilder?`<span class="row" style="gap:4px;flex-wrap:nowrap">${sichtbarkeitChip(e,'eins')}<button class="btn btn-sm btn-ghost" data-eins-bearbeiten="${e.id}" title="Bearbeiten">✎</button><button class="btn btn-sm btn-ghost" data-eins-loeschen="${e.id}" title="Löschen">✕</button></span>`:''}
+      </div>
+      <div style="white-space:pre-wrap;margin-top:4px">${esc(e.text)}</div>
+    </div>`;
   const zielZeile = z=>`
     <div class="row" style="gap:8px;align-items:flex-start;padding:7px 0;border-top:1px dashed var(--line)">
-      <input type="checkbox" data-ziel-erledigt="${z.id}" ${z.erledigt?'checked':''} style="margin-top:4px" title="erledigt">
+      <input type="checkbox" data-ziel-erledigt="${z.id}" ${z.erledigt?'checked':''} ${istAusbilder?'':'disabled'} style="margin-top:4px" title="erledigt">
       <div style="flex:1;min-width:0;${z.erledigt?'text-decoration:line-through;opacity:.6':''}">${esc(z.text)}
         ${z.bis?`<div class="hint" style="${zielUeberfaellig(z)?'color:var(--accent-ink);font-weight:600':''}">bis ${fmtDatum(z.bis)}${zielUeberfaellig(z)?' – überfällig':''}</div>`:''}</div>
-      <button class="btn btn-sm btn-ghost" data-ziel-loeschen="${z.id}" title="Löschen">✕</button>
+      ${istAusbilder?`${sichtbarkeitChip(z,'ziel')}<button class="btn btn-sm btn-ghost" data-ziel-loeschen="${z.id}" title="Löschen">✕</button>`:''}
     </div>`;
-  const uebersicht = hunde.map(h=>{
+  const uebersicht = istAusbilder ? hunde.map(h=>{
     const o = (h.ziele||[]).filter(z=>!z.erledigt), ue = o.filter(zielUeberfaellig);
-    return `<tr class="clickable" data-planung-team="${h.id}"><td>${esc(teamLabel(h))}</td><td class="hint">${h.ausbilderNotiz?esc(h.ausbilderNotiz.slice(0,70))+(h.ausbilderNotiz.length>70?' …':''):'–'}</td><td style="white-space:nowrap">${o.length}${ue.length?` <span class="badge warn">${ue.length} überfällig</span>`:''}</td></tr>`;
-  }).join('');
+    const letzte = einschaetzungenVon(h)[0];
+    return `<tr class="clickable" data-planung-team="${h.id}"><td>${esc(teamLabel(h))}</td><td class="hint">${letzte?fmtDatum(letzte.datum)+': '+esc(letzte.text.slice(0,60))+(letzte.text.length>60?' …':''):'–'}</td><td style="white-space:nowrap">${o.length}${ue.length?` <span class="badge warn">${ue.length} überfällig</span>`:''}</td></tr>`;
+  }).join('') : '';
   return `
-    <p class="lead">Interne Einschätzung des Ausbildungsstands und die nächsten Ziele je Team – sichtbar nur für Ausbilder/-innen und Leitung.</p>
+    <p class="lead">${istAusbilder
+      ? 'Einschätzung des Ausbildungsstands und die nächsten Ziele je Team. Jeder Eintrag ist entweder 🔒 intern (nur Ausbilder/-innen und Leitung) oder 👥 für das Team sichtbar – ein Tippen auf die Markierung schaltet um.'
+      : 'Was eure Ausbilder/-innen mit euch teilen: Einschätzung und gemeinsame Ziele für euer Team.'}</p>
     <div class="row" style="margin:14px 0">
       <select id="pl-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${h.id===planungHundId?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
     </div>
     <div class="card card-pad" style="margin-bottom:14px;border-left:4px solid var(--t-ausbildung)">
-      <h3>Aktueller Ausbildungsstand</h3>
-      <textarea id="pl-notiz" rows="6" style="width:100%;box-sizing:border-box" placeholder="z. B. Verbellen am Opfer sicher, Freiverweisen noch im Aufbau; Gewandtheit Wippe ängstlich; Prüfung 1.2 im Frühjahr realistisch …">${esc(hund.ausbilderNotiz||'')}</textarea>
-      <div class="spread" style="margin-top:8px">
-        <span class="hint">${hund.ausbilderNotizAm?`Zuletzt geändert am ${fmtDatum(hund.ausbilderNotizAm)}${bearbeiter?' von '+esc(bearbeiter.name):''}`:'Noch keine Einschätzung gespeichert.'}</span>
-        <button class="btn btn-sm btn-primary" id="pl-notiz-speichern">Speichern</button>
-      </div>
+      <div class="spread"><h3>Ausbildungsstand</h3>${eins.length?`<span class="chip muted">${eins.length} Einschätzung(en)</span>`:''}</div>
+      ${istAusbilder?`
+      <details ${eins.length?'':'open'} style="margin:4px 0 8px"><summary style="cursor:pointer;font-weight:600">+ Neue Einschätzung</summary>
+        <textarea id="pl-eins-text" rows="5" style="width:100%;box-sizing:border-box;margin-top:8px" placeholder="z. B. Verbellen am Opfer sicher, Freiverweisen noch im Aufbau; Wippe ängstlich; Prüfung 1.2 im Frühjahr realistisch …"></textarea>
+        <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">
+          <input id="pl-eins-datum" type="date" value="${new Date().toISOString().slice(0,10)}" style="width:auto">
+          <select id="pl-eins-sicht" style="width:auto"><option value="intern">🔒 intern</option><option value="team">👥 für das Team</option></select>
+          <button class="btn btn-sm btn-primary" id="pl-eins-add">Speichern</button>
+        </div>
+      </details>`:''}
+      ${eins.length ? eins.slice(0,1).map(einsZeile).join('') : `<p class="hint">${istAusbilder?'Noch keine Einschätzung gespeichert.':'Noch keine geteilte Einschätzung.'}</p>`}
+      ${eins.length>1?`<details style="margin-top:6px"><summary style="cursor:pointer" class="hint">Frühere Einschätzungen (${eins.length-1})</summary>${eins.slice(1).map((e)=>einsZeile(e,1)).join('')}</details>`:''}
     </div>
     <div class="card card-pad" style="margin-bottom:14px">
       <div class="spread"><h3>Nächste Ziele / Planung</h3><span class="chip muted">${offen.length} offen</span></div>
-      ${offen.map(zielZeile).join('') || '<p class="hint">Noch keine offenen Ziele.</p>'}
+      ${offen.map(zielZeile).join('') || `<p class="hint">${istAusbilder?'Noch keine offenen Ziele.':'Aktuell keine geteilten Ziele.'}</p>`}
+      ${istAusbilder?`
       <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
         <input id="pl-ziel-text" placeholder="Neues Ziel, z. B. Rückverweis auf 50 m sicher" style="flex:1;min-width:180px">
         <input id="pl-ziel-bis" type="date" style="width:auto" title="bis wann (optional)">
+        <select id="pl-ziel-sicht" style="width:auto"><option value="team">👥 für das Team</option><option value="intern">🔒 intern</option></select>
         <button class="btn btn-sm btn-primary" id="pl-ziel-add">+ Ziel</button>
-      </div>
+      </div>`:''}
       ${erledigt.length?`<details style="margin-top:10px"><summary style="cursor:pointer" class="hint">Erledigt (${erledigt.length})</summary>${erledigt.map(zielZeile).join('')}</details>`:''}
     </div>
+    ${istAusbilder?`
     <details class="card card-pad">
       <summary style="cursor:pointer;font-weight:700">Übersicht aller Teams</summary>
-      <div class="table-scroll" style="margin-top:8px"><table><thead><tr><th>Team</th><th>Stand</th><th>Offene Ziele</th></tr></thead><tbody>${uebersicht}</tbody></table></div>
-    </details>`;
+      <div class="table-scroll" style="margin-top:8px"><table><thead><tr><th>Team</th><th>Letzte Einschätzung</th><th>Offene Ziele</th></tr></thead><tbody>${uebersicht}</tbody></table></div>
+    </details>`:''}`;
 }
 function bindAusbildungPlanung(person){
   const hund = state.hunde.find(h=>h.id===planungHundId); if(!hund) return;
   const sel = document.getElementById('pl-team');
   if(sel) sel.onchange = e=>{ planungHundId = e.target.value; render(); };
+  if(!darfTrainingBearbeiten(person)) return; // Hundeführende: nur lesen
   document.querySelectorAll('[data-planung-team]').forEach(tr=>{ tr.onclick = ()=>{ planungHundId = tr.dataset.planungTeam; render(); window.scrollTo(0,0); }; });
-  document.getElementById('pl-notiz-speichern').onclick = ()=>{
-    hund.ausbilderNotiz = document.getElementById('pl-notiz').value.trim();
-    hund.ausbilderNotizAm = nowIso(); hund.ausbilderNotizVon = person.id;
+  const einsAdd = document.getElementById('pl-eins-add');
+  if(einsAdd) einsAdd.onclick = ()=>{
+    const text = document.getElementById('pl-eins-text').value.trim();
+    if(!text){ zeigeToast('Bitte eine Einschätzung eintragen.'); return; }
+    hund.einschaetzungen = hund.einschaetzungen || [];
+    hund.einschaetzungen.push({id:uid(), datum:document.getElementById('pl-eins-datum').value || new Date().toISOString().slice(0,10), text,
+      sichtbarkeit:document.getElementById('pl-eins-sicht').value, vonPersonId:person.id, am:nowIso()});
     speichereState(); zeigeToast('Einschätzung gespeichert.'); render();
   };
-  document.getElementById('pl-ziel-add').onclick = ()=>{
+  document.querySelectorAll('[data-eins-sicht]').forEach(b=>{ b.onclick = ()=>{ const e=(hund.einschaetzungen||[]).find(x=>x.id===b.dataset.einsSicht); if(!e) return; e.sichtbarkeit = e.sichtbarkeit==='team'?'intern':'team'; speichereState(); zeigeToast(e.sichtbarkeit==='team'?'Jetzt für das Team sichtbar.':'Jetzt nur intern sichtbar.'); render(); }; });
+  document.querySelectorAll('[data-eins-bearbeiten]').forEach(b=>{ b.onclick = ()=>{ const e=(hund.einschaetzungen||[]).find(x=>x.id===b.dataset.einsBearbeiten); if(!e) return; const t = prompt('Einschätzung bearbeiten:', e.text); if(t===null) return; if(!t.trim()) return; e.text = t.trim(); e.am = nowIso(); speichereState(); render(); }; });
+  document.querySelectorAll('[data-eins-loeschen]').forEach(b=>{ b.onclick = ()=>{ if(!confirm('Diese Einschätzung löschen?')) return; hund.einschaetzungen = (hund.einschaetzungen||[]).filter(x=>x.id!==b.dataset.einsLoeschen); speichereState(); render(); }; });
+  const zielAdd = document.getElementById('pl-ziel-add');
+  if(zielAdd) zielAdd.onclick = ()=>{
     const text = document.getElementById('pl-ziel-text').value.trim();
     if(!text){ zeigeToast('Bitte ein Ziel eintragen.'); return; }
     hund.ziele = hund.ziele || [];
-    hund.ziele.push({id:uid(), text, bis:document.getElementById('pl-ziel-bis').value, erledigt:false, angelegtAm:nowIso(), angelegtVon:person.id});
+    hund.ziele.push({id:uid(), text, bis:document.getElementById('pl-ziel-bis').value, erledigt:false, sichtbarkeit:document.getElementById('pl-ziel-sicht').value, angelegtAm:nowIso(), angelegtVon:person.id});
     speichereState(); render();
   };
+  document.querySelectorAll('[data-ziel-sicht]').forEach(b=>{ b.onclick = ()=>{ const z=(hund.ziele||[]).find(x=>x.id===b.dataset.zielSicht); if(!z) return; z.sichtbarkeit = z.sichtbarkeit==='team'?'intern':'team'; speichereState(); zeigeToast(z.sichtbarkeit==='team'?'Ziel jetzt für das Team sichtbar.':'Ziel jetzt nur intern sichtbar.'); render(); }; });
   document.querySelectorAll('[data-ziel-erledigt]').forEach(cb=>{
     cb.onchange = ()=>{ const z = (hund.ziele||[]).find(x=>x.id===cb.dataset.zielErledigt); if(!z) return; z.erledigt = cb.checked; z.erledigtAm = cb.checked?nowIso():null; speichereState(); render(); };
   });
@@ -4463,8 +4512,19 @@ function bindAusbildungPlanung(person){
     b.onclick = ()=>{ if(!confirm('Dieses Ziel löschen?')) return; hund.ziele = (hund.ziele||[]).filter(z=>z.id!==b.dataset.zielLoeschen); speichereState(); render(); };
   });
 }
+function renderStartGeteilteZiele(eigeneHunde){
+  // Für Hundeführende: die mit dem Team geteilten, offenen Ziele direkt auf der Startseite
+  const eintraege = eigeneHunde.flatMap(h=>(h.ziele||[]).filter(z=>!z.erledigt && z.sichtbarkeit==='team').map(z=>({h,z})))
+    .sort((a,b)=>String(a.z.bis||'9999').localeCompare(String(b.z.bis||'9999')));
+  if(!eintraege.length) return '';
+  return `
+    <div class="card card-pad" style="margin-top:20px;border-left:4px solid var(--t-ausbildung)">
+      <div class="spread"><h3 style="font-size:1.05rem">🎯 Unsere nächsten Ziele</h3><span class="chip muted" data-goto-planung="1" style="cursor:pointer">Stand &amp; Planung →</span></div>
+      <ul class="hint" style="margin:6px 0 0 -18px">${eintraege.slice(0,5).map(({h,z})=>`<li><strong>${esc(z.text)}</strong>${eigeneHunde.length>1?' ('+esc(h.name)+')':''}${z.bis?' – bis '+fmtDatum(z.bis):''}</li>`).join('')}</ul>
+    </div>`;
+}
 function renderAusbildung(person){
-  const darfPlanung = darfTrainingBearbeiten(person);
+  const darfPlanung = darfTrainingBearbeiten(person) || state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
   if(ausbildungTab==='planung' && !darfPlanung) ausbildungTab = 'findewille';
   return `
     <div class="eyebrow" style="--dot:var(--t-ausbildung)">Ausbildung & Team</div>
@@ -4570,9 +4630,11 @@ function renderRasseLebensphaseKarte(hund){
     </details>`;
 }
 let findewilleZufallsUebung = null;
+let findewilleOffen = {}; // Auf-/Zuklappzustand der Abschnitte (bleibt beim Neuzeichnen erhalten)
+function fwOffen(key, standard){ return (findewilleOffen[key] ?? standard) ? 'open' : ''; }
 function renderAusbildungFindewille(person){
-  const hunde = state.hunde.filter(h=>h.status!=='inaktiv');
-  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.</p></div>`;
+  const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && (darfTrainingBearbeiten(person) || hundGefuehrtVon(h, person.id)));
+  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>${darfTrainingBearbeiten(person)?'Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.':'Dir ist noch kein eigener Hund zugeordnet – die Leitung kann das unter Verwaltung → Hunde eintragen.'}</p></div>`;
   if(!hunde.some(h=>h.id===findewilleHundId)) findewilleHundId = hunde[0]?.id || null;
   const profil = state.findewilleProfile.find(p=>p.hundId===findewilleHundId);
   if(!findewilleDraft){
@@ -4585,6 +4647,8 @@ function renderAusbildungFindewille(person){
   const motTyp = motivationsTyp(findewilleDraft.motivationsAntworten);
   const anzVorschlag = anzeigeartVorschlag(findewilleDraft.beobachtungAntworten);
   const uebungen = FINDEWILLEN_UEBUNGEN[motTyp.typ] || [];
+  const motBeantwortet = Object.keys(findewilleDraft.motivationsAntworten).length >= MOTIVATIONS_FRAGEN.length;
+  const beobBeantwortet = Object.keys(findewilleDraft.beobachtungAntworten).length >= ANZEIGEART_BEOBACHTUNG_FRAGEN.length;
 
   const frageBlock = (fragen, antworten, prefix) => fragen.map(f=>`
     <div class="field">
@@ -4618,41 +4682,53 @@ function renderAusbildungFindewille(person){
     </div>
     ${renderRasseLebensphaseKarte(hunde.find(h=>h.id===findewilleHundId))}
 
-    <div class="card card-pad" style="margin-bottom:16px">
-      <h3>Motivation & Findewille</h3>
+    ${(motBeantwortet||beobBeantwortet)?`
+    <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      ${motBeantwortet?`<span class="chip">Motivation: ${esc(motTyp.typ)}</span>`:''}
+      ${beobBeantwortet?`<span class="chip">Anzeigeart-Vorschlag: ${esc(anzVorschlag.typ)}</span>`:''}
+    </div>`:''}
+
+    <details class="card card-pad" style="margin-bottom:12px" data-fw-sec="mot" ${fwOffen('mot', !motBeantwortet)}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Motivation & Findewille <span class="chip muted">${Object.keys(findewilleDraft.motivationsAntworten).length}/${MOTIVATIONS_FRAGEN.length} beantwortet</span></summary>
+      <div style="margin-top:10px">
       ${frageBlock(MOTIVATIONS_FRAGEN, findewilleDraft.motivationsAntworten, 'm')}
       <div class="card card-pad" style="background:var(--soft);border:none;margin-top:6px">
         <strong>${esc(motTyp.typ)}</strong>
         <p class="hint" style="margin-top:4px">${esc(motTyp.tipp)}</p>
       </div>
-      ${uebungen.length?`
-      <h3 style="margin-top:16px">Passende Übungen</h3>
-      ${uebungen.map(u=>`<div style="margin-bottom:10px"><strong>${esc(u.titel)}</strong><p class="hint" style="margin-top:2px">${esc(u.ablauf)}</p></div>`).join('')}
-      `:''}
-    </div>
+      ${darf?`<button class="btn btn-primary btn-sm" data-fw-speichern style="margin-top:12px">Antworten speichern</button>`:''}
+      </div>
+    </details>
 
-    <div class="card card-pad" style="margin-bottom:16px">
-      <h3>Opferbindung – Übungen</h3>
+    <details class="card card-pad" style="margin-bottom:12px" data-fw-sec="ueb" ${fwOffen('ueb', false)}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Passende Übungen & Opferbindung <span class="chip muted">${uebungen.length+OPFERBINDUNG_UEBUNGEN.length}</span></summary>
+      <div style="margin-top:10px">
+      ${uebungen.length?`<h3>Passend zum Motivationstyp „${esc(motTyp.typ)}“</h3>
+      ${uebungen.map(u=>`<div style="margin-bottom:10px"><strong>${esc(u.titel)}</strong><p class="hint" style="margin-top:2px">${esc(u.ablauf)}</p></div>`).join('')}`:''}
+      <h3 style="margin-top:14px">Opferbindung</h3>
       ${OPFERBINDUNG_UEBUNGEN.map(u=>`<div style="margin-bottom:10px"><strong>${esc(u.titel)}</strong><p class="hint" style="margin-top:2px">${esc(u.ablauf)}</p></div>`).join('')}
-    </div>
+      </div>
+    </details>
 
-    <div class="card card-pad">
-      <h3>Beobachtung: passende Anzeigeart finden</h3>
+    <details class="card card-pad" style="margin-bottom:12px" data-fw-sec="beob" ${fwOffen('beob', !beobBeantwortet)}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Beobachtung: passende Anzeigeart <span class="chip muted">${Object.keys(findewilleDraft.beobachtungAntworten).length}/${ANZEIGEART_BEOBACHTUNG_FRAGEN.length} beantwortet</span></summary>
+      <div style="margin-top:10px">
       ${frageBlock(ANZEIGEART_BEOBACHTUNG_FRAGEN, findewilleDraft.beobachtungAntworten, 'b')}
       <div class="card card-pad" style="background:var(--soft);border:none;margin-top:6px">
         <strong>${esc(anzVorschlag.typ)}</strong>
         <p class="hint" style="margin-top:4px">${esc(anzVorschlag.tipp)}</p>
       </div>
-      ${darf?`<button class="btn btn-primary" id="fw-speichern" style="margin-top:14px">Speichern</button>`:''}
-    </div>
+      ${darf?`<button class="btn btn-primary btn-sm" data-fw-speichern style="margin-top:12px">Antworten speichern</button>`:''}
+      </div>
+    </details>
 
     ${renderAnzeigeaufbauKarte(hunde.find(h=>h.id===findewilleHundId), darf)}
 
-    <div class="card card-pad" style="margin-top:16px">
-      <h3>Aufgaben für den Hundeführer (Kluger-Hans-Effekt vermeiden)</h3>
-      <p class="hint">Unbewusste Signale des Hundeführers können den Hund lenken, ohne dass es beabsichtigt ist. Diese Punkte helfen, das zu vermeiden – unabhängig vom Team, immer gültig.</p>
+    <details class="card card-pad" style="margin-top:12px" data-fw-sec="hf" ${fwOffen('hf', false)}>
+      <summary style="cursor:pointer;font-weight:700;font-size:1rem">Aufgaben für den Hundeführer (Kluger-Hans-Effekt vermeiden)</summary>
+      <p class="hint" style="margin-top:8px">Unbewusste Signale des Hundeführers können den Hund lenken, ohne dass es beabsichtigt ist. Diese Punkte helfen, das zu vermeiden – unabhängig vom Team, immer gültig.</p>
       ${HF_AUFGABEN.map(a=>`<div style="margin-bottom:8px"><strong>${esc(a.titel)}</strong><p class="hint" style="margin-top:2px">${esc(a.text)}</p></div>`).join('')}
-    </div>
+    </details>
   `;
 }
 function renderAnzeigeaufbauKarte(hund, darf){
@@ -4865,7 +4941,7 @@ const FEHLERSUCHE_SYMPTOME = [
 
 function bindAusbildungFindewille(person){
   const sel = document.getElementById('fw-team');
-  if(sel) sel.onchange = e=>{ findewilleHundId = e.target.value; findewilleDraft = null; anzeigeaufbauAuswahl = null; render(); };
+  if(sel) sel.onchange = e=>{ findewilleHundId = e.target.value; findewilleDraft = null; anzeigeaufbauAuswahl = null; findewilleOffen = {}; render(); };
   const btnFwZufall = document.getElementById('btn-fw-zufall');
   if(btnFwZufall) btnFwZufall.onclick = ()=>{
     const pool = ALLE_UEBUNGEN.filter(u=>u.cat==='anzeige');
@@ -4880,24 +4956,24 @@ function bindAusbildungFindewille(person){
     modal = {type:'alltagseintrag', id:null};
     render();
   };
+  document.querySelectorAll('[data-fw-sec]').forEach(d=>{ d.ontoggle = ()=>{ findewilleOffen[d.dataset.fwSec] = d.open; }; });
   document.querySelectorAll('[data-m-frage]').forEach(b=>{
-    b.onclick = ()=>{ findewilleDraft.motivationsAntworten[b.dataset.mFrage] = b.dataset.mWert; render(); };
+    b.onclick = ()=>{ findewilleOffen.mot = true; findewilleDraft.motivationsAntworten[b.dataset.mFrage] = b.dataset.mWert; renderErhalteScroll(); };
   });
   document.querySelectorAll('[data-b-frage]').forEach(b=>{
-    b.onclick = ()=>{ findewilleDraft.beobachtungAntworten[b.dataset.bFrage] = b.dataset.bWert; render(); };
+    b.onclick = ()=>{ findewilleOffen.beob = true; findewilleDraft.beobachtungAntworten[b.dataset.bFrage] = b.dataset.bWert; renderErhalteScroll(); };
   });
   const aaSel = document.getElementById('aa-art');
-  if(aaSel) aaSel.onchange = e=>{ anzeigeaufbauAuswahl = e.target.value; render(); };
+  if(aaSel) aaSel.onchange = e=>{ anzeigeaufbauAuswahl = e.target.value; renderErhalteScroll(); };
   document.querySelectorAll('[data-aa-schritt]').forEach(b=>{
     b.onclick = ()=>{
       const hund = state.hunde.find(h=>h.id===findewilleHundId);
       hund.anzeigeaufbauSchritt = hund.anzeigeaufbauSchritt || {};
       hund.anzeigeaufbauSchritt[anzeigeaufbauAuswahl] = parseInt(b.dataset.aaSchritt,10);
-      speichereState(); render();
+      speichereState(); renderErhalteScroll();
     };
   });
-  const speichern = document.getElementById('fw-speichern');
-  if(speichern) speichern.onclick = ()=>{
+  document.querySelectorAll('[data-fw-speichern]').forEach(speichern=>{ speichern.onclick = ()=>{
     const bestehend = state.findewilleProfile.find(p=>p.hundId===findewilleHundId);
     const daten = {
       hundId: findewilleHundId,
@@ -4907,13 +4983,18 @@ function bindAusbildungFindewille(person){
     };
     if(bestehend) Object.assign(bestehend, daten);
     else state.findewilleProfile.push(Object.assign({id:uid()}, daten));
-    speichereState(); zeigeToast('Gespeichert.'); render();
-  };
+    speichereState(); zeigeToast('Gespeichert.'); renderErhalteScroll();
+  }; });
 }
 
 /* ---- DRK-Module & VDH BH-VT ---- */
 let pruefungHundId = null;
 let pruefungVerband = 'brh';
+let pruefungModul = 'drk11'; // nur ein Modul gleichzeitig anzeigen – hält die Seite kurz
+const PRUEFUNG_MODULE = [
+  {id:'drk11', label:'DRK 1.1'}, {id:'drk12', label:'DRK 1.2'}, {id:'drk13', label:'DRK 1.3'},
+  {id:'vdh_a', label:'VDH Teil A'}, {id:'vdh_b', label:'VDH Teil B'}, {id:'vergleich', label:'BRH / IRO / DRV'},
+];
 let pruefungOffenSet = new Set();
 const PRUEFUNG_STATUS = [
   { id:'offen', label:'Nicht bewertet' },
@@ -4928,7 +5009,11 @@ function pruefungStatusVon(hundId, modul, elementId){
 }
 function pruefungStatusButtons(hundId, modul, elementId){
   const aktuell = pruefungStatusVon(hundId, modul, elementId);
-  return PRUEFUNG_STATUS.map(s=>`<button class="btn btn-sm ${aktuell===s.id?'btn-primary':'btn-ghost'}" data-pruef-modul="${modul}" data-pruef-element="${elementId}" data-pruef-status="${s.id}">${esc(s.label)}</button>`).join(' ');
+  const farbe = aktuell==='bestanden' ? 'var(--green-soft, var(--soft))' : aktuell==='offen' ? 'transparent' : 'var(--t-ausbildung-soft)';
+  return `<label class="row" style="gap:8px;align-items:center;flex-wrap:nowrap"><span class="hint">Status</span>
+    <select data-pruef-modul="${modul}" data-pruef-element="${elementId}" style="width:auto;background:${farbe};font-weight:${aktuell==='offen'?'400':'600'}">
+      ${PRUEFUNG_STATUS.map(s=>`<option value="${s.id}" ${aktuell===s.id?'selected':''}>${esc(s.label)}</option>`).join('')}
+    </select></label>`;
 }
 function pruefungFortschritt(hundId, modul, elementIds){
   const bestanden = elementIds.filter(id=>pruefungStatusVon(hundId,modul,id)==='bestanden').length;
@@ -5086,8 +5171,8 @@ function renderTeilBElement(el, hundId){
   </div>`;
 }
 function renderAusbildungPruefung(person){
-  const hunde = state.hunde.filter(h=>h.status!=='inaktiv');
-  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.</p></div>`;
+  const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && (darfTrainingBearbeiten(person) || hundGefuehrtVon(h, person.id)));
+  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>${darfTrainingBearbeiten(person)?'Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.':'Dir ist noch kein eigener Hund zugeordnet – die Leitung kann das unter Verwaltung → Hunde eintragen.'}</p></div>`;
   if(!hunde.some(h=>h.id===pruefungHundId)) pruefungHundId = hunde[0]?.id || null;
   const hid = pruefungHundId;
   return `
@@ -5097,18 +5182,22 @@ function renderAusbildungPruefung(person){
     </div>
     ${renderRasseLebensphaseKarte(hunde.find(h=>h.id===hid))}
     ${renderPruefungVorschlagKarte(hid)}
-
-    <div class="card card-pad" style="margin-bottom:18px">
-      <h3>Modulprüfungen aus Tabelle übernehmen</h3>
-      <p class="hint">Für viele Teams auf einmal: markiert bei „bestanden" automatisch alle Elemente von DRK 1.1/1.2/1.3 für das jeweilige Team.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin:0 0 14px">
+      ${PRUEFUNG_MODULE.map(m=>{ const z = m.id==='drk11'?pruefungFortschrittZahlen(hid,'drk11',DRK_VERHALTEN.map(e=>e.id)) : m.id==='drk12'?pruefungFortschrittZahlen(hid,'drk12',DRK_GRUNDGEHORSAM.map(e=>e.id)) : m.id==='drk13'?pruefungFortschrittZahlen(hid,'drk13',DRK_GEWANDTHEIT.map(e=>e.id)) : null;
+        return `<button class="btn btn-sm ${pruefungModul===m.id?'btn-primary':'btn-ghost'}" data-pf-modul="${m.id}">${esc(m.label)}${z?` <span style="opacity:.75">${z.bestanden}/${z.gesamt}</span>`:''}</button>`; }).join('')}
+    </div>
+    ${darfTrainingBearbeiten(person)?`
+    <details class="card card-pad" style="margin-bottom:14px">
+      <summary style="cursor:pointer;font-weight:600">Modulprüfungen aus Tabelle übernehmen</summary>
+      <p class="hint" style="margin-top:8px">Für viele Teams auf einmal: markiert bei „bestanden" automatisch alle Elemente von DRK 1.1/1.2/1.3 für das jeweilige Team.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn btn-sm" id="btn-modul-csv-vorlage">Vorlage herunterladen (CSV)</button>
         <label class="btn btn-sm" for="in-modul-csv-import" style="cursor:pointer">Ausgefüllte Tabelle einlesen</label>
         <input type="file" id="in-modul-csv-import" accept=".csv,text/csv" style="display:none">
       </div>
-    </div>
+    </details>`:''}
 
-    <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
+    ${pruefungModul!=='drk11'?'':`<div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
       <div class="spread"><h3>DRK Modul 1.1 — Verhalten und Grundfertigkeiten</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk11',DRK_VERHALTEN.map(e=>e.id))}</span></div>
       <details><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">Allgemeine Grundsätze</summary>
         <ul class="hint">${DRK_VERHALTEN_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
@@ -5116,9 +5205,9 @@ function renderAusbildungPruefung(person){
       </details>
       ${renderJumpNav(DRK_VERHALTEN, 'drk11')}
       ${DRK_VERHALTEN.map(el=>renderDrkElement(el, hid, 'drk11')).join('')}
-    </div>
+    </div>`}
 
-    <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
+    ${pruefungModul!=='drk12'?'':`<div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
       <div class="spread"><h3>DRK Modul 1.2 — Grundgehorsam</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk12',DRK_GRUNDGEHORSAM.map(e=>e.id))}</span></div>
       <details><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">Allgemeine Grundsätze</summary>
         <p class="hint">${esc(DRK_ERSATZREGEL)}</p>
@@ -5127,31 +5216,31 @@ function renderAusbildungPruefung(person){
       </details>
       ${renderJumpNav(DRK_GRUNDGEHORSAM, 'drk12')}
       ${DRK_GRUNDGEHORSAM.map(el=>renderDrkElement(el, hid, 'drk12')).join('')}
-    </div>
+    </div>`}
 
-    <div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
+    ${pruefungModul!=='drk13'?'':`<div class="card card-pad" style="margin-bottom:18px;border-left:4px solid var(--t-ausbildung)">
       <div class="spread"><h3>DRK Modul 1.3 — Gewandtheit</h3><span class="chip" style="background:var(--t-ausbildung-soft);color:var(--t-ausbildung);font-weight:700">${pruefungFortschritt(hid,'drk13',DRK_GEWANDTHEIT.map(e=>e.id))}</span></div>
       <details><summary style="cursor:pointer;color:var(--muted);font-size:.85rem">Allgemeine Grundsätze</summary>
         <ul class="hint">${DRK_GEWANDTHEIT_ALLGEMEIN.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
       </details>
       ${renderJumpNav(DRK_GEWANDTHEIT, 'drk13')}
       ${DRK_GEWANDTHEIT.map(el=>renderDrkElement(el, hid, 'drk13')).join('')}
-    </div>
+    </div>`}
 
-    <div class="card card-pad" style="margin-bottom:18px">
+    ${pruefungModul!=='vdh_a'?'':`<div class="card card-pad" style="margin-bottom:18px">
       <div class="spread"><h3>VDH BH-VT — Teil A (Unterordnung)</h3><span class="chip">${pruefungFortschritt(hid,'vdh_a',TEIL_A.map(e=>e.id))}</span></div>
       <p class="hint">Mindestquote laut Prüfungsordnung: ${Math.round(TEILA_MINDESTQUOTE*100)} % der Punkte.</p>
       ${renderJumpNav(TEIL_A, 'vdh_a')}
       ${TEIL_A.map(el=>renderTeilAElement(el, hid)).join('')}
-    </div>
+    </div>`}
 
-    <div class="card card-pad">
+    ${pruefungModul!=='vdh_b'?'':`<div class="card card-pad">
       <div class="spread"><h3>VDH BH-VT — Teil B (Verhalten im Verkehr)</h3><span class="chip">${pruefungFortschritt(hid,'vdh_b',TEIL_B.map(e=>e.id))}</span></div>
       ${renderJumpNav(TEIL_B, 'vdh_b')}
       ${TEIL_B.map(el=>renderTeilBElement(el, hid)).join('')}
-    </div>
+    </div>`}
 
-    ${renderVerbandVergleich(hid)}
+    ${pruefungModul==='vergleich'?renderVerbandVergleich(hid):''}
   `;
 }
 function renderVerbandVergleich(hid){
@@ -5207,16 +5296,17 @@ function bindAusbildungPruefung(person){
       else pruefungOffenSet.delete(d.dataset.pruefKey);
     });
   });
-  document.querySelectorAll('[data-pruef-element]').forEach(b=>{
-    b.onclick = ()=>{
-      if(!darfTrainingBearbeiten(person)){ zeigeToast('Nur Ausbilder/Ausbilder-Anwärter/-Helfer oder Leitung können den Prüfstatus ändern.'); return; }
-      const modul = b.dataset.pruefModul, elementId = b.dataset.pruefElement, status = b.dataset.pruefStatus;
+  document.querySelectorAll('select[data-pruef-element]').forEach(b=>{
+    if(!darfTrainingBearbeiten(person)) b.disabled = true;
+    b.onchange = ()=>{
+      const modul = b.dataset.pruefModul, elementId = b.dataset.pruefElement, status = b.value;
       let eintrag = state.pruefungsstatus.find(p=>p.hundId===pruefungHundId && p.modul===modul && p.elementId===elementId);
       if(eintrag) eintrag.status = status;
       else state.pruefungsstatus.push({id:uid(), hundId:pruefungHundId, modul, elementId, status});
-      speichereState(); render();
+      speichereState(); renderErhalteScroll();
     };
   });
+  document.querySelectorAll('[data-pf-modul]').forEach(b=>{ b.onclick = ()=>{ pruefungModul = b.dataset.pfModul; render(); }; });
 }
 
 /* ---- Lehrmaterial ---- */
@@ -5305,8 +5395,8 @@ function renderAusbildungMaterial(person){
 /* ---- Fehlerdiagnose ---- */
 let fehlerdiagnoseHundId = null;
 function renderAusbildungFehlerdiagnose(person){
-  const hunde = state.hunde.filter(h=>h.status!=='inaktiv');
-  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.</p></div>`;
+  const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && (darfTrainingBearbeiten(person) || hundGefuehrtVon(h, person.id)));
+  if(hunde.length===0) return `<div class="card empty"><h3>Noch keine Teams</h3><p>${darfTrainingBearbeiten(person)?'Lege zuerst unter Verwaltung → Hunde ein Team (Hund + Hundeführer/in) an.':'Dir ist noch kein eigener Hund zugeordnet – die Leitung kann das unter Verwaltung → Hunde eintragen.'}</p></div>`;
   if(!hunde.some(h=>h.id===fehlerdiagnoseHundId)) fehlerdiagnoseHundId = hunde[0]?.id || null;
   const hund = hunde.find(h=>h.id===fehlerdiagnoseHundId);
   const bewertung = hund.schwachstellenBewertung || {};
@@ -6794,7 +6884,8 @@ function bindAlltagHausaufgaben(person){
 /* ---- Übungsbibliothek (Pfotenalltag) ---- */
 let bibliothekKategorie = 'alle';
 let bibliothekSuche = '';
-let bibliothekSucheTippt = false; // nur nach eigener Eingabe den Fokus zurücksetzen (sonst springt am Handy die Tastatur auf)
+let bibliothekSucheTippt = false;
+let bibliothekLimit = 30; // nur nach eigener Eingabe den Fokus zurücksetzen (sonst springt am Handy die Tastatur auf)
 function renderUebungsbibliothekKarte(u){
   const vertiefung = u.excelId ? VERTIEFUNG_INDEX[u.excelId] : null;
   return `
@@ -6927,12 +7018,13 @@ function renderAlltagBibliothek(person){
     } else if(bibliothekKategorie!=='alle'){
       liste = liste.filter(u=>u.cat===bibliothekKategorie);
     }
-    const anzeigeListe = liste.slice(0, 120);
+    const anzeigeListe = liste.slice(0, bibliothekLimit);
     abschnitte.push(`
       <details class="card card-pad" style="margin-bottom:12px" open>
         <summary style="cursor:pointer;font-weight:700;font-size:.98rem">Übungen <span class="chip muted">${ALLE_UEBUNGEN.length}</span></summary>
-        <p class="hint" style="margin-top:10px">${liste.length} Übung(en) gefunden${liste.length>120?' – die ersten 120 angezeigt, bitte weiter eingrenzen':''}.</p>
+        <p class="hint" style="margin-top:10px">${liste.length} Übung(en) gefunden${liste.length>bibliothekLimit?` – die ersten ${bibliothekLimit} angezeigt`:''}.</p>
         ${anzeigeListe.map(renderUebungsbibliothekKarte).join('') || '<div class="card empty"><p>Keine Übungen gefunden.</p></div>'}
+        ${liste.length>bibliothekLimit?`<button class="btn" id="bib-mehr" style="margin-top:8px">Weitere ${Math.min(30, liste.length-bibliothekLimit)} anzeigen (${liste.length-bibliothekLimit} weitere)</button>`:''}
       </details>
     `);
   }
@@ -7006,7 +7098,9 @@ function bindAlltagBibliothek(person){
     };
   });
   const kat = document.getElementById('bib-kategorie');
-  if(kat) kat.onchange = e=>{ bibliothekKategorie = e.target.value; render(); };
+  if(kat) kat.onchange = e=>{ bibliothekKategorie = e.target.value; bibliothekLimit = 30; render(); };
+  const mehr = document.getElementById('bib-mehr');
+  if(mehr) mehr.onclick = ()=>{ bibliothekLimit += 30; renderErhalteScroll(); };
   const suche = document.getElementById('bib-suche');
   if(suche){
     suche.oninput = ()=>{ bibliothekSuche = suche.value; bibliothekSucheTippt = true; render(); };
@@ -8225,13 +8319,13 @@ const HILFE_ARTIKEL = [
   {id:"organisation-kalender", kategorie:"Organisation & Termine", titel:"Kalender ansehen und zu-/absagen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Organisation &amp; Termine \u2192 Kalender</strong> stehen alle Staffeltermine. Mit dem Filter\noben l\u00e4sst sich zwischen \u201eKommende\", \u201eAlle\" und einzelnen Kategorien wechseln. Ein Klick auf einen Termin\n\u00f6ffnet die Details.</p>\n<p>Die eigene R\u00fcckmeldung (\u201eDabei\"/\u201eNicht dabei\"/\u201eNoch offen\") gibt jede Person im Reiter\n<strong>Teilnahme</strong> selbst ab \u2013 das geht auch direkt von der Startseite aus f\u00fcr die n\u00e4chsten\nTermine. Bei Zusage k\u00f6nnen optional gefahrene Kilometer und anrechenbare Stunden f\u00fcr den sp\u00e4teren\nDienstnachweis eingetragen werden.</p>\n"},
   {id:"organisation-termin-anlegen", kategorie:"Organisation & Termine", titel:"Termin anlegen (Ausbilder/Leitung)", rollen:["ausbilder", "leitung"], text:"\n<p>\u00dcber <strong>+ Termin anlegen</strong> lassen sich Titel, Datum/Uhrzeit, Ort, Kategorie (z. B.\nRHS-Ausbildung, Einsatz\u00fcbung, Fortbildung, Pr\u00fcfung) und weitere Angaben festlegen. Wer das Recht\n\u201eKalender verwalten\" hat \u2013 als Ausbilder-Rolle automatisch, oder als individuell vergebenes Zusatzrecht \u2013\nkann Termine anlegen und bearbeiten.</p>\n<p>Ein ganzer Jahresplan l\u00e4sst sich au\u00dferdem bequem aus einer vorbereiteten Excel-Tabelle einlesen\n(Button <strong>Jahresplan (Excel)</strong>): BARRY zeigt vor der \u00dcbernahme eine Vorschau und\n\u00fcberspringt automatisch bereits vorhandene Termine.</p>\n"},
   {id:"organisation-planung", kategorie:"Organisation & Termine", titel:"Planung & Themenb\u00f6rse", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Zu geplanten Terminen k\u00f6nnen Inhalte, Verantwortliche, ben\u00f6tigtes Material und Absprachen hinterlegt\nwerden \u2013 sichtbar f\u00fcr die ganze Staffel. So wei\u00df jede/r vorab, worum es bei einem Termin geht und wer\nwas mitbringt.</p>\n"},
-  {id:"ausbildung-ueberblick", kategorie:"Ausbildung & Team", titel:"Ausbildung & Team: Aufbau des Bereichs", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Der Bereich <strong>Ausbildung &amp; Team</strong> hat drei Reiter:</p>\n<ol>\n<li><strong>Findewille &amp; Anzeigetraining</strong> – die Hauptessenz der Ausbildung: Motivations-Fragebogen, Opferbindungs-Übungen, Beobachtung der Anzeigeart und der Anzeigeaufbau für alle fünf Anzeigearten (Standardkette in vier Bausteinen). Oben lässt sich mit <strong>🎲 Übung vorschlagen</strong> eine zufällige Anzeige-/Suchübung ziehen und direkt ins Trainingstagebuch übernehmen.</li>\n<li><strong>Stand &amp; Planung</strong> (nur Ausbilder/-innen und Leitung) – je Team eine interne Einschätzung des aktuellen Ausbildungsstands und eine Liste der nächsten Ziele mit „bis wann“ und Abhaken; darunter eine Übersicht aller Teams. Überfällige Ziele erscheinen auf der Startseite.</li>\n<li><strong>Trainingstagebücher</strong> – mit drei Unterreitern: <strong>Allgemein</strong> (kurzer formloser Eintrag), <strong>Fläche &amp; Trümmer</strong> (ausführliche Fachdokumentation je Sparte) und <strong>Mantrailing</strong> (Fachdokumentation inkl. GPS-Track).</li>\n</ol>\n<p>Ein Trainingseintrag darf von Ausbildern/Leitung für jedes Team angelegt werden, und zusätzlich von der eigenen Hundeführerin/dem eigenen Hundeführer für das eigene Team. Gespeicherte Einträge lassen sich später öffnen, ergänzen oder löschen – dazu in der Liste auf den Eintrag klicken.</p>\n"},
+  {id:"ausbildung-ueberblick", kategorie:"Ausbildung & Team", titel:"Ausbildung & Team: Aufbau des Bereichs", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Hundeführende sehen in allen Team-Auswahlen nur ihre eigenen Hunde; Ausbilder/-innen und Leitung alle Teams. Der Bereich <strong>Ausbildung &amp; Team</strong> hat drei Reiter:</p>\n<ol>\n<li><strong>Findewille &amp; Anzeigetraining</strong> – die Hauptessenz der Ausbildung: Motivations-Fragebogen, Opferbindungs-Übungen, Beobachtung der Anzeigeart und der Anzeigeaufbau für alle fünf Anzeigearten (Standardkette in vier Bausteinen). Oben lässt sich mit <strong>🎲 Übung vorschlagen</strong> eine zufällige Anzeige-/Suchübung ziehen und direkt ins Trainingstagebuch übernehmen.</li>\n<li><strong>Stand &amp; Planung</strong> – Ausbilder/-innen und Leitung halten je Team datierte Einschätzungen des Ausbildungsstands (mit Verlauf) und die nächsten Ziele mit „bis wann“ fest. Jeder Eintrag ist entweder 🔒 intern oder 👥 für das Team sichtbar; ein Tippen auf die Markierung schaltet um. Hundeführende sehen hier für ihr eigenes Team nur die geteilten Einträge, die offenen geteilten Ziele zusätzlich auf der Startseite. Überfällige Ziele erscheinen für Leitung und Ausbildung auf der Startseite.</li>\n<li><strong>Trainingstagebücher</strong> – mit drei Unterreitern: <strong>Allgemein</strong> (kurzer formloser Eintrag), <strong>Fläche &amp; Trümmer</strong> (ausführliche Fachdokumentation je Sparte) und <strong>Mantrailing</strong> (Fachdokumentation inkl. GPS-Track).</li>\n</ol>\n<p>Ein Trainingseintrag darf von Ausbildern/Leitung für jedes Team angelegt werden, und zusätzlich von der eigenen Hundeführerin/dem eigenen Hundeführer für das eigene Team. Gespeicherte Einträge lassen sich später öffnen, ergänzen oder löschen – dazu in der Liste auf den Eintrag klicken.</p>\n"},
   {id:"rh-tagebuch", kategorie:"Ausbildung & Team", titel:"RH-Tagebuch Fl\u00e4che/Tr\u00fcmmer ausf\u00fcllen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Team ausw\u00e4hlen, dann eine Sparte w\u00e4hlen (z. B. \u201e+ Fl\u00e4chensuche\" oder \u201e+ Tr\u00fcmmersuche\"). Das Formular\ngliedert sich in Abschnitte: Rahmendaten (Ort, Datum), Wetter, Gel\u00e4nde, eine oder mehrere\n<strong>Versteck-/Zielpersonen (VP)</strong> mit jeweils eigener, komplett getrennter Bewertung, und am\nEnde ein Gesamtergebnis. \u00dcber <strong>+ Person hinzuf\u00fcgen</strong> lassen sich beliebig viele VP f\u00fcr\ndasselbe Training anlegen \u2013 jede VP wird einzeln bewertet, sodass sich z. B. eine leicht und eine\nschwierig gefundene Person klar unterscheiden lassen.</p>\n<p>Bewertungsfelder stehen standardm\u00e4\u00dfig auf \u201enicht bewertet\", damit versehentlich nicht ausgef\u00fcllte\nFelder nicht wie ein gutes Ergebnis aussehen.</p>\n"},
   {id:"mantrailing-tagebuch", kategorie:"Ausbildung & Team", titel:"Mantrailing-Tagebuch und GPS-Track", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Erfasst Geruchsartikel, Ansatzsuche/PLS, Trailverlauf, Entscheidungen, Negativarbeit, Endpool und\nAuffindesituation. \u00dcber <strong>Track starten</strong> zeichnet BARRY bei erteilter Standortfreigabe\nlive den zur\u00fcckgelegten Weg auf; <strong>Stoppen</strong> beendet die Aufzeichnung. Wird der Standort\nverweigert, bleiben alle \u00fcbrigen Eingaben erhalten und lassen sich normal weiter ausf\u00fcllen.</p>\n"},
   {id:"findewille", kategorie:"Ausbildung & Team", titel:"Findewille & Anzeigetraining", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Je Hund: ein Fragebogen zu Motivation und Findewille (ergibt einen Motivationstyp mit passenden Übungen), Opferbindungs-Übungen, ein Beobachtungs-Fragebogen zur passenden Anzeigeart sowie der <strong>Anzeigeaufbau</strong> – per Auswahl für Verbeller, Pendler, Rückverweiser, Freiverweiser oder Bringsel, jeweils als Standardkette mit vier Bausteinen. Der aktuell trainierte Baustein lässt sich markieren.</p>\n<p>Die Karte <strong>Rasse &amp; Lebensphase</strong> ist standardmäßig zugeklappt; ein Klick öffnet die Hinweise. Passen Rassegruppe oder Lebensphase des Hundes zu einer Übung, erscheinen direkt an der Übungskarte automatische Hinweis-Kästchen 🐾.</p>\n"},
   {id:"alltag", kategorie:"Alltag & Zuhause", titel:"Übungen, Alltagstraining und Übungsbibliothek", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Der Bereich startet mit dem Reiter <strong>Übungen</strong>: Über <strong>🎲 Übung vorschlagen</strong> zieht BARRY eine zufällige Übung aus der aktuellen Auswahl – wahlweise passend zu den Sparten eines gewählten Teams. „Neu würfeln“ liefert die nächste, <strong>In Trainingstagebuch übernehmen</strong> öffnet direkt den Eintrags-Dialog mit vorausgefüllter Übung. So lässt sich zwischen den Staffelterminen selbstständig mit dem eigenen Hund arbeiten.</p>\n<p>Darunter die Suche (Übungen und Fachfragen), ein Kategorie-Filter und die Quellen-Auswahl mit Mehrfachauswahl: Übungen, Fitness-Übungen, Anzeigeart-Programme und Fachfragen – jede Quelle als eigener aufklappbarer Abschnitt.</p>\n<p>Im <strong>Trainingstagebuch (Alltag)</strong> dokumentieren Hundeführer/-innen ihre privaten Übungen – klar getrennt von der offiziellen Ausbildung. <strong>Hausaufgaben</strong> siehe eigener Artikel.</p>\n"},
   {id:"hausaufgaben", kategorie:"Alltag & Zuhause", titel:"Hausaufgaben zuweisen und erledigen", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Zuweisen</strong> (Ausbilder/-in, Leitung oder die/der eigene Hundef\u00fchrer/in f\u00fcr das eigene\nTeam): im Reiter <strong>Hausaufgaben</strong> auf <strong>+ Hausaufgabe zuweisen</strong> klicken. Im\nDialog l\u00e4sst sich <strong>ein Team, mehrere Teams gezielt oder mit einem Klick \u201eAllen Teams\nzuweisen\"</strong> ausw\u00e4hlen \u2013 praktisch, wenn alle Teams dieselbe \u00dcbung bis zum n\u00e4chsten Termin machen\nsollen. Titel, Beschreibung und optional ein F\u00e4lligkeitsdatum ausf\u00fcllen und speichern: BARRY legt dann\nf\u00fcr jedes ausgew\u00e4hlte Team einen eigenen, unabh\u00e4ngigen Eintrag an.</p>\n<p>Ausbilder/-innen sehen und k\u00f6nnen dabei alle Teams ausw\u00e4hlen; ein normales Mitglied sieht dort nur\ndie eigenen Teams.</p>\n<p><strong>Erledigen</strong> (Hundef\u00fchrer/-in): offene Hausaufgaben erscheinen sowohl auf der\nStartseite als auch im Reiter selbst. Mit <strong>Als erledigt markieren</strong> und einer optionalen\nkurzen R\u00fcckmeldung wird die Aufgabe abgehakt. Wer eine Hausaufgabe zugewiesen hat, oder ein Ausbilder/\neine Ausbilderin, kann sie \u00fcber <strong>Entfernen</strong> auch wieder l\u00f6schen.</p>\n"},
-  {id:"wissen", kategorie:"Wissen & Material", titel:"Nachschlagewerk: Prüfungen, Fehlersuche, Lehrmaterial", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Dieser Bereich dient zum Nachlesen und zum Pflegen des Prüfstatus:</p>\n<ul>\n<li><strong>Prüfungsordnungen</strong> – DRK-Module 1.1/1.2/1.3 sowie VDH BH-VT je Hund mit allen Elementen (Durchführung, Bewertung, Aufbau-Tipps). Über jedem Modul eine Sprungleiste zu den Elementen; „Allgemeine Grundsätze“ sind zugeklappt. Der Status je Element hat fünf Stufen (Nicht bewertet · Im Aufbau · Gefestigt · Sicher beherrscht · Geprüft/bestanden) und darf nur von Ausbildern/Leitung gesetzt werden. Oben: <strong>🎯 Nächste Übung vorschlagen</strong> zieht ein offenes Element und dazu eine passende Übung aus der Bibliothek. Über <strong>Modulprüfungen aus Tabelle übernehmen</strong> lassen sich bestandene Module für viele Teams per CSV eintragen.</li>\n<li><strong>Fehlerdiagnose</strong> – Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste und Selbstcheck (klappen nach dem Beantworten zu), HF-Kompetenz-Themen und eine „Wenn X, dann prüfe Y“-Fehlersuche. Dort kann pro Symptom <strong>„Das betrifft uns“</strong> gewählt werden – das Thema erscheint dann als 🎯-Hinweis an genau den betroffenen Übungskarten.</li>\n<li><strong>Sparten, Helfer &amp; Erste Hilfe</strong> – Übungskataloge für Mantrailing und Trümmersuche, Helferschulung, Erste-Hilfe-Wissen.</li>\n<li><strong>Lehrmaterial</strong> – Dateien (PDF, Word, Bilder u. a.), die Ausbilder/-innen hochladen; Unterlagen liegen in <strong>eigenen Ordnern</strong> (vorbelegt nach den Themen der Staffel, frei anlegbar, umbenennbar und löschbar; Einträge lassen sich per Auswahl in einen anderen Ordner verschieben). Große Unterlagen werden besser als <strong>Link</strong> (z. B. OneDrive/Teams) hinterlegt, da der Gerätespeicher begrenzt ist.</li>\n</ul>\n"},
+  {id:"wissen", kategorie:"Wissen & Material", titel:"Nachschlagewerk: Prüfungen, Fehlersuche, Lehrmaterial", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Dieser Bereich dient zum Nachlesen und zum Pflegen des Prüfstatus:</p>\n<ul>\n<li><strong>Prüfungsordnungen</strong> – DRK-Module 1.1/1.2/1.3 sowie VDH BH-VT je Hund mit allen Elementen (Durchführung, Bewertung, Aufbau-Tipps). Die Module werden einzeln über die Leiste (DRK 1.1 · 1.2 · 1.3 · VDH · Verbandsvergleich) gewählt; darüber eine Sprungleiste zu den Elementen, „Allgemeine Grundsätze“ sind zugeklappt. Der Status je Element wird über eine kompakte Auswahlliste gesetzt. Der Status je Element hat fünf Stufen (Nicht bewertet · Im Aufbau · Gefestigt · Sicher beherrscht · Geprüft/bestanden) und darf nur von Ausbildern/Leitung gesetzt werden. Oben: <strong>🎯 Nächste Übung vorschlagen</strong> zieht ein offenes Element und dazu eine passende Übung aus der Bibliothek. Über <strong>Modulprüfungen aus Tabelle übernehmen</strong> lassen sich bestandene Module für viele Teams per CSV eintragen.</li>\n<li><strong>Fehlerdiagnose</strong> – Schwachstellen-Fragebogen, Trainingsaufbau-Checkliste und Selbstcheck (klappen nach dem Beantworten zu), HF-Kompetenz-Themen und eine „Wenn X, dann prüfe Y“-Fehlersuche. Dort kann pro Symptom <strong>„Das betrifft uns“</strong> gewählt werden – das Thema erscheint dann als 🎯-Hinweis an genau den betroffenen Übungskarten.</li>\n<li><strong>Sparten, Helfer &amp; Erste Hilfe</strong> – Übungskataloge für Mantrailing und Trümmersuche, Helferschulung, Erste-Hilfe-Wissen.</li>\n<li><strong>Lehrmaterial</strong> – Dateien (PDF, Word, Bilder u. a.), die Ausbilder/-innen hochladen; Unterlagen liegen in <strong>eigenen Ordnern</strong> (vorbelegt nach den Themen der Staffel, frei anlegbar, umbenennbar und löschbar; Einträge lassen sich per Auswahl in einen anderen Ordner verschieben). Große Unterlagen werden besser als <strong>Link</strong> (z. B. OneDrive/Teams) hinterlegt, da der Gerätespeicher begrenzt ist.</li>\n</ul>\n"},
   {id:"einsatz-grundlagen", kategorie:"Einsatz", titel:"Realeinsatz und \u00dcbung: der Unterschied", rollen:["ausbilder", "leitung"], text:"\n<p>Beim Anlegen eines neuen Einsatzes wird zuerst die <strong>Art</strong> gew\u00e4hlt: <strong>Realeinsatz</strong>\n(nur f\u00fcr Leitung/Admin sichtbar und bearbeitbar) oder <strong>\u00dcbung</strong> (mit frei w\u00e4hlbarer,\nvor\u00fcbergehender Einsatzleitung, siehe Artikel \u201eEinsatzleitung f\u00fcr eine \u00dcbung \u00fcbernehmen\"). F\u00fcr beide\nArten lassen sich Alarmierungszeit, Einsatzort, Angaben zur vermissten Person, eine\nKarten-/Einsatzreferenz (z. B. ein CalTopo-Link als reine Notiz) und ein chronologisches\nEreignisprotokoll mit Typ (Statusmeldung, Fund, \u00dcbergabe, Nachforderung, Erste Hilfe) und Bezug zu\neinem Suchtrupp erfassen.</p>\n"},
   {id:"einsatz-suchtrupps", kategorie:"Einsatz", titel:"Suchtrupps, Kr\u00e4fte und Risikobewertung", rollen:["ausbilder", "leitung"], text:"\n<p>\u00dcber die Schaltfl\u00e4che <strong>Suchtrupps</strong> im ge\u00f6ffneten Einsatz lassen sich Trupps mit echten\nPersonen anlegen: Hundef\u00fchrer/-in ausw\u00e4hlen (der zugeh\u00f6rige Hund wird automatisch vorgeschlagen),\nweitere Helfer aus der Staffel per Mehrfachauswahl erg\u00e4nzen, oder der Trupp als <strong>externes\nTeam</strong> (z. B. eine andere Staffel) markieren. Rufname, Suchart, Status, Suchauftrag und Ergebnis\nwerden je Trupp erfasst; die letzten Ereignisprotokoll-Meldungen zu einem Trupp werden direkt in seiner\nKarte angezeigt.</p>\n<p><strong>Kr\u00e4fte</strong> listet alle vor Ort eingesetzten Personen und Fahrzeuge.\n<strong>Risikobewertung</strong> berechnet nach dem festen Bewertungsraster automatisch eine Einstufung\n(NIEDRIG/MITTEL/HOCH) aus den eingegebenen Werten.</p>\n"},
   {id:"einsatz-tracks", kategorie:"Einsatz", titel:"Karten & Tracks: GPX/KML importieren", rollen:["ausbilder", "leitung"], text:"\n<p>Tracks und Suchgebiete aus einer Karten-App (z. B. Gaia GPS oder CalTopo) lassen sich als\n<strong>GPX- oder KML-Datei</strong> exportieren und \u00fcber <strong>Karten &amp; Tracking \u2192\nGPX-/KML-Track importieren</strong> einlesen \u2013 offline, ohne Verbindung zu einem externen Dienst.\nWegpunkte/Marker (z. B. eine Fundstelle) werden mit \u00fcbernommen. Jeder Track l\u00e4sst sich anschlie\u00dfend\neinem Suchtrupp zuordnen; BARRY setzt dabei automatisch den Hundef\u00fchrer als prim\u00e4re Position, damit die\nKarte nicht von mehreren fast identischen Positionen \u00fcberf\u00fcllt wird. Weitere Truppmitglieder lassen\nsich bei Bedarf \u00fcber einen Schalter zus\u00e4tzlich einblenden. GeoJSON-Dateien werden aktuell nicht\nunterst\u00fctzt.</p>\n"},
