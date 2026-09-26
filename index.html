@@ -1406,6 +1406,14 @@ function renderLogin(){
       <p class="hint" style="margin:6px 0 10px">Sie haben von Ihrer Staffelleitung eine Datendatei erhalten? Dann importieren Sie sie hier direkt – eine Anmeldung als „Admin“ ist dafür nicht nötig. Danach melden Sie sich mit Ihrem eigenen Namen an.</p>
       <label class="btn" style="display:inline-flex;cursor:pointer">📂 Datendatei importieren<input type="file" id="in-erststart-import" accept="application/json,.json" style="display:none"></label>
     </div>`:''}
+    ${!istErststartOhneDaten()?`
+    <details class="card card-pad" style="background:var(--soft);border:none;margin-top:16px">
+      <summary style="cursor:pointer;font-weight:700">Kein Zugang mehr? Datei von der Leitung einspielen</summary>
+      <p class="hint" style="margin:6px 0 10px">Hat die Staffelleitung ein <strong>Zugangspaket</strong> (oder eine Datensicherung) geschickt, kann es hier ohne Anmeldung eingespielt werden. Achtung: Der Bestand auf diesem Gerät wird dabei ersetzt – eigene Einträge seit dem letzten Abgleich gehen verloren.</p>
+      <label class="btn" style="display:inline-flex;cursor:pointer">📂 Zugangspaket / Datendatei einspielen<input type="file" id="in-login-import" accept="application/json,.json" style="display:none"></label>
+      <p class="hint" style="margin:14px 0 6px">Soll BARRY auf diesem Gerät komplett zurückgesetzt werden (z. B. Gerät wird abgegeben)? Das löscht alle lokal gespeicherten Daten unwiderruflich.</p>
+      <button class="btn btn-danger btn-sm" id="btn-login-alles-loeschen">Alle BARRY-Daten auf diesem Gerät löschen</button>
+    </details>`:''}
     ${localStorage.getItem(STORAGE_KEY+'-vor-import-backup')?`
     <div class="card card-pad" style="background:var(--soft);border:none;margin-top:16px">
       <strong>Passwort vergessen / Import war ein Fehler?</strong>
@@ -1436,6 +1444,17 @@ function bindLogin(){
   document.getElementById('in-person').oninput = e=>{ loginEingabe=e.target.value; };
   const erststart = document.getElementById('in-erststart-import');
   if(erststart) erststart.onchange = e=>{ const f=e.target.files[0]; e.target.value=''; if(f && istErststartOhneDaten()) bestandAusDateiImportieren(f); };
+  const loginImport = document.getElementById('in-login-import');
+  if(loginImport) loginImport.onchange = e=>{ const f=e.target.files[0]; e.target.value=''; if(f) bestandAusDateiImportieren(f); };
+  const allesLoeschen = document.getElementById('btn-login-alles-loeschen');
+  if(allesLoeschen) allesLoeschen.onclick = ()=>{
+    if(!confirm('Wirklich ALLE BARRY-Daten auf diesem Gerät löschen? Personen, Hunde, Trainings, Lehrmaterial und Sicherheitskopien sind danach unwiderruflich weg.')) return;
+    if(!confirm('Letzte Sicherheitsfrage: Es gibt keine Möglichkeit, das rückgängig zu machen. Jetzt löschen?')) return;
+    try{ Object.keys(localStorage).filter(k=>k===STORAGE_KEY || k.startsWith(STORAGE_KEY+'-') || k==='barry-last-login').forEach(k=>localStorage.removeItem(k)); }catch(e){}
+    try{ if('caches' in window) caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))); }catch(e){}
+    alert('Alle Daten wurden gelöscht. BARRY startet jetzt neu wie beim ersten Öffnen (Erstzugang: Admin / admin).');
+    location.reload();
+  };
   document.getElementById('btn-anmelden').onclick = ()=>{
     const pw = document.getElementById('in-pw').value;
     const {person:p, mehrdeutig} = findePersonFuerLogin(loginEingabe);
@@ -2884,6 +2903,45 @@ function bindModalCsvVorschau(){
   };
 }
 
+/* Zugangspaket: reduzierter Bestand für das Gerät eines einzelnen Mitglieds – keine Kontaktdaten, keine Qualifikationen, keine internen Notizen anderer. */
+function zugangspaketErstellen(person, startpasswort){
+  const eigeneHunde = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
+  const eigeneHundIds = new Set(eigeneHunde.map(h=>h.id));
+  const nurTeam = e => e.sichtbarkeit==='team';
+  const personenReduziert = state.personen.filter(p=>p.status!=='inaktiv').map(p=>({
+    id:p.id, name:p.name, benutzername:p.benutzername||'', rollen:(p.rollen||[]).filter(r=>r==='mitglied' || r.startsWith('ausbilder') || r==='leitung' || r==='bereitschaftsleitung' || r==='admin'), zusatzrechte:[], status:'aktiv',
+    mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum:'', mitgliedSeit:'', strasse:'', plz:'', ort:'', email:'', telefon:'',
+    passwortHash: p.id===person.id ? einfacherHash(startpasswort) : '', mussPasswortAendern: p.id===person.id, angelegtAm: p.angelegtAm||nowIso(),
+  }));
+  const hundeReduziert = state.hunde.filter(h=>h.status!=='inaktiv').map(h=>{
+    const eigen = eigeneHundIds.has(h.id);
+    return { id:h.id, name:h.name, rasse:h.rasse||'', geburtsdatum: eigen ? (h.geburtsdatum||'') : '', geschlecht: eigen?(h.geschlecht||''):'', chipnummer: eigen?(h.chipnummer||''):'',
+      hundefuehrerId:h.hundefuehrerId||'', zweitHundefuehrerId:h.zweitHundefuehrerId||'', status:'aktiv', sparten:h.sparten||[], anzeigeart: eigen?(h.anzeigeart||''):'', rassegruppe: eigen?(h.rassegruppe||''):'',
+      plaketten: eigen?(h.plaketten||[]):[], anzeigeaufbauSchritt: eigen?(h.anzeigeaufbauSchritt||{}):{}, entwicklungsthemen: eigen?(h.entwicklungsthemen||[]):[],
+      schwachstellenBewertung: eigen?(h.schwachstellenBewertung||{}):{}, trainingsaufbauCheck: eigen?(h.trainingsaufbauCheck||{}):{}, selbstcheck: eigen?(h.selbstcheck||{}):{},
+      einschaetzungen: eigen?(h.einschaetzungen||[]).filter(nurTeam):[], ziele: eigen?(h.ziele||[]).filter(nurTeam):[] };
+  });
+  const nurEigene = liste => (liste||[]).filter(e=>eigeneHundIds.has(e.hundId));
+  const paket = Object.assign(leererState(), {
+    meta: Object.assign({}, state.meta, {erstelltAm: nowIso(), qualiKatalogVersion: state.meta.qualiKatalogVersion, lehrOrdnerVorbelegt:true}),
+    organisation: state.organisation,
+    personen: personenReduziert, hunde: hundeReduziert,
+    termine: state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff'),
+    ruckmeldungen: (state.ruckmeldungen||[]).filter(r=>r.personId===person.id),
+    qualifikationen: state.qualifikationen, personQualifikationen: [], hospitationen: [],
+    pruefungsstatus: nurEigene(state.pruefungsstatus), findewilleProfile: nurEigene(state.findewilleProfile),
+    hausaufgaben: nurEigene(state.hausaufgaben), trainingseintraege: nurEigene(state.trainingseintraege), alltagseintraege: nurEigene(state.alltagseintraege),
+    rhEintraege: nurEigene(state.rhEintraege), mantrailingEintraege: nurEigene(state.mantrailingEintraege),
+    lehrmaterialOrdner: state.lehrmaterialOrdner, lehrmaterial: state.lehrmaterial.filter(m=>m.typ==='link'),
+    orte: state.orte||[],
+  });
+  const exportDaten = Object.assign({ exportInfo:{ format:'barry-bestand', paket:'zugang', fuer:person.name, app:'BARRY', appVersion:BARRY_APP_VERSION, schemaVersion:BARRY_SCHEMA_VERSION, exportiertAm:nowIso(), organisation:state.organisation.name||'' } }, paket);
+  const blob = new Blob([JSON.stringify(exportDaten)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = `BARRY_Zugang_${person.name.replace(/[^\wäöüÄÖÜß-]+/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast('Zugangspaket für '+person.name+' erstellt.');
+}
 /* Gemeinsame Importlogik für Datensicherung und Erststart – alle Schutzprüfungen an einer Stelle. */
 function bestandAusDateiImportieren(file){
     const reader = new FileReader();
@@ -2893,10 +2951,10 @@ function bestandAusDateiImportieren(file){
       if(!parsed.personen || !Array.isArray(parsed.personen)) throw new Error('Kein gültiges Bestandspaket.');
       if(parsed.exportInfo && parsed.exportInfo.format && parsed.exportInfo.format!=='barry-bestand') throw new Error('Diese Datei ist kein BARRY-Bestand (Format: '+parsed.exportInfo.format+').');
       if(parsed.meta && Number(parsed.meta.schemaVersion) > BARRY_SCHEMA_VERSION) throw new Error('Die Datei stammt aus einer neueren BARRY-Version und kann hier noch nicht gelesen werden.');
-      const hatZugang = parsed.personen.some(p=>p && p.id && p.status!=='inaktiv' && p.passwortHash && (p.rollen||[]).includes('admin'));
+      const hatZugang = parsed.personen.some(p=>p && p.id && p.status!=='inaktiv' && p.passwortHash);
       // Harte Sperre: Ohne anmeldefähige Admin-Person wäre nach dem Import niemand mehr in der Lage,
       // sich anzumelden oder die Sicherheitskopie zurückzuholen (Prüfbericht: Aussperrung).
-      if(!hatZugang) throw new Error('In dieser Datei ist keine anmeldefähige Person mit Admin-Rolle enthalten. Ein Import würde alle Nutzer aussperren und wurde deshalb abgebrochen. Der vorhandene Bestand bleibt unverändert.');
+      if(!hatZugang) throw new Error('In dieser Datei ist keine anmeldefähige Person (mit Passwort) enthalten. Ein Import würde alle Nutzer aussperren und wurde deshalb abgebrochen. Der vorhandene Bestand bleibt unverändert.');
       const info = parsed.exportInfo ? `\n\nDatei: ${parsed.exportInfo.organisation||'ohne Staffelname'}, exportiert am ${fmtDatum(parsed.exportInfo.exportiertAm)} (BARRY ${parsed.exportInfo.appVersion||'?'}, Schema ${parsed.exportInfo.schemaVersion||'?'})` : '\n\nHinweis: Ältere Datei ohne Exportkennung.';
       const umfang = `\nInhalt: ${parsed.personen.length} Personen, ${(parsed.hunde||[]).length} Hunde, ${(parsed.termine||[]).length} Termine, ${(parsed.einsaetze||[]).length} Einsätze.`;
       if(!confirm('Der bestehende Bestand auf diesem Gerät wird ersetzt (der aktuelle Stand wird vorher automatisch als Sicherheitskopie abgelegt). Fortfahren?'+info+umfang)) return;
@@ -3161,6 +3219,15 @@ function renderModalPerson(){
       </div>`:`
       <div class="field"><button class="btn btn-sm" id="pf-pw-reset">Passwort zurücksetzen</button>
         <div class="hint" id="pf-pw-reset-hint"></div>
+      </div>
+      <div class="field" style="background:var(--soft);border-radius:10px;padding:10px 12px">
+        <label style="margin-top:0">Zugangspaket für das eigene Gerät dieser Person</label>
+        <p class="hint" style="margin:0 0 8px">Erzeugt eine Datei nur mit dem, was diese Person braucht: Namen aller Mitglieder und Hunde, Termine, die Trainings- und Prüfungsdaten der eigenen Hunde, geteilte Ziele und Lehrmaterial-Links – <strong>ohne</strong> Adressen, Kontaktdaten, Qualifikationen und interne Notizen anderer. Nur diese Person erhält darin ein Passwort.</p>
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          <input id="pf-zp-passwort" placeholder="Startpasswort für die Person" style="flex:1;min-width:160px" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="btn btn-sm btn-primary" id="pf-zp-erstellen" type="button">Zugangspaket herunterladen</button>
+        </div>
+        <div class="hint" id="pf-zp-hint" style="margin-top:6px"></div>
       </div>`}
       ${bestehend?renderPersonQualifikationenBereich(bestehend):''}
       ${bestehend?renderPersonHospitationenBereich(bestehend):''}
@@ -3188,6 +3255,14 @@ function bindModalPerson(){
       hint.textContent = vorschlag ? `Vorschlag: ${vorschlag} (Feld oben leer lassen, um Namen zur Anmeldung zu nutzen)` : '';
     };
   }
+  const zpBtn = document.getElementById('pf-zp-erstellen');
+  if(zpBtn) zpBtn.onclick = ()=>{
+    const pw = document.getElementById('pf-zp-passwort').value.trim();
+    if(pw.length<4){ document.getElementById('pf-zp-hint').textContent = 'Bitte ein Startpasswort mit mindestens 4 Zeichen eingeben.'; return; }
+    const p = state.personen.find(x=>x.id===modal.id);
+    zugangspaketErstellen(p, pw);
+    document.getElementById('pf-zp-hint').textContent = `Zugangspaket erstellt. Passwort „${pw}“ bitte getrennt von der Datei mitteilen; die Person muss es beim ersten Login ändern.`;
+  };
   const resetBtn = document.getElementById('pf-pw-reset');
   if(resetBtn) resetBtn.onclick = ()=>{
     const neu = Math.random().toString(36).slice(2,8);
@@ -8336,7 +8411,7 @@ const HILFE_ARTIKEL = [
   {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt, enthält auch die Ausbilder-Qualifikationen (Erwachsenengerechte Unterrichtsgestaltung, Rettungshunde-Ausbilderschein Fläche/Trümmer) und lässt sich um eigene Einträge ergänzen: Im Personen-Dialog über „➕ Sonstige Ausbildung (eigener Name)“ – diese landen in der Rubrik „Sonstige Ausbildungen“. Im selben Dialog werden auch <strong>Hospitationen</strong> je Thema mit Datum, Ausbilder/in und Unterlage (Datei oder Link) festgehalten. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
   {id:"fristen", kategorie:"Verwaltung", titel:"Fristen & Lücken, Jubiläen und Erinnerungen", rollen:["ausbilder", "leitung"], text:"\n<p><strong>Verwaltung → Fristen &amp; Lücken</strong> wertet automatisch aus: abgelaufene und bald ablaufende Qualifikationen (auf Basis der „Gültig bis“-Daten), Personen ohne eine als Pflicht markierte Qualifikation, Hund/Team-Module, die kurz vor dem Abschluss stehen, sowie <strong>Jubiläen</strong> (5/10/15/… Jahre im DRK, aus „Mitglied im DRK seit“ im Personen-Dialog).</p>\n<p>Weil BARRY offline arbeitet, gibt es keine Push-Benachrichtigungen. Stattdessen zeigt die <strong>Startseite</strong> für Leitung und Ausbilder/-innen eine Karte „Für Leitung &amp; Ausbildung“ mit den wichtigsten offenen Punkten und den Terminen der nächsten sieben Tage inklusive Zusagen und fehlender Rückmeldungen – ein Klick führt zur jeweiligen Verwaltungsseite.</p>\n"},
   {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Mitgliedsnummer, Adresse, E-Mail, Telefon, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte und je eine Spalte „Ausb: …“ für jede Ausbildung der Rettungshundearbeit (Pflicht und empfohlen) sowie die Führungslehrgänge (Datum oder x). Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
-  {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Die Leitung oder ein Admin vergibt unter Verwaltung → Personen → Person öffnen → „Passwort zurücksetzen“ ein neues Startpasswort.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
+  {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Ohne Synchronisation liegt das Passwort nur auf dem eigenen Gerät. Die Leitung erstellt deshalb unter Verwaltung → Personen → Person öffnen ein <strong>Zugangspaket</strong> mit neuem Startpasswort (enthält nur Namen, Termine und die Daten des eigenen Teams – keine Kontaktdaten oder internen Notizen anderer). Das Mitglied spielt die Datei am Anmeldebildschirm unter „Kein Zugang mehr? Datei von der Leitung einspielen“ ein und meldet sich mit dem Startpasswort an. Auf einem gemeinsam genutzten Gerät genügt „Passwort zurücksetzen“ im Personen-Dialog.</p>\n<p><strong>Gerät zurücksetzen:</strong> Am Anmeldebildschirm im selben Kasten „Alle BARRY-Daten auf diesem Gerät löschen“ – entfernt Bestand, Sicherheitskopien und Zwischenspeicher; das Home-Icon kann danach gelöscht werden.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
   {id:"hund-felder", kategorie:"Verwaltung", titel:"Hundeprofil: Geschlecht, Chipnummer, Plaketten", rollen:["ausbilder", "leitung"], text:"\n<p>Im Dialog <strong>Verwaltung → Hunde → Hund bearbeiten</strong> lassen sich neben Name, Rasse und Wurftag auch <strong>Geschlecht</strong> (Rüde/Hündin), die <strong>Chip-/Identifikationsnummer</strong> und beliebig viele <strong>Plaketten</strong> (Sparte, Plaketten-/ID-Nr., Datum) erfassen – genau die Angaben, die die offiziellen Bewertungsbögen und Anmeldeformulare abfragen. Zusätzlich: Sparten, Rassegruppe (für automatische Trainingshinweise) und die festgelegte Anzeigeart.</p>\n"},
   {id:"datensicherung", kategorie:"Daten sichern & teilen", titel:"Backup exportieren und einspielen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung \u2192 Datensicherung</strong> l\u00e4sst sich der komplette Datenbestand als eine\neinzelne Datei <strong>exportieren</strong> \u2013 das sollte regelm\u00e4\u00dfig geschehen, am besten vor gr\u00f6\u00dferen\n\u00c4nderungen. Beim <strong>Import</strong> einer solchen Datei zeigt BARRY vorher eine Vorschau (Inhalt,\nHerkunft, Datum) und legt automatisch eine Sicherheitskopie des bisherigen Standes an, die sich bei\nBedarf mit einem Klick wiederherstellen l\u00e4sst. Eine Datei ohne anmeldef\u00e4hige Admin-Person wird\ngrunds\u00e4tzlich abgelehnt, damit sich niemand versehentlich aussperrt.</p>\n"},
   {id:"keine-automatische-sync", kategorie:"Daten sichern & teilen", titel:"Wichtig: Keine automatische Synchronisation zwischen Ger\u00e4ten", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>BARRY speichert alle Daten <strong>ausschlie\u00dflich lokal auf dem jeweiligen Ger\u00e4t</strong>. Es gibt\nkeinen Server im Hintergrund, der die Daten automatisch zwischen mehreren Handys oder Tablets abgleicht.\nMeldet sich jemand auf einem <em>anderen</em> Ger\u00e4t an, sieht diese Person eine eigenst\u00e4ndige,\nunabh\u00e4ngige Kopie \u2013 neue Eintr\u00e4ge auf dem einen Ger\u00e4t erscheinen nicht von selbst auf dem anderen.</p>\n<p><strong>F\u00fcr die Praxis bedeutet das:</strong> BARRY funktioniert am besten auf einem\n<strong>gemeinsam genutzten Ger\u00e4t</strong> (z. B. ein Staffel-Tablet), auf dem sich alle mit dem\neigenen Login anmelden. Soll BARRY auf mehreren eigenen Handys parallel genutzt werden, m\u00fcssen Daten\nbewusst per Export/Import \u00fcbertragen werden \u2013 siehe Artikel \u201eBackup exportieren und einspielen\".</p>\n"},
