@@ -924,7 +924,7 @@ const QUALI_HINWEIS_KBL = 'Wiederholungsfrist bitte bei der KBL bestätigen lass
 const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   // 1) Grundausbildung Einsatzkraft Bereitschaft – Pflicht für Rettungshundehelfende und -führende
   { code:'rke', label:'RKE – Rotkreuz-Einführungsseminar', kategorie:K_GA, ue:9, pflichtRHF:true, aliase:['Einführungsseminar','DRK Einführungsseminar'] },
-  { code:'eh', label:'EH – Erste Hilfe', kategorie:K_GA, ue:9, pflichtRHF:true, intervallMonate:24, hinweis:'DRK empfiehlt eine Auffrischung alle 2 Jahre – '+QUALI_HINWEIS_KBL },
+  { code:'eh', label:'EH – Erste Hilfe', kategorie:K_GA, ue:9, pflichtRHF:true, intervallMonate:24, hinweis:'Wiederholung alle 2 Jahre nur ohne Sanitätsausbildung; mit Sanitätsausbildung ersetzt die Sanitätsfortbildung (16 UE in 2 Jahren) die EH-Wiederholung.' },
   { code:'ds', label:'DS – Datenschutz (online)', kategorie:K_GA, ue:2, pflichtRHF:true, hinweis:'Voraussetzung: RKE' },
   { code:'ekga_e', label:'EKGA-E – Grundausbildung Einsatz (HGA Einsatz)', kategorie:K_GA, ue:10, pflichtRHF:true, aliase:['HGA Einsatz','EKGA-E – Einsatz','EGA Einsatz'] },
   { code:'ekga_s', label:'EKGA-S – Grundausbildung Sanität (HGA SAN)', kategorie:K_GA, ue:10, pflichtRHF:true, hinweis:'Voraussetzung: EH', aliase:['HGA Sanität','HGA San','EKGA-S – Sanitätsdienst','EGA San'] },
@@ -934,7 +934,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'slg', label:'SLG – Sanitätslehrgang inkl. Prüfung', kategorie:K_FA, ue:64, pflichtRHF:true, hinweis:'Voraussetzung: EKGA-S. Einmaliger Lehrgang; die regelmäßige Fortbildung wird als „Sanitätsfortbildung“ erfasst.', aliase:['SLG – Sanitätslehrgang','Sanitätslehrgang','Sanitätsl.'] },
   { code:'ekf_pruef', label:'EKF.Prüf – Fachbezogene Prüfung', kategorie:K_FA, ue:2, pflichtRHF:true },
   { code:'bos', label:'BOS – Sprechfunkausbildung (digital)', kategorie:K_FA, ue:20, pflichtRHF:true, hinweis:'Voraussetzung: EKGA-E', aliase:['BOS – Sprechfunkausbildung','BOS Funk','BOS'] },
-  { code:'suwr', label:'SuWR – Sonder- und Wegerechte im Einsatz', kategorie:K_FA, ue:2, pflichtRHF:true, hinweis:'Pflicht laut Staffel-Merkblatt', aliase:['SuWR – Sonder-/Wegerechte','Sonderrechte im Einsatz'] },
+  { code:'suwr', label:'SuWR – Sonder- und Wegerechte im Einsatz (jährlich)', kategorie:K_FA, ue:2, pflichtRHF:true, intervallMonate:12, hinweis:'Pflicht laut Staffel-Merkblatt; jährliche Wiederholung (Fahren mit Sonderrechten).', aliase:['SuWR – Sonder-/Wegerechte','SuWR – Sonder- und Wegerechte im Einsatz','Sonderrechte im Einsatz','Sonderrechte'] },
   // 3) Fachdienstausbildung Rettungshund (RHd) – Gesamtkurs und Theorieteile
   { code:'rhd', label:'RHd – Fachdienstausbildung Rettungshund (gesamt)', kategorie:K_RHD, ue:35, pflichtRHF:true, hinweis:'Voraussetzung: SLG. Theorieteile siehe folgende Einträge.', aliase:['Fachdienstausbildung Rettungshunde','Rettungshundeführer'] },
   { code:'rhd_ehhund', label:'RHd · Erste Hilfe am Hund', kategorie:K_RHD, pflichtRHF:true, aliase:['EH Hund','Erste Hilfe am Hund'] },
@@ -956,10 +956,12 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'modul_13', label:'Modulprüfung 1.3 – Gewandtheit', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung – Übertrag nach DRK 1.3 wie bei 1.1.', aliase:['Modul 1.3','Modulprüfung 1.3','Gewandtheit','Gewandheit'] },
   { code:'rh_pruef', label:'Modulprüfung 2 – Suchprüfung (RH-Prüf)', kategorie:K_PR, ue:4, pflichtRHF:true, intervallMonate:24, hinweis:'Laut Dienstanweisung alle 24 Monate. Teamprüfung je Sparte: Hund, Sparte und Plakettennummer werden mit erfasst und beim Hund als Plakette eingetragen.', aliase:['RH-Prüf – Rettungshundeprüfung (Suchprüfung)','Suchprüfung','Rettungshundeprüfung','RH-Prüf','Modul 2','Modulprüfung 2'] },
   { code:'tf', label:'TF – Truppführer:in (online)', kategorie:K_PR, ue:3, pflichtRHF:true },
-  { code:'hlw', label:'HLW und AED (Auffrischung)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt 1× jährlich.' },
-  { code:'san_fb', label:'Sanitätsfortbildung (16 UE in 2 Jahren)', kategorie:K_PR, pflichtRHF:true, intervallMonate:24, hinweis:'Fortbildung zum Erhalt der Sanitätsqualifikation (DRK-Infomaterial: 16 UE in 2 Jahren) – '+QUALI_HINWEIS_KBL, aliase:['San-Fortbildung','Fortbildung Sanität','Sanitätsfortbildung','16 UE Sanität'] },
-  { code:'uvv_jaehrlich', label:'UVV-Unterweisung (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt jährlich.' },
-  { code:'hygiene', label:'Hygieneunterweisung (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt jährlich.' },
+  { code:'hlw', label:'HLW und AED – Reanimationstraining (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Praktisches HLW- und AED-Training, jährlich (Staffel-Merkblatt, Fristenübersicht).', aliase:['HLW und AED (Auffrischung)','Reanimationstraining','HLW/AED'] },
+  { code:'san_fb', label:'Sanitätsfortbildung (16 UE in 2 Jahren)', kategorie:K_PR, pflichtRHF:true, intervallMonate:24, hinweis:'Nachweis über mindestens 16 UE in 2 Jahren (häufig aufgeteilt auf 2 × 8 UE pro Jahr); ersetzt bei Sanitätern die Erste-Hilfe-Wiederholung. '+QUALI_HINWEIS_KBL, aliase:['San-Fortbildung','Fortbildung Sanität','Sanitätsfortbildung','16 UE Sanität'] },
+  { code:'uvv_jaehrlich', label:'UVV-Unterweisung allgemein (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Jährlich für alle Einsatzkräfte. Wird bei der Modulprüfung 2 nicht abgeprüft, ist aber regelmäßig nachzuweisen.', aliase:['UVV-Unterweisung (jährlich)','UVV-Unterweisung','UVV allgemein'] },
+  { code:'ds_jaehrlich', label:'Datenschutzunterweisung (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Jährliche Belehrung zum Umgang mit personenbezogenen Daten (z. B. Patientendaten) – für alle Einsatzkräfte. Der einmalige Grundkurs ist „DS – Datenschutz (online)“.', aliase:['Datenschutzunterweisung','Datenschutzbelehrung'] },
+  { code:'hygiene', label:'Hygieneunterweisung (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Jährlich. Wird bei der Modulprüfung 2 nicht abgeprüft, ist aber regelmäßig nachzuweisen.', aliase:['Hygieneunterweisung'] },
+  { code:'ehhund_fb', label:'Erste Hilfe am Hund – Auffrischung (alle 2 Jahre)', kategorie:K_PR, pflichtRHF:true, intervallMonate:24, hinweis:'Praxisnahe Auffrischung der Notfallversorgung am Hund (Verbände, Vitalwerte, Reanimation beim Hund). Die Erstausbildung ist „RHd · Erste Hilfe am Hund“.', aliase:['EH Hund Auffrischung','Erste Hilfe am Hund Auffrischung','EHA Hund'] },
   // 5) Empfohlen & staffelinterne Ergänzungen
   { code:'tie', label:'TiE – Basisausbildung Technik und Logistik', kategorie:K_EMP, ue:10, empfohlen:true, hinweis:'Empfohlen; Voraussetzung: EKGA-T', aliase:['BA Technik + Logistik','TiE – Basisausb. Technik & Logistik','BA Tech+Logi'] },
   { code:'heikat', label:'HEIKAT', kategorie:K_EMP, ue:2, empfohlen:true, aliase:['Heikat'] },
@@ -1015,6 +1017,8 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'btd28', label:'BtD-28 – Rückbau, Wartung, Pflege', kategorie:K_BT, ue:3 },
   { code:'btd29', label:'BtD-29 – Mat. Zubereitung / Ausgabe', kategorie:K_BT, ue:4 },
   { code:'btd30', label:'BtD-30 – Hygiene & Lebensmittelrecht', kategorie:K_BT, ue:3 },
+  { code:'ifsg', label:'IfSG-Folgebelehrung (§ 43 IfSG) – Verpflegung', kategorie:K_BT, intervallMonate:12, hinweis:'Pflichtbelehrung für den Umgang mit Lebensmitteln. Staffelvorgabe jährlich; gesetzlich mindestens alle zwei Jahre (§ 43 Abs. 4 IfSG).', aliase:['IfSG-Belehrung','Folgebelehrung IfSG'] },
+  { code:'haccp', label:'Hygieneschulung Verpflegung (HACCP, jährlich)', kategorie:K_BT, intervallMonate:12, hinweis:'Unterweisung nach HACCP (Kühlketten, Hygiene in der Feldküche), jährlich.', aliase:['HACCP-Schulung','Hygieneschulung HACCP'] },
   { code:'fko', label:'FKo – Feldkoch/Feldköchin', kategorie:K_BT, ue:40 },
   // 9) Technik & Logistik
   { code:'btd14', label:'BtD-14 – Materialkunde & Instandhaltung', kategorie:K_TL, ue:6 },
@@ -1022,6 +1026,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'fkh', label:'FKH – Maschinist:in FKH Kärcher', kategorie:K_TL, ue:16 },
   { code:'ms', label:'MS – Motorsäge Hessenforst LVH-F', kategorie:K_TL, ue:16 },
   { code:'uwste', label:'UwSte – Unterw. Stromerzeuger KatS', kategorie:K_TL, ue:8 },
+  { code:'uvv_tus', label:'UVV-Unterweisung erweitert – Technik & Sicherheit (jährlich)', kategorie:K_TL, intervallMonate:12, hinweis:'Spezifische Unfallverhütung für Aggregate, Strom, Zelte und Gefahrstoffe, jährlich.', aliase:['Erweiterte UVV-Unterweisung','UVV TuS'] },
   { code:'tw5k', label:'TW5k – Trinkwasser 5000', kategorie:K_TL, ue:16 },
   { code:'twa1', label:'TWA1 – Trinkwasseraufbereitung 1', kategorie:K_TL, ue:16 },
   { code:'twa2', label:'TWA2 – Trinkwasseraufbereitung 2', kategorie:K_TL, ue:16 },
@@ -1037,7 +1042,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'psu', label:'PSU – Psycho-Soziale Unterstützung', kategorie:K_KATS, ue:4 },
   { code:'at', label:'AT# – Aktuelle Themen (alle FachD)', kategorie:K_KATS, ue:2 },
 ].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null, aliase:[], ...q }));
-const QUALI_KATALOG_VERSION = 6;
+const QUALI_KATALOG_VERSION = 8;
 // Vorbelegte Ordner (entsprechen der bestehenden Ordnerstruktur der Staffel); jederzeit umbenenn-, lösch- und erweiterbar.
 const LEHRMATERIAL_STANDARD_ORDNER = ['Flächensuche','Mantrailing','Trümmerkunde','Kynologie','Geruch und Geruchsverteilung','Orientierung und Kartenkunde','EH Hund','UVV, Sicherheit im Einsatz, Transport','Funk','PSNV','Wasserrettung, Wassersuche','Organisation','Rechtliches und Grundlagen','Geschichte und Entwicklung','Hospitationen','Formulare & Vordrucke'];
 function qualiNorm(t){ return String(t||'').toLowerCase().replace(/[‐-–—]/g,'-').replace(/\s+/g,' ').trim(); }
@@ -1081,6 +1086,10 @@ function qualiKatalogMigrieren(s){
   s.meta = s.meta || {};
   if((s.meta.qualiKatalogVersion||0) >= QUALI_KATALOG_VERSION) return;
   const alteKatalogVersion = s.meta.qualiKatalogVersion||0;
+  if(alteKatalogVersion>0 && alteKatalogVersion<8){
+    // Hinweise der wiederkehrenden Pflichtnachweise auf den aktuellen Stand bringen
+    ['eh','slg','hlw','san_fb','suwr','uvv_jaehrlich','hygiene'].forEach(code=>{ const q=s.qualifikationen.find(x=>x.code===code), c=QUALIFIKATIONEN_KATALOG_VORSCHLAG.find(x=>x.code===code); if(q && c) q.hinweis=c.hinweis; });
+  }
   if(alteKatalogVersion>0 && alteKatalogVersion<6){
     // SLG ist ein einmaliger Lehrgang; die Wiederholung läuft über „Sanitätsfortbildung“ → Ablaufdatum beim SLG entfernen
     const slg = s.qualifikationen.find(q=>q.code==='slg');
@@ -1118,6 +1127,12 @@ function qualiKatalogMigrieren(s){
     const k = pq.personId+'|'+pq.qualifikationId+'|'+(pq.datum||'');
     if(gesehen.has(k)) return false; gesehen.add(k); return true;
   });
+  if(alteKatalogVersion>0 && alteKatalogVersion<8){
+    ['suwr','uvv_jaehrlich','hygiene'].forEach(code=>{
+      const q=s.qualifikationen.find(x=>x.code===code); if(!q || !q.intervallMonate) return;
+      s.personQualifikationen.forEach(pq=>{ if(pq.qualifikationId===q.id && pq.datum && !pq.gueltigBis){ const d=new Date(pq.datum); d.setMonth(d.getMonth()+q.intervallMonate); pq.gueltigBis=d.toISOString().slice(0,10); } });
+    });
+  }
   s.meta.qualiKatalogVersion = QUALI_KATALOG_VERSION;
 }
 
@@ -2267,11 +2282,19 @@ function fristenAuswertung(){
 
   // Abgelaufene und bald ablaufende Personen-Qualifikationen
   const abgelaufen = [], baldAblaufend = [];
+  // Je Person, Qualifikation (und bei Teamprüfungen je Hund/Sparte) zählt nur der neueste Nachweis – eine erneuerte Qualifikation gilt nicht als abgelaufen.
+  const neuester = new Map();
   state.personQualifikationen.forEach(pq=>{
+    const k = pq.personId+'|'+pq.qualifikationId+'|'+(pq.hundId||'')+'|'+(pq.sparte||'');
+    const alt = neuester.get(k);
+    if(!alt || String(pq.datum||'') > String(alt.datum||'') || (String(pq.datum||'')===String(alt.datum||'') && String(pq.gueltigBis||'') > String(alt.gueltigBis||''))) neuester.set(k, pq);
+  });
+  [...neuester.values()].forEach(pq=>{
     if(!pq.gueltigBis) return;
     const p = state.personen.find(x=>x.id===pq.personId);
     const q = state.qualifikationen.find(x=>x.id===pq.qualifikationId);
     if(!p || !q || p.status==='inaktiv') return;
+    if(qualiFristEntfaellt(p.id, q)) return;
     const tage = tageBisHeute(pq.gueltigBis);
     if(isNaN(tage)) return;
     if(tage < 0) abgelaufen.push({p,q,pq,tage});
@@ -2295,7 +2318,7 @@ function fristenAuswertung(){
   const rhfLuecken = aktivePersonen
     .filter(p=>state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, p.id)))
     .map(p=>{ const durchSuch = hatSuchpruefung(p.id);
-      return {p, durchSuch, fehlt: rhfPflicht.filter(q=>!state.personQualifikationen.some(pq=>pq.personId===p.id && pq.qualifikationId===q.id) && (!durchSuch || q.intervallMonate))}; })
+      return {p, durchSuch, fehlt: rhfPflicht.filter(q=>!state.personQualifikationen.some(pq=>pq.personId===p.id && pq.qualifikationId===q.id) && (!durchSuch || q.intervallMonate) && !qualiFristEntfaellt(p.id, q))}; })
     .filter(x=>x.fehlt.length)
     .sort((a,b)=>a.fehlt.length-b.fehlt.length);
 
@@ -2348,7 +2371,7 @@ function renderTabFristen(){
 
       <div class="card card-pad">
         <h3>🐕 Pflichtausbildungen Rettungshundeführende (${rhfLuecken.length})</h3>
-        <p class="hint">Personen, die einen aktiven Hund führen, und die noch nicht alle ${rhfPflichtAnzahl} Pflicht-Einträge (★) laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt nachgewiesen haben. Wer die <strong>Modulprüfung 2 (Suchprüfung)</strong> bestanden hat, gilt für alle einmaligen Pflichtausbildungen als erfüllt – dann werden nur noch die wiederkehrenden (z. B. HLW/AED, Sanitätsfortbildung, UVV, Hygiene) geprüft. Zum Aufklappen antippen.</p>
+        <p class="hint">Personen, die einen aktiven Hund führen, und die noch nicht alle ${rhfPflichtAnzahl} Pflicht-Einträge (★) laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt nachgewiesen haben. Wer die <strong>Modulprüfung 2 (Suchprüfung)</strong> bestanden hat, gilt für alle einmaligen Pflichtausbildungen als erfüllt – dann werden nur noch die wiederkehrenden Nachweise geprüft: <strong>jährlich</strong> HLW/AED, UVV, Hygiene, Datenschutz und Sonderrechte; <strong>alle 2 Jahre</strong> Suchprüfung, Erste Hilfe am Hund und Sanitätsfortbildung. Die Erste-Hilfe-Wiederholung (alle 2 Jahre) gilt nur für Personen ohne Sanitätsausbildung. Zum Aufklappen antippen.</p>
         ${rhfLuecken.map(x=>`<details style="border-top:1px dashed var(--line);padding:6px 0"><summary style="cursor:pointer"><strong>${esc(x.p.name)}</strong> – ${x.durchSuch?`fehlt: ${x.fehlt.length} wiederkehrende(r) Nachweis(e)`:`fehlt: ${x.fehlt.length} von ${rhfPflichtAnzahl}`}</summary><ul class="hint" style="margin:6px 0 0 -18px">${x.fehlt.map(q=>`<li>${esc(q.label)}</li>`).join('')}</ul></details>`).join('') || '<p class="hint">Alle Rettungshundeführenden haben die Pflichtausbildungen vollständig eingetragen.</p>'}
       </div>
 
@@ -2961,6 +2984,13 @@ function bindModalCsvVorschau(){
 
 /* Wer die Modulprüfung 2 (Suchprüfung) abgelegt hat, hat alle Pflichtausbildungen bis dahin erfüllt.
    Offen bleiben dann nur die wiederkehrenden Pflichteinträge (mit Wiederholungsintervall) und aufbauende Qualifikationen. */
+/* Sanitätsausbildung vorhanden (SLG eingetragen oder durch Suchprüfung abgedeckt)? Dann entfällt die EH-Wiederholung,
+   weil die Sanitätsfortbildung (16 UE in 2 Jahren) darüber steht. */
+function hatSanitaetsausbildung(personId){
+  const slg = state.qualifikationen.find(x=>x.code==='slg');
+  return hatSuchpruefung(personId) || (!!slg && state.personQualifikationen.some(pq=>pq.personId===personId && pq.qualifikationId===slg.id));
+}
+function qualiFristEntfaellt(personId, q){ return !!q && q.code==='eh' && hatSanitaetsausbildung(personId); }
 function hatSuchpruefung(personId){
   const q = state.qualifikationen.find(x=>x.code==='rh_pruef');
   return !!q && state.personQualifikationen.some(pq=>pq.personId===personId && pq.qualifikationId===q.id);
@@ -3216,7 +3246,7 @@ function renderPersonQualifikationenBereich(p){
   return `
   <div class="field">
     <label>Qualifikationen dieser Person</label>
-    ${hatSuchpruefung(p.id)?'<p class="hint" style="margin:0 0 4px;color:var(--ink)">✓ Modulprüfung 2 (Suchprüfung) vorhanden – alle einmaligen Pflichtausbildungen bis dahin gelten als erfüllt. Einzutragen sind nur noch aufbauende Qualifikationen und die wiederkehrenden Nachweise.</p>':''}
+    ${hatSuchpruefung(p.id)?'<p class="hint" style="margin:0 0 4px;color:var(--ink)">✓ Modulprüfung 2 (Suchprüfung) vorhanden – alle einmaligen Pflichtausbildungen bis dahin gelten als erfüllt. Einzutragen sind nur noch aufbauende Qualifikationen und die wiederkehrenden Nachweise (jährlich: HLW/AED, UVV, Hygiene, Datenschutz, Sonderrechte; alle 2 Jahre: Suchprüfung, Erste Hilfe am Hund, Sanitätsfortbildung).</p>':''}
     <div id="pf-qual-liste">${zeilen}</div>
     <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap">
       <select id="pf-qual-neu" style="flex:1;min-width:160px">
