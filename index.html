@@ -951,6 +951,9 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'rhd_geruch', label:'RHd · Geruch und Geruchsausbreitung', kategorie:K_RHD, pflichtRHF:true, aliase:['Geruch','Geruch und Geruchsverteilung'] },
   { code:'rhd_orga', label:'RHd · Organisation und Struktur', kategorie:K_RHD, pflichtRHF:true, aliase:['Orga/Struktur','Organisation'] },
   // 4) Prüfung, Einsatzfähigkeit, jährliche Unterweisungen
+  { code:'modul_11', label:'Modulprüfung 1.1 – Verhalten und Grundfertigkeiten', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung (Hund + Hundeführer/in). Beim Eintragen werden die Elemente von DRK 1.1 unter Prüfungsordnungen für den Hund auf „bestanden“ gesetzt, wenn die Person genau einen aktiven Hund führt.', aliase:['Modul 1.1','Modulprüfung 1.1','Grundfertigkeiten und Verhalten','Verhalten und Grundfertigkeiten'] },
+  { code:'modul_12', label:'Modulprüfung 1.2 – Gehorsam (oder VDH-Begleithundeprüfung mit Verkehrsteil)', kategorie:K_PR, pflichtRHF:true, hinweis:'Alternativ gilt die VDH-Begleithundeprüfung mit Verkehrsteil (BH/VT). Teamprüfung – Übertrag nach DRK 1.2 wie bei 1.1.', aliase:['Modul 1.2','Modulprüfung 1.2','Gehorsam','BH-VT','BH/VT','Begleithundeprüfung','Begleithundeprüfung VDH','VDH BH-VT'] },
+  { code:'modul_13', label:'Modulprüfung 1.3 – Gewandtheit', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung – Übertrag nach DRK 1.3 wie bei 1.1.', aliase:['Modul 1.3','Modulprüfung 1.3','Gewandtheit','Gewandheit'] },
   { code:'rh_pruef', label:'RH-Prüf – Rettungshundeprüfung (Suchprüfung)', kategorie:K_PR, ue:4, pflichtRHF:true, intervallMonate:24, hinweis:'Laut Dienstanweisung alle 24 Monate.' },
   { code:'tf', label:'TF – Truppführer:in (online)', kategorie:K_PR, ue:3, pflichtRHF:true },
   { code:'hlw', label:'HLW und AED (Auffrischung)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Laut Staffel-Merkblatt 1× jährlich.' },
@@ -1033,7 +1036,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'psu', label:'PSU – Psycho-Soziale Unterstützung', kategorie:K_KATS, ue:4 },
   { code:'at', label:'AT# – Aktuelle Themen (alle FachD)', kategorie:K_KATS, ue:2 },
 ].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null, aliase:[], ...q }));
-const QUALI_KATALOG_VERSION = 3;
+const QUALI_KATALOG_VERSION = 4;
 // Vorbelegte Ordner (entsprechen der bestehenden Ordnerstruktur der Staffel); jederzeit umbenenn-, lösch- und erweiterbar.
 const LEHRMATERIAL_STANDARD_ORDNER = ['Flächensuche','Mantrailing','Trümmerkunde','Kynologie','Geruch und Geruchsverteilung','Orientierung und Kartenkunde','EH Hund','UVV, Sicherheit im Einsatz, Transport','Funk','PSNV','Wasserrettung, Wassersuche','Organisation','Rechtliches und Grundlagen','Geschichte und Entwicklung','Hospitationen','Formulare & Vordrucke'];
 function qualiNorm(t){ return String(t||'').toLowerCase().replace(/[‐-–—]/g,'-').replace(/\s+/g,' ').trim(); }
@@ -1227,7 +1230,8 @@ function einfacherHash(text){
 }
 
 const BARRY_SCHEMA_VERSION = 1; // muss VOR ladeState() definiert sein (temporal dead zone)
-const BARRY_APP_VERSION = '1.9';
+const BARRY_APP_VERSION = '2.0';
+const BARRY_APP_STAND = '27.09.2026';
 let state = ladeState();
 // Internes Datenschema von BARRY selbst (unabhängig vom RHS-Austauschformat-Schema).
 // Bei künftigen strukturellen Änderungen am state-Objekt: Versionsnummer hochzählen und
@@ -1517,6 +1521,7 @@ function render(){
         <div class="who clickable" id="btn-mein-profil" title="Mein Profil bearbeiten">${esc(person.name)} ✎</div>
         <div style="margin-bottom:8px">${(person.rollen||[]).map(r=>`<span class="chip muted">${esc(rolleInfo(r).label)}</span>`).join(' ')}</div>
         <button class="link" id="btn-abmelden">Abmelden</button>
+        <div class="hint" style="margin-top:8px;font-size:.75rem">BARRY ${BARRY_APP_VERSION} · Stand ${BARRY_APP_STAND}</div>
       </div>
     </div>
     <div class="main">
@@ -2759,7 +2764,7 @@ function csvSchnellstartAnalysieren(text){
   const genutzt = new Set([idxName, idxRolle, ...personIdx.map(p=>p.i), idxHundName, idxHundRasse, idxHundGeburt, idxHundGeschlecht, idxHundChip, idxSparten, idxPlFl, idxPlTr, idxPlMt, idxZweit, ...ausbSpalten.map(a=>a.i)]);
   const unbekannteSpalten = kopf.filter((k,i)=>k && !genutzt.has(i));
   const startHash = einfacherHash('start');
-  const personenNeu=[], hundeNeu=[], personenUpdates=[], hundeUpdates=[], zweitZuordnungen=[], ausbNeu=[], protokoll=[];
+  const personenNeu=[], hundeNeu=[], personenUpdates=[], hundeUpdates=[], zweitZuordnungen=[], ausbNeu=[], protokoll=[], personenOhneAenderung=[];
   let abweichungenGesamt = 0;
   const feld = (f,i)=> i>-1 ? (f[i]||'').trim() : '';
   const personFinden = name => state.personen.find(p=>p.status!=='inaktiv' && p.name.trim().toLowerCase()===name.toLowerCase()) || personenNeu.find(p=>p.name.trim().toLowerCase()===name.toLowerCase());
@@ -2777,6 +2782,7 @@ function csvSchnellstartAnalysieren(text){
       const ergaenzt = Object.keys(werte).filter(k=>!person[k]);
       const abweichend = Object.keys(werte).filter(k=>person[k] && String(person[k])!==String(werte[k]));
       if(ergaenzt.length || abweichend.length) personenUpdates.push({person, werte});
+      else if(!personenOhneAenderung.includes(person)) personenOhneAenderung.push(person);
       abweichungenGesamt += abweichend.length;
       personStatus = 'vorhanden' + (ergaenzt.length?` – ${ergaenzt.length} Feld(er) ergänzt`:'') + (abweichend.length?` – ${abweichend.length} abweichend (nur mit „Überschreiben“)`:'');
     } else {
@@ -2786,7 +2792,7 @@ function csvSchnellstartAnalysieren(text){
       personStatus = 'neu (Startpasswort „start“)';
     }
     // Ausbildungen
-    let ausbAnzahl = 0;
+    let ausbAnzahl = 0; const zeilenAusb = [];
     ausbSpalten.forEach(({i:ix, q})=>{
       const roh = feld(f, ix);
       if(!roh) return;
@@ -2797,10 +2803,11 @@ function csvSchnellstartAnalysieren(text){
       if(vorhanden.some(pq=>(pq.datum||'')===datum)) return;           // exakt schon da
       if(!datum && vorhanden.length) return;                             // „x“, aber schon eingetragen
       const ohneDatum = vorhanden.find(pq=>!pq.datum);
-      ausbNeu.push({person, q, datum, ersetzt: datum && ohneDatum ? ohneDatum : null});
+      const eintrag = {person, q, datum, ersetzt: datum && ohneDatum ? ohneDatum : null};
+      ausbNeu.push(eintrag); zeilenAusb.push(eintrag);
       ausbAnzahl++;
     });
-    let hundStatus = '';
+    let hundStatus = ''; let zeilenHund = null;
     const hundName = feld(f, idxHundName);
     if(hundName){
       const sparten = idxSparten>-1 ? rhsSpartenNormalisieren(feld(f,idxSparten)) : [];
@@ -2829,6 +2836,7 @@ function csvSchnellstartAnalysieren(text){
         hundeNeu.push(hund);
         hundStatus = `Hund „${hundName}“ neu`;
       }
+      zeilenHund = hund || null;
       const zweitName = feld(f, idxZweit);
       if(zweitName && hund){
         const zp = personFinden(zweitName);
@@ -2836,9 +2844,10 @@ function csvSchnellstartAnalysieren(text){
         else if(!zp) hundStatus += ` · Zweit-Hundeführer/in „${zweitName}“ nicht gefunden`;
       }
     }
+    zeilenAusb.forEach(e=>{ e.hund = zeilenHund; }); // Modulprüfungen gelten für den Hund dieser Zeile
     protokoll.push({nr, text:name, status:personStatus + (ausbAnzahl?` · ${ausbAnzahl} Ausbildung(en) neu`:'') + (hundStatus?' · '+hundStatus:'')});
   });
-  return {personenNeu, hundeNeu, personenUpdates, hundeUpdates, zweitZuordnungen, ausbNeu, abweichungenGesamt, protokoll,
+  return {personenNeu, hundeNeu, personenUpdates, hundeUpdates, zweitZuordnungen, ausbNeu, abweichungenGesamt, protokoll, personenOhneAenderung,
     unbekannteSpalten, unbekannteAusb, ausbSpaltenAnzahl: ausbSpalten.length, zeilenGesamt: zeilen.length};
 }
 function csvSchnellstartUebernehmen(a, ueberschreiben){
@@ -2857,6 +2866,7 @@ function csvSchnellstartUebernehmen(a, ueberschreiben){
     if(n.datum && n.q.intervallMonate){ const d = new Date(n.datum); d.setMonth(d.getMonth()+n.q.intervallMonate); bis = d.toISOString().slice(0,10); }
     if(n.ersetzt){ n.ersetzt.datum = n.datum; if(bis) n.ersetzt.gueltigBis = bis; }
     else state.personQualifikationen.push({id:uid(), personId:n.person.id, qualifikationId:n.q.id, datum:n.datum, gueltigBis:bis});
+    modulQualiUebertragen(n.person.id, n.q.id, n.hund);
   });
   speichereState();
 }
@@ -2895,6 +2905,10 @@ function renderModalCsvVorschau(){
         <input type="checkbox" id="m-csv-ueberschreiben" style="margin-top:3px">
         <span class="hint" style="color:var(--ink)"><strong>Abweichende Werte aus der Tabelle übernehmen</strong> (überschreibt z. B. geänderte Adressen oder Telefonnummern vorhandener Personen und Hunde${a.abweichungenGesamt?` – betrifft ${a.abweichungenGesamt} Feld(er)`:''}). Ohne Haken werden nur leere Felder ergänzt.</span>
       </label>
+      <label class="row" style="gap:8px;align-items:flex-start;margin:0 0 10px;cursor:pointer">
+        <input type="checkbox" id="m-csv-startpw" style="margin-top:3px">
+        <span class="hint" style="color:var(--ink)"><strong>Startpasswort „start“ auch für vorhandene Personen setzen</strong> – sie müssen es bei der ersten Anmeldung ändern. Ausgenommen sind Sie selbst und das Admin-Konto. Neue Personen erhalten „start“ immer.</span>
+      </label>
       <div class="table-scroll" style="max-height:40vh;overflow:auto"><table><thead><tr><th>Zeile</th><th>Name</th><th>Ergebnis</th></tr></thead><tbody>
         ${a.protokoll.map(z=>`<tr><td>${z.nr}</td><td>${esc(z.text)}</td><td class="hint">${esc(z.status)}</td></tr>`).join('')}
       </tbody></table></div>
@@ -2908,12 +2922,36 @@ function bindModalCsvVorschau(){
   document.getElementById('m-abbrechen').onclick = ()=>{ csvVorschau=null; schliesseModal(); };
   document.getElementById('m-csv-uebernehmen').onclick = ()=>{
     const a = csvVorschau; csvVorschau=null;
+    const startpw = document.getElementById('m-csv-startpw').checked;
     csvSchnellstartUebernehmen(a, document.getElementById('m-csv-ueberschreiben').checked);
+    if(startpw){
+      const ich = aktuellePerson(); const h = einfacherHash('start'); let n=0;
+      a.personenUpdates.forEach(u=>{ const p=u.person; if(ich && p.id===ich.id) return; if((p.name||'').toLowerCase()==='admin') return; p.passwortHash=h; p.mussPasswortAendern=true; n++; });
+      // auch vorhandene Personen ohne Feldänderungen aus der Tabelle berücksichtigen
+      (a.personenOhneAenderung||[]).forEach(p=>{ if(ich && p.id===ich.id) return; if((p.name||'').toLowerCase()==='admin') return; p.passwortHash=h; p.mussPasswortAendern=true; n++; });
+      speichereState(); setTimeout(()=>zeigeToast(n+' Person(en) haben jetzt das Startpasswort „start“.'), 1200);
+    }
     zeigeToast(`${a.personenNeu.length} neue Person(en), ${a.hundeNeu.length} neue(r) Hund(e), ${a.ausbNeu.length} Ausbildungseinträge übernommen.`);
     schliesseModal();
   };
 }
 
+/* Modulprüfung als Qualifikation einer Person → Elemente des Moduls beim geführten Hund auf „bestanden“ setzen.
+   Nur eindeutig: Person führt genau einen aktiven Hund. Rückgabe: Hund oder null. */
+const MODUL_QUALI_ZU_PRUEFUNG = { modul_11:'drk11', modul_12:'drk12', modul_13:'drk13' };
+function modulQualiUebertragen(personId, qualifikationId, zielHund){
+  const q = state.qualifikationen.find(x=>x.id===qualifikationId);
+  const modul = q && MODUL_QUALI_ZU_PRUEFUNG[q.code]; if(!modul) return null;
+  const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, personId));
+  const hund = (zielHund && hunde.includes(zielHund)) ? zielHund : (hunde.length===1 ? hunde[0] : null);
+  if(!hund) return null;
+  const elemente = modul==='drk11' ? DRK_VERHALTEN : modul==='drk12' ? DRK_GRUNDGEHORSAM : DRK_GEWANDTHEIT;
+  elemente.forEach(el=>{
+    let e = state.pruefungsstatus.find(p=>p.hundId===hund.id && p.modul===modul && p.elementId===el.id);
+    if(e) e.status='bestanden'; else state.pruefungsstatus.push({id:uid(), hundId:hund.id, modul, elementId:el.id, status:'bestanden'});
+  });
+  return hund;
+}
 /* Zugangspaket: reduzierter Bestand für das Gerät eines einzelnen Mitglieds – keine Kontaktdaten, keine Qualifikationen, keine internen Notizen anderer. */
 function zugangspaketErstellen(person, startpasswort){
   const eigeneHunde = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
@@ -3170,6 +3208,9 @@ function bindPersonQualifikationenBereich(p){
       qualId = q.id;
     }
     state.personQualifikationen.push({id:uid(), personId:p.id, qualifikationId:qualId, datum:von.value, gueltigBis:bis.value||null});
+    const uebertragHund = modulQualiUebertragen(p.id, qualId);
+    if(uebertragHund) setTimeout(()=>zeigeToast(`Auch unter Prüfungsordnungen für ${uebertragHund.name} als bestanden eingetragen.`), 50);
+    else if(MODUL_QUALI_ZU_PRUEFUNG[(state.qualifikationen.find(x=>x.id===qualId)||{}).code]) setTimeout(()=>zeigeToast('Hinweis: Die Person führt nicht genau einen Hund – den Modulstatus bitte unter Prüfungsordnungen beim richtigen Hund setzen.'), 50);
     speichereState();
     zeigeToast('Qualifikation zugeordnet.');
     render();
@@ -3239,7 +3280,7 @@ function renderModalPerson(){
         <label style="margin-top:0">Zugangspaket für das eigene Gerät dieser Person</label>
         <p class="hint" style="margin:0 0 8px">Erzeugt eine Datei nur mit dem, was diese Person braucht: Namen aller Mitglieder und Hunde, Termine, die Trainings- und Prüfungsdaten der eigenen Hunde, geteilte Ziele und Lehrmaterial-Links – <strong>ohne</strong> Adressen, Kontaktdaten, Qualifikationen und interne Notizen anderer. Nur diese Person erhält darin ein Passwort.</p>
         <div class="row" style="gap:6px;flex-wrap:wrap">
-          <input id="pf-zp-passwort" placeholder="Startpasswort für die Person" style="flex:1;min-width:160px" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input id="pf-zp-passwort" value="start" placeholder="Startpasswort für die Person" style="flex:1;min-width:160px" autocapitalize="off" autocorrect="off" spellcheck="false">
           <button class="btn btn-sm btn-primary" id="pf-zp-erstellen" type="button">Zugangspaket herunterladen</button>
         </div>
         <div class="hint" id="pf-zp-hint" style="margin-top:6px"></div>
@@ -8600,7 +8641,7 @@ const HILFE_ARTIKEL = [
   {id:"verwaltung-ueberblick", kategorie:"Verwaltung", titel:"Verwaltung: Wer sieht was?", rollen:["ausbilder", "leitung"], text:"\n<p>Ausbilder/-innen (alle drei Ausbilder-Rollen) sehen die Reiter <strong>Hunde, Qualifikationen, Fristen &amp; Lücken,\nAnwesenheit, Orte &amp; Gebiete</strong> \u2013 die f\u00fcr den laufenden Trainingsbetrieb wichtigen Bereiche.\nNur Staffel-/Bereitschaftsleitung und Admin sehen zus\u00e4tzlich <strong>Personen, Rollen &amp; Rechte</strong>\nund <strong>Datensicherung</strong>, sowie das Feld f\u00fcr den Staffelnamen oben auf dieser Seite.</p>\n"},
   {id:"verwaltung-personen", kategorie:"Verwaltung", titel:"Personen und Hunde anlegen und pflegen", rollen:["leitung"], text:"\n<p>Unter <strong>Personen</strong> werden neue Mitglieder mit Name, Rolle(n) und einem ersten Passwort\nangelegt. Der Status l\u00e4sst sich auf <strong>inaktiv</strong> setzen, wenn jemand pausiert oder die\nStaffel verl\u00e4sst, oder auf <strong>extern</strong> f\u00fcr G\u00e4ste/Einsatzkr\u00e4fte anderer Einheiten. Wichtig:\nIst eine Person oder ein Hund bereits in Trainings, Terminen o. \u00c4. verwendet, bietet BARRY statt\nL\u00f6schen automatisch \u201eauf inaktiv setzen\" an, damit keine historischen Daten verloren gehen. Ein\nHundef\u00fchrer-Wechsel wird zus\u00e4tzlich in einer kleinen Historie am Hund festgehalten.</p>\n"},
   {id:"verwaltung-rechte", kategorie:"Verwaltung", titel:"Rollen und individuelle Zusatzrechte vergeben", rollen:["leitung"], text:"\n<p>Beim Anlegen oder Bearbeiten einer Person werden die Rollen per H\u00e4kchen vergeben. Zus\u00e4tzlich lassen\nsich unter <strong>Rollen &amp; Rechte</strong> einzelne, frei benannte Zusatzrechte definieren; die\nbeiden vorbelegten Eintr\u00e4ge \u201eKalender verwalten\" und \u201eAusbildung verwalten\" wirken sich tats\u00e4chlich auf\ndie Berechtigung aus, auch wenn die Person keine Ausbilder-Rolle hat.</p>\n"},
-  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt, enthält auch die Ausbilder-Qualifikationen (Erwachsenengerechte Unterrichtsgestaltung, Rettungshunde-Ausbilderschein Fläche/Trümmer) und lässt sich um eigene Einträge ergänzen: Im Personen-Dialog über „➕ Sonstige Ausbildung (eigener Name)“ – diese landen in der Rubrik „Sonstige Ausbildungen“. Im selben Dialog werden auch <strong>Hospitationen</strong> je Thema mit Datum, Ausbilder/in und Unterlage (Datei oder Link) festgehalten. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
+  {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt, enthält auch die Ausbilder-Qualifikationen (Erwachsenengerechte Unterrichtsgestaltung, Rettungshunde-Ausbilderschein Fläche/Trümmer) und lässt sich um eigene Einträge ergänzen: Im Personen-Dialog über „➕ Sonstige Ausbildung (eigener Name)“ – diese landen in der Rubrik „Sonstige Ausbildungen“. Die <strong>Modulprüfungen 1.1, 1.2 (oder VDH-Begleithundeprüfung mit Verkehrsteil) und 1.3</strong> stehen ebenfalls im Katalog; beim Eintragen setzt BARRY das Modul unter Wissen &amp; Material → Prüfungsordnungen für den geführten Hund automatisch auf „bestanden“ (bei mehreren Hunden: in der Schnelleingabe-Tabelle den Hund der jeweiligen Zeile, im Personen-Dialog bitte beim richtigen Hund nachtragen). Im selben Dialog werden auch <strong>Hospitationen</strong> je Thema mit Datum, Ausbilder/in und Unterlage (Datei oder Link) festgehalten. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
   {id:"fristen", kategorie:"Verwaltung", titel:"Fristen & Lücken, Jubiläen und Erinnerungen", rollen:["ausbilder", "leitung"], text:"\n<p><strong>Verwaltung → Fristen &amp; Lücken</strong> wertet automatisch aus: abgelaufene und bald ablaufende Qualifikationen (auf Basis der „Gültig bis“-Daten), Personen ohne eine als Pflicht markierte Qualifikation, Hund/Team-Module, die kurz vor dem Abschluss stehen, sowie <strong>Jubiläen</strong> (5/10/15/… Jahre im DRK, aus „Mitglied im DRK seit“ im Personen-Dialog).</p>\n<p>Weil BARRY offline arbeitet, gibt es keine Push-Benachrichtigungen. Stattdessen zeigt die <strong>Startseite</strong> für Leitung und Ausbilder/-innen eine Karte „Für Leitung &amp; Ausbildung“ mit den wichtigsten offenen Punkten und den Terminen der nächsten sieben Tage inklusive Zusagen und fehlender Rückmeldungen – ein Klick führt zur jeweiligen Verwaltungsseite.</p>\n"},
   {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Mitgliedsnummer, Adresse, E-Mail, Telefon, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte und je eine Spalte „Ausb: …“ für jede Ausbildung der Rettungshundearbeit (Pflicht und empfohlen) sowie die Führungslehrgänge (Datum oder x). Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
   {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Ohne Synchronisation liegt das Passwort nur auf dem eigenen Gerät. Die Leitung erstellt deshalb unter Verwaltung → Personen → Person öffnen ein <strong>Zugangspaket</strong> mit neuem Startpasswort (enthält nur Namen, Termine und die Daten des eigenen Teams – keine Kontaktdaten oder internen Notizen anderer). Das Mitglied spielt die Datei am Anmeldebildschirm unter „Kein Zugang mehr? Datei von der Leitung einspielen“ ein und meldet sich mit dem Startpasswort an. Auf einem gemeinsam genutzten Gerät genügt „Passwort zurücksetzen“ im Personen-Dialog.</p>\n<p><strong>Gerät zurücksetzen:</strong> Am Anmeldebildschirm im selben Kasten „Alle BARRY-Daten auf diesem Gerät löschen“ – entfernt Bestand, Sicherheitskopien und Zwischenspeicher; das Home-Icon kann danach gelöscht werden.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
