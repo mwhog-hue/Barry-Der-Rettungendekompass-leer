@@ -1874,6 +1874,16 @@ function renderTabPersonen(){
           <button class="btn btn-sm" data-duplikat-zusammenfuehren="${gi}">Zusammenführen</button>
         </div>`).join('')}
     </div>`:''}
+    <details class="card card-pad" style="margin-bottom:14px">
+      <summary style="cursor:pointer;font-weight:700">🔑 Zugänge für Mitglieder <span class="chip muted">${zugangsberechtigtePersonen().filter(p=>p.startPasswort).length} von ${zugangsberechtigtePersonen().length} mit Startpasswort</span></summary>
+      <p class="hint" style="margin-top:8px">Jedes Mitglied erhält ein <b>eigenes Startpasswort</b> und ein eigenes Zugangspaket mit nur seinen Daten und Rechten. Die Startpasswörter bleiben hier in der Zugangsliste nachlesbar; bei der ersten Anmeldung muss jede Person ihr Passwort ändern.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btn-startpw-vergeben">Fehlende Startpasswörter vergeben</button>
+        <button class="btn btn-sm" id="btn-zugangsliste">Zugangsliste (CSV)</button>
+        <button class="btn btn-sm btn-primary" id="btn-alle-zugangspakete">Alle Zugangspakete (ZIP)</button>
+      </div>
+      <p class="hint" style="margin-top:6px">Die ZIP-Datei enthält je Person eine Datei „BARRY_Zugang_Name.json“. Datei und Passwort bitte getrennt weitergeben.</p>
+    </details>
     <div class="spread" style="margin-bottom:14px">
       <p class="hint">${state.personen.length} Personen im Bestand · Zum Bearbeiten anklicken</p>
       <button class="btn btn-primary" id="btn-neue-person">+ Person anlegen</button>
@@ -1882,6 +1892,10 @@ function renderTabPersonen(){
   `;
 }
 function bindTabPersonen(){
+  const spv=document.getElementById('btn-startpw-vergeben');
+  if(spv) spv.onclick = ()=>{ const n=fehlendeStartpasswoerterVergeben(); zeigeToast(n?`${n} Startpasswörter vergeben.`:'Alle haben bereits ein Startpasswort.'); render(); };
+  const zl=document.getElementById('btn-zugangsliste'); if(zl) zl.onclick = ()=>{ fehlendeStartpasswoerterVergeben(); zugangslisteHerunterladen(); render(); };
+  const az=document.getElementById('btn-alle-zugangspakete'); if(az) az.onclick = ()=>{ alleZugangspaketeHerunterladen(); render(); };
   const btn = document.getElementById('btn-neue-person');
   if(btn) btn.onclick = ()=>{ modal = {type:'person', id:null}; render(); };
   document.querySelectorAll('[data-person]').forEach(tr=>{
@@ -2607,7 +2621,7 @@ function renderTabDatensicherung(){
         <li>Als CSV speichern (Trennzeichen ; oder , – beides wird erkannt) und hier <strong>einlesen</strong>.</li>
         <li>BARRY zeigt eine <strong>Vorschau</strong>, was neu angelegt bzw. ergänzt wird – erst nach „Jetzt übernehmen" wird gespeichert.</li>
       </ol>
-      <p class="hint">Der Schnellstart <strong>ergänzt</strong> den Bestand (nichts wird ersetzt). Bereits vorhandene Personen und Hunde werden erkannt: keine Doppelungen, nur leere Felder werden nachgetragen; steht ein Hund bei einer zweiten Person, wird diese als Zweit-Hundeführer/in übernommen. Neue Personen erhalten das Startpasswort <strong>start</strong>.</p>
+      <p class="hint">Der Schnellstart <strong>ergänzt</strong> den Bestand (nichts wird ersetzt). Bereits vorhandene Personen und Hunde werden erkannt: keine Doppelungen, nur leere Felder werden nachgetragen; steht ein Hund bei einer zweiten Person, wird diese als Zweit-Hundeführer/in übernommen. Neue Personen erhalten ein eigenes Startpasswort (Zugangsliste unter Verwaltung → Personen → 🔑 Zugänge).</p>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         <button class="btn" id="btn-csv-vorlage" style="align-self:flex-start">Leere Vorlage (CSV)</button>
         <button class="btn" id="btn-csv-bestand" style="align-self:flex-start">Aktuellen Bestand als Tabelle (CSV, inkl. Kontaktdaten &amp; Ausbildungen)</button>
@@ -2835,8 +2849,9 @@ function csvSchnellstartAnalysieren(text){
     } else {
       person = { id: uid(), name, benutzername:'', mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum:'', mitgliedSeit:'', strasse:'', plz:'', ort:'', email:'', telefon:'',
         ...werte, rollen:[rolle], zusatzrechte:[], status:'aktiv', passwortHash: startHash, mussPasswortAendern:true, angelegtAm: nowIso() };
+      person.startPasswort = startPasswortErzeugen(); person.passwortHash = einfacherHash(person.startPasswort);
       personenNeu.push(person);
-      personStatus = 'neu (Startpasswort „start“)';
+      personStatus = 'neu (eigenes Startpasswort, siehe Zugangsliste)';
     }
     let hundStatus = ''; let zeilenHund = null;
     const hundName = feld(f, idxHundName);
@@ -2963,12 +2978,12 @@ function renderModalCsvVorschau(){
       </label>
       <label class="row" style="gap:8px;align-items:flex-start;margin:0 0 10px;cursor:pointer">
         <input type="checkbox" id="m-csv-startpw" style="margin-top:3px">
-        <span class="hint" style="color:var(--ink)"><strong>Startpasswort „start“ auch für vorhandene Personen setzen</strong> – sie müssen es bei der ersten Anmeldung ändern. Ausgenommen sind Sie selbst und das Admin-Konto. Neue Personen erhalten „start“ immer.</span>
+        <span class="hint" style="color:var(--ink)"><strong>Auch vorhandenen Personen ohne Startpasswort ein eigenes vergeben</strong> (ausgenommen Sie selbst und das Admin-Konto). Neue Personen erhalten immer ein eigenes. Alle Startpasswörter stehen danach in der Zugangsliste unter Verwaltung → Personen.</span>
       </label>
       <div class="table-scroll" style="max-height:40vh;overflow:auto"><table><thead><tr><th>Zeile</th><th>Name</th><th>Ergebnis</th></tr></thead><tbody>
         ${a.protokoll.map(z=>`<tr><td>${z.nr}</td><td>${esc(z.text)}</td><td class="hint">${esc(z.status)}</td></tr>`).join('')}
       </tbody></table></div>
-      <p class="hint" style="margin-top:8px">Neue Personen melden sich mit ihrem Namen und dem Startpasswort <strong>start</strong> an und wählen dann ein eigenes Passwort. Ausbildungen werden nur ergänzt, nie gelöscht; ein neues Datum zu einer bereits vorhandenen Ausbildung wird als weiterer Nachweis (z. B. Auffrischung) gespeichert.</p>
+      <p class="hint" style="margin-top:8px">Neue Personen erhalten ein eigenes Startpasswort (Zugangsliste unter Verwaltung → Personen) und wählen bei der ersten Anmeldung ein eigenes Passwort. Ausbildungen werden nur ergänzt, nie gelöscht; ein neues Datum zu einer bereits vorhandenen Ausbildung wird als weiterer Nachweis (z. B. Auffrischung) gespeichert.</p>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button><button class="btn btn-primary" id="m-csv-uebernehmen">Jetzt übernehmen</button></div>
   </div></div>`;
@@ -2981,11 +2996,8 @@ function bindModalCsvVorschau(){
     const startpw = document.getElementById('m-csv-startpw').checked;
     csvSchnellstartUebernehmen(a, document.getElementById('m-csv-ueberschreiben').checked);
     if(startpw){
-      const ich = aktuellePerson(); const h = einfacherHash('start'); let n=0;
-      a.personenUpdates.forEach(u=>{ const p=u.person; if(ich && p.id===ich.id) return; if((p.name||'').toLowerCase()==='admin') return; p.passwortHash=h; p.mussPasswortAendern=true; n++; });
-      // auch vorhandene Personen ohne Feldänderungen aus der Tabelle berücksichtigen
-      (a.personenOhneAenderung||[]).forEach(p=>{ if(ich && p.id===ich.id) return; if((p.name||'').toLowerCase()==='admin') return; p.passwortHash=h; p.mussPasswortAendern=true; n++; });
-      speichereState(); setTimeout(()=>zeigeToast(n+' Person(en) haben jetzt das Startpasswort „start“.'), 1200);
+      const n = fehlendeStartpasswoerterVergeben();
+      setTimeout(()=>zeigeToast(n+' Startpasswörter vergeben – siehe Verwaltung → Personen → Zugänge.'), 1200);
     }
     zeigeToast(`${a.personenNeu.length} neue Person(en), ${a.hundeNeu.length} neue(r) Hund(e), ${a.ausbNeu.length} Ausbildungseinträge übernommen.`);
     schliesseModal();
@@ -3040,7 +3052,7 @@ function modulQualiUebertragen(personId, qualifikationId, zielHund){
   return hund;
 }
 /* Zugangspaket: reduzierter Bestand für das Gerät eines einzelnen Mitglieds – keine Kontaktdaten, keine Qualifikationen, keine internen Notizen anderer. */
-function zugangspaketErstellen(person, startpasswort){
+function zugangspaketDaten(person, startpasswort){
   const eigeneHunde = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
   const eigeneHundIds = new Set(eigeneHunde.map(h=>h.id));
   const nurTeam = e => e.sichtbarkeit==='team';
@@ -3072,13 +3084,82 @@ function zugangspaketErstellen(person, startpasswort){
     lehrmaterialOrdner: state.lehrmaterialOrdner, lehrmaterial: state.lehrmaterial.filter(m=>m.typ==='link'),
     orte: state.orte||[],
   });
-  const exportDaten = Object.assign({ exportInfo:{ format:'barry-bestand', paket:'zugang', fuer:person.name, app:'BARRY', appVersion:BARRY_APP_VERSION, schemaVersion:BARRY_SCHEMA_VERSION, exportiertAm:nowIso(), organisation:state.organisation.name||'' } }, paket);
+  return Object.assign({ exportInfo:{ format:'barry-bestand', paket:'zugang', fuer:person.name, app:'BARRY', appVersion:BARRY_APP_VERSION, schemaVersion:BARRY_SCHEMA_VERSION, exportiertAm:nowIso(), organisation:state.organisation.name||'' } }, paket);
+}
+function zugangspaketErstellen(person, startpasswort){
+  const exportDaten = zugangspaketDaten(person, startpasswort);
   const blob = new Blob([JSON.stringify(exportDaten)], {type:'application/json'});
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
-  a.href = url; a.download = `BARRY_Zugang_${person.name.replace(/[^\wäöüÄÖÜß-]+/g,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  a.href = url; a.download = zugangsDateiname(person);
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
   zeigeToast('Zugangspaket für '+person.name+' erstellt.');
 }
+/* ---------- Individuelle Startpasswörter & Zugangspakete für alle ----------
+   Jede Person erhält ein eigenes, gut lesbares Startpasswort (z. B. „spur-4821“). Es wird nur auf dem Gerät der Leitung
+   im Klartext gemerkt (Zugangsliste), damit es nicht verloren geht; in Zugangspaketen steht nur der Prüfwert. */
+const STARTPW_WOERTER = ['pfote','nase','spur','fund','suche','wald','leine','fährte','wiese','hang','bach','fels','moos','tanne','buche','eiche','kompass','karte','funk','weste'];
+function startPasswortErzeugen(){
+  const vergeben = new Set(state.personen.map(p=>p.startPasswort).filter(Boolean));
+  const zufall = n=>{ try{ const a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; }catch(e){ return Math.floor(Math.random()*n); } };
+  for(let i=0;i<200;i++){
+    const pw = STARTPW_WOERTER[zufall(STARTPW_WOERTER.length)].replace('ä','ae') + '-' + String(1000+zufall(9000));
+    if(!vergeben.has(pw)) return pw;
+  }
+  return 'start-'+Date.now().toString().slice(-6);
+}
+function zugangsberechtigtePersonen(){
+  const ich = aktuellePerson();
+  return state.personen.filter(p=>p.status!=='inaktiv' && (!ich || p.id!==ich.id) && (p.name||'').toLowerCase()!=='admin');
+}
+function fehlendeStartpasswoerterVergeben(){
+  let n=0; zugangsberechtigtePersonen().forEach(p=>{ if(!p.startPasswort){ p.startPasswort=startPasswortErzeugen(); n++; } });
+  if(n) speichereState(); return n;
+}
+function zugangsDateiname(person){ return `BARRY_Zugang_${person.name.replace(/[^\p{L}\p{N}-]+/gu,'_')}.json`; }
+function zugangslisteHerunterladen(){
+  const zeilen=[['Name','Benutzername','Startpasswort','Hund(e)','Datei'].join(';')];
+  zugangsberechtigtePersonen().filter(p=>p.startPasswort).sort((a,b)=>a.name.localeCompare(b.name,'de')).forEach(p=>{
+    const hunde=state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)).map(h=>h.name).join(', ');
+    zeilen.push([p.name, p.benutzername||'', p.startPasswort, hunde, zugangsDateiname(p)].map(csvZeileEscapen).join(';'));
+  });
+  csvDownload(zeilen, `BARRY_Zugangsliste_${new Date().toISOString().slice(0,10)}.csv`, '# Vertraulich: nur für die Staffelleitung. Passwort getrennt von der Datei weitergeben; es muss bei der ersten Anmeldung geändert werden.');
+}
+/* Minimaler ZIP-Schreiber (ohne Kompression) – bündelt alle Zugangspakete in einer Datei */
+const ZIP_CRC_TAB = (()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); t[n]=c>>>0; } return t; })();
+function zipCrc32(b){ let c=0xFFFFFFFF; for(let i=0;i<b.length;i++) c = ZIP_CRC_TAB[(c^b[i])&0xFF] ^ (c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function zipErstellen(dateien){ // [{name, text}]
+  const enc=new TextEncoder(), teile=[], zentral=[]; let offset=0;
+  const d=new Date(), dosZeit=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dosDatum=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
+  dateien.forEach(f=>{
+    const name=enc.encode(f.name), daten=enc.encode(f.text), crc=zipCrc32(daten);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+    lh.setUint16(10,dosZeit,true); lh.setUint16(12,dosDatum,true); lh.setUint32(14,crc,true); lh.setUint32(18,daten.length,true); lh.setUint32(22,daten.length,true);
+    lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+    teile.push(new Uint8Array(lh.buffer), name, daten);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+    ch.setUint16(12,dosZeit,true); ch.setUint16(14,dosDatum,true); ch.setUint32(16,crc,true); ch.setUint32(20,daten.length,true); ch.setUint32(24,daten.length,true);
+    ch.setUint16(28,name.length,true); ch.setUint32(42,offset,true);
+    zentral.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + daten.length;
+  });
+  const zGroesse = zentral.reduce((s,x)=>s+x.length,0);
+  const ende=new DataView(new ArrayBuffer(22));
+  ende.setUint32(0,0x06054b50,true); ende.setUint16(8,dateien.length,true); ende.setUint16(10,dateien.length,true); ende.setUint32(12,zGroesse,true); ende.setUint32(16,offset,true);
+  return new Blob([...teile, ...zentral, new Uint8Array(ende.buffer)], {type:'application/zip'});
+}
+function alleZugangspaketeHerunterladen(){
+  const neu = fehlendeStartpasswoerterVergeben();
+  const personen = zugangsberechtigtePersonen().filter(p=>p.startPasswort);
+  const dateien = personen.map(p=>({name: zugangsDateiname(p), text: JSON.stringify(zugangspaketDaten(p, p.startPasswort))}));
+  const blob = zipErstellen(dateien);
+  const url = URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=`BARRY_Zugangspakete_${new Date().toISOString().slice(0,10)}.zip`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast(`${dateien.length} Zugangspakete erstellt${neu?` (${neu} neue Startpasswörter vergeben)`:''}. Zugangsliste nicht vergessen.`);
+}
+
 /* Gemeinsame Importlogik für Datensicherung und Erststart – alle Schutzprüfungen an einer Stelle. */
 function bestandAusDateiImportieren(file){
     const reader = new FileReader();
@@ -3399,9 +3480,10 @@ function renderModalPerson(){
       </div>
       <div class="field" style="background:var(--soft);border-radius:10px;padding:10px 12px">
         <label style="margin-top:0">Zugangspaket für das eigene Gerät dieser Person</label>
-        <p class="hint" style="margin:0 0 8px">Erzeugt eine Datei nur mit dem, was diese Person braucht: Namen aller Mitglieder und Hunde, Termine, die Trainings- und Prüfungsdaten der eigenen Hunde, geteilte Ziele und Lehrmaterial-Links – <strong>ohne</strong> Adressen, Kontaktdaten, Qualifikationen und interne Notizen anderer. Nur diese Person erhält darin ein Passwort.</p>
+        <p class="hint" style="margin:0 0 8px">Erzeugt eine Datei nur mit dem, was diese Person braucht: Namen aller Mitglieder und Hunde, Termine, die Trainings- und Prüfungsdaten der eigenen Hunde, geteilte Ziele und Lehrmaterial-Links – <strong>ohne</strong> Adressen, Kontaktdaten, Qualifikationen und interne Notizen anderer. Nur diese Person erhält darin ein Passwort – ihr eigenes Startpasswort (steht auch in der Zugangsliste unter Verwaltung → Personen).</p>
         <div class="row" style="gap:6px;flex-wrap:wrap">
-          <input id="pf-zp-passwort" value="start" placeholder="Startpasswort für die Person" style="flex:1;min-width:160px" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input id="pf-zp-passwort" value="${esc(bestehend.startPasswort||'')}" placeholder="wird automatisch vergeben" style="flex:1;min-width:160px" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="btn btn-sm btn-ghost" id="pf-zp-neu" type="button" title="Neues Startpasswort erzeugen">↻</button>
           <button class="btn btn-sm btn-primary" id="pf-zp-erstellen" type="button">Zugangspaket herunterladen</button>
         </div>
         <div class="hint" id="pf-zp-hint" style="margin-top:6px"></div>
@@ -3433,10 +3515,14 @@ function bindModalPerson(){
     };
   }
   const zpBtn = document.getElementById('pf-zp-erstellen');
+  const zpNeu = document.getElementById('pf-zp-neu');
+  if(zpNeu) zpNeu.onclick = ()=>{ document.getElementById('pf-zp-passwort').value = startPasswortErzeugen(); document.getElementById('pf-zp-hint').textContent = 'Neues Startpasswort – wird beim Herunterladen des Zugangspakets gespeichert.'; };
   if(zpBtn) zpBtn.onclick = ()=>{
-    const pw = document.getElementById('pf-zp-passwort').value.trim();
-    if(pw.length<4){ document.getElementById('pf-zp-hint').textContent = 'Bitte ein Startpasswort mit mindestens 4 Zeichen eingeben.'; return; }
     const p = state.personen.find(x=>x.id===modal.id);
+    let pw = document.getElementById('pf-zp-passwort').value.trim();
+    if(!pw){ pw = p.startPasswort || startPasswortErzeugen(); document.getElementById('pf-zp-passwort').value = pw; }
+    if(pw.length<4){ document.getElementById('pf-zp-hint').textContent = 'Bitte ein Startpasswort mit mindestens 4 Zeichen eingeben.'; return; }
+    if(p.startPasswort!==pw){ p.startPasswort = pw; speichereState(); }
     zugangspaketErstellen(p, pw);
     document.getElementById('pf-zp-hint').textContent = `Zugangspaket erstellt. Passwort „${pw}“ bitte getrennt von der Datei mitteilen; die Person muss es beim ersten Login ändern.`;
   };
@@ -9047,7 +9133,8 @@ const HILFE_ARTIKEL = [
   {id:"verwaltung-rechte", kategorie:"Verwaltung", titel:"Rollen und individuelle Zusatzrechte vergeben", rollen:["leitung"], text:"\n<p>Beim Anlegen oder Bearbeiten einer Person werden die Rollen per H\u00e4kchen vergeben. Zus\u00e4tzlich lassen\nsich unter <strong>Rollen &amp; Rechte</strong> einzelne, frei benannte Zusatzrechte definieren; die\nbeiden vorbelegten Eintr\u00e4ge \u201eKalender verwalten\" und \u201eAusbildung verwalten\" wirken sich tats\u00e4chlich auf\ndie Berechtigung aus, auch wenn die Person keine Ausbilder-Rolle hat.</p>\n"},
   {id:"qualifikationen", kategorie:"Verwaltung", titel:"Qualifikationen und Ausbildungsstand pflegen", rollen:["ausbilder", "leitung"], text:"\n<p>Unter <strong>Verwaltung → Qualifikationen</strong> steht der Katalog aller Ausbildungen und Fortbildungen – zuerst alle Aus- und Fortbildungen der Rettungshundearbeit (Grundausbildung, Fach- und Zusatzausbildung, Fachdienstausbildung RHd mit allen Theorieteilen, Prüfung und jährliche Unterweisungen, Empfehlungen), danach Führung, Sanität, Betreuung und Technik. ★ markiert die Pflicht für Rettungshundeführende laut Dienstanweisung „Rettungshundearbeit in Hessen“ und Staffel-Merkblatt; fehlende ★-Einträge zeigt „Fristen &amp; Lücken“. Der Katalog ist vorbelegt, enthält auch die Ausbilder-Qualifikationen (Erwachsenengerechte Unterrichtsgestaltung, Rettungshunde-Ausbilderschein Fläche/Trümmer) und lässt sich um eigene Einträge ergänzen: Im Personen-Dialog über „➕ Sonstige Ausbildung (eigener Name)“ – diese landen in der Rubrik „Sonstige Ausbildungen“. Die <strong>Modulprüfungen 1.1, 1.2 (oder VDH-Begleithundeprüfung mit Verkehrsteil), 1.3 und 2 (Suchprüfung)</strong> stehen ebenfalls im Katalog; bei der Suchprüfung werden zusätzlich Sparte und Plakettennummer erfasst und beim Hund als Plakette eingetragen; beim Eintragen setzt BARRY das Modul unter Wissen &amp; Material → Prüfungsordnungen für den geführten Hund automatisch auf „bestanden“ (bei mehreren Hunden wird im Personen-Dialog abgefragt, mit welchem Hund die Prüfung abgelegt wurde; in der Schnelleingabe-Tabelle gilt der Hund der jeweiligen Zeile). Im selben Dialog werden auch <strong>Hospitationen</strong> je Thema mit Datum, Ausbilder/in und Unterlage (Datei oder Link) festgehalten. Je Eintrag können ein <strong>Wiederholungsintervall</strong> (Monate) und die Markierung <strong>Pflichtqualifikation</strong> gesetzt werden.</p>\n<p>Die Zuordnung zu Personen geht am einfachsten direkt im <strong>Personen-Dialog</strong> (Verwaltung → Personen → Person öffnen → Abschnitt „Qualifikationen dieser Person“): Qualifikation aus dem Dropdown wählen, Datum eintragen – „Gültig bis“ wird bei hinterlegtem Intervall automatisch vorgeschlagen. Alternativ unter Qualifikationen → „+ Zuordnung“, oder für viele Einträge auf einmal per <strong>CSV</strong> (Vorlage herunterladen, ausfüllen, einlesen – additiv, unbekannte Bezeichnungen werden neu in den Katalog aufgenommen).</p>\n"},
   {id:"fristen", kategorie:"Verwaltung", titel:"Fristen & Lücken, Jubiläen und Erinnerungen", rollen:["ausbilder", "leitung"], text:"\n<p><strong>Verwaltung → Fristen &amp; Lücken</strong> wertet automatisch aus: abgelaufene und bald ablaufende Qualifikationen (auf Basis der „Gültig bis“-Daten), Personen ohne eine als Pflicht markierte Qualifikation, Hund/Team-Module, die kurz vor dem Abschluss stehen, sowie <strong>Jubiläen</strong> (5/10/15/… Jahre im DRK, aus „Mitglied im DRK seit“ im Personen-Dialog).</p>\n<p>Weil BARRY offline arbeitet, gibt es keine Push-Benachrichtigungen. Stattdessen zeigt die <strong>Startseite</strong> für Leitung und Ausbilder/-innen eine Karte „Für Leitung &amp; Ausbildung“ mit den wichtigsten offenen Punkten und den Terminen der nächsten sieben Tage inklusive Zusagen und fehlender Rückmeldungen – ein Klick führt zur jeweiligen Verwaltungsseite.</p>\n"},
-  {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Mitgliedsnummer, Adresse, E-Mail, Telefon, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte und je eine Spalte „Ausb: …“ für jede Ausbildung der Rettungshundearbeit (Pflicht und empfohlen) sowie die Führungslehrgänge (Datum oder x). Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten das Startpasswort <strong>start</strong> und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
+  {id:"csv-schnellstart", kategorie:"Verwaltung", titel:"Mitglieder & Hunde per Tabelle einlesen, Duplikate zusammenführen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung → Datensicherung → Schnellstart: Mitglieder &amp; Hunde aus Tabelle</strong> lässt sich eine CSV-Vorlage herunterladen, in Excel/Calc befüllen und wieder einlesen. Spalten u. a.: Name, Rolle, Benutzername, Mitgliedsnummer, Adresse, E-Mail, Telefon, Geburtsdatum, MitgliedSeit, HundName, HundRasse, HundGeburtsdatum (TT.MM.JJJJ wird erkannt), HundGeschlecht (ruede/huendin), HundChipnummer, Sparten (flaeche, truemmer, mantrailing) sowie Plaketten-Nummern je Sparte und je eine Spalte „Ausb: …“ für jede Ausbildung der Rettungshundearbeit (Pflicht und empfohlen) sowie die Führungslehrgänge (Datum oder x). Fehlende Spalten sind kein Problem – nur „Name“ ist Pflicht.</p>\n<p>Der Import ist <strong>additiv</strong> und erkennt bereits vorhandene Namen: Bestehende Personen und Hunde werden nicht doppelt angelegt, sondern nur um leere Felder ergänzt. Neue Personen erhalten ein eigenes Startpasswort (Zugangsliste unter Verwaltung → Personen → 🔑 Zugänge) und müssen es beim ersten Login ändern. Hat eine Person mehrere Hunde, einfach eine weitere Zeile mit demselben Namen und dem nächsten Hund anlegen. Ein Hund, der von zwei Personen geführt wird, bekommt die zweite Person in der Spalte „ZweitHundefuehrer“ – oder er steht bei beiden Personen (gleicher Name + Chip/Wurftag), dann erkennt BARRY ihn und übernimmt die zweite Person automatisch als Zweit-Hundeführer/in. Sollten dennoch Doppelungen entstanden sein, zeigt <strong>Verwaltung → Personen</strong> oben einen Kasten „Mögliche Duplikate“ mit einem Klick zum Zusammenführen.</p>\n<p>Wichtig: Der Kasten <strong>Import</strong> darüber ist etwas anderes – er spielt eine komplette JSON-Sicherung ein und <em>ersetzt</em> den gesamten Bestand.</p>\n"},
+    {id:"zugaenge", kategorie:"Verwaltung", titel:"Zugänge für Mitglieder: Startpasswörter und Zugangspakete", rollen:["leitung"], text:"\n<p><strong>Zugänge für Mitglieder:</strong> Unter Verwaltung → Personen → <strong>🔑 Zugänge für Mitglieder</strong> erhält jede Person ein eigenes, gut lesbares Startpasswort (z. B. „spur-4821“). „Zugangsliste (CSV)“ listet Name, Startpasswort, Hund(e) und Dateiname – vertraulich, nur für die Staffelleitung. „Alle Zugangspakete (ZIP)“ erzeugt je Person eine eigene Datei mit nur ihren Daten und Rechten. Datei und Passwort getrennt weitergeben; bei der ersten Anmeldung wird das Passwort geändert. Einzelne Pakete gibt es weiterhin im Personen-Dialog (↻ erzeugt ein neues Startpasswort).</p>\n"},
   {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Ohne Synchronisation liegt das Passwort nur auf dem eigenen Gerät. Die Leitung erstellt deshalb unter Verwaltung → Personen → Person öffnen ein <strong>Zugangspaket</strong> mit neuem Startpasswort (enthält nur Namen, Termine und die Daten des eigenen Teams – keine Kontaktdaten oder internen Notizen anderer). Das Mitglied spielt die Datei am Anmeldebildschirm unter „Kein Zugang mehr? Datei von der Leitung einspielen“ ein und meldet sich mit dem Startpasswort an. Auf einem gemeinsam genutzten Gerät genügt „Passwort zurücksetzen“ im Personen-Dialog.</p>\n<p><strong>Gerät zurücksetzen:</strong> Am Anmeldebildschirm im selben Kasten „Alle BARRY-Daten auf diesem Gerät löschen“ – entfernt Bestand, Sicherheitskopien und Zwischenspeicher; das Home-Icon kann danach gelöscht werden.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
   {id:"hund-felder", kategorie:"Verwaltung", titel:"Hundeprofil: Geschlecht, Chipnummer, Plaketten", rollen:["ausbilder", "leitung"], text:"\n<p>Im Dialog <strong>Verwaltung → Hunde → Hund bearbeiten</strong> lassen sich neben Name, Rasse und Wurftag auch <strong>Geschlecht</strong> (Rüde/Hündin), die <strong>Chip-/Identifikationsnummer</strong> und beliebig viele <strong>Plaketten</strong> (Sparte, Plaketten-/ID-Nr., Datum) erfassen – genau die Angaben, die die offiziellen Bewertungsbögen und Anmeldeformulare abfragen. Zusätzlich: Sparten, Rassegruppe (für automatische Trainingshinweise) und die festgelegte Anzeigeart.</p>\n"},
   {id:"terminplan", kategorie:"Organisation & Termine", titel:"Terminplan an Mitglieder verteilen und aktualisieren", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Leitung/Ausbildung:</strong> Nach Änderungen am Jahresplan unter Organisation &amp; Termine → Kalender → „🔄 Terminplan verteilen / aktualisieren“ auf <strong>Terminplan exportieren</strong> tippen und die Datei an die Mitglieder schicken. Sie enthält nur die Staffeltermine (keine Ausbilder-internen oder persönlichen Termine, keine Planungsnotizen, keine Personendaten) sowie die Löschvermerke.</p>\n<p>Wird ein Staffeltermin gelöscht, fragt BARRY nach einem kurzen <strong>Vermerk</strong> (z. B. „fällt wegen Unwetter aus – Ersatz am 17.10.“). Der Vermerk wird mit dem nächsten Export verteilt; der Termin verschwindet dann auch bei den Mitgliedern und erscheint dort unter „Entfallene Termine“.</p>\n<p><strong>Mitglieder:</strong> Im selben Kasten auf <strong>Terminplan einlesen</strong> tippen und die Datei auswählen. Eine Vorschau zeigt neue, geänderte und entfallene Termine. Abgeglichen wird über eine feste Termin-Kennung (zusätzlich über Titel + Beginn), deshalb entsteht nichts doppelt; eigene Zusagen/Absagen und persönliche Termine bleiben erhalten. Ein älterer Plan holt bereits gelöschte Termine nicht zurück.</p>\n"},
