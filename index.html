@@ -1174,6 +1174,7 @@ function leererState(){
     anwesenheiten: [],   // {id,terminId,personId,status:'anwesend'|'entschuldigt'|'unentschuldigt'}
     trainingseintraege: [], // {id,personId,hundId,datum,kategorie,thema,notizen,erstelltVon}
     alltagseintraege: [], // {id,personId,hundId,datum,kategorie,thema,notizen,erstelltVon}
+    trainingskarten: [], // „Mein heutiges Training“: {id,personId,hundId,datum,terminId,ziel,plan,check,erreicht,gut,weniger,arbeiten,tagebuchId}
     hausaufgaben: [], // {id,hundId,titel,beschreibung,faelligBis,zugewiesenVon,zugewiesenAm,status:'offen'|'erledigt',erledigtAm,rueckmeldung}
     einsaetze: [], // {id,alarmierungZeit,meldender,einsatzort,vermisstName,vermisstAlter,vermisstBeschreibung,
                     //  medizinischerZustand,psychischerZustand,status,ereignisse:[{id,zeit,text}],
@@ -1287,6 +1288,7 @@ function migriereState(s){
   if(!Array.isArray(s.lehrmaterialOrdner)) s.lehrmaterialOrdner = [];
   if(!Array.isArray(s.hospitationen)) s.hospitationen = [];
   if(!Array.isArray(s.geloeschteTermine)) s.geloeschteTermine = [];
+  if(!Array.isArray(s.trainingskarten)) s.trainingskarten = [];
   s.hunde.forEach(h=>{
     if(!Array.isArray(h.einschaetzungen)) h.einschaetzungen = [];
     if(h.ausbilderNotiz && !h.einschaetzungen.length){
@@ -1629,6 +1631,10 @@ function renderStart(person){
     </div>
 
     ${(istLeitung || hatAusbilderRecht(person)) ? renderStartLeitungsHinweise(person) : ''}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px">
+      ${eigeneHunde.length?`<button class="btn btn-primary" id="btn-start-trainingskarte">🐾 Mein heutiges Training</button>`:''}
+      <button class="btn" id="btn-start-funk">📻 Funk-Spickzettel</button>
+    </div>
     ${renderStartGeteilteZiele(eigeneHunde)}
     ${renderUebungDesTages(person, eigeneHunde)}
     <div class="card card-pad" style="margin:20px 0">
@@ -1712,6 +1718,10 @@ function bindStart(person){
   document.querySelectorAll('[data-goto-verwaltung]').forEach(el=>{
     el.onclick = ()=>{ route = {bereich:'verwaltung', unter:el.dataset.gotoVerwaltung, id:null}; render(); };
   });
+  const tkBtn=document.getElementById('btn-start-trainingskarte');
+  if(tkBtn) tkBtn.onclick = ()=>{ modal={type:'trainingskarte'}; render(); };
+  const fkBtn=document.getElementById('btn-start-funk');
+  if(fkBtn) fkBtn.onclick = ()=>{ route={bereich:'wissen',unter:null,id:null}; wissenTab='funk'; render(); window.scrollTo(0,0); };
   document.querySelectorAll('[data-goto-planung]').forEach(el=>{
     el.onclick = ()=>{ route = {bereich:'ausbildung', unter:null, id:null}; ausbildungTab='planung'; render(); };
   });
@@ -3057,7 +3067,7 @@ function zugangspaketErstellen(person, startpasswort){
     ruckmeldungen: (state.ruckmeldungen||[]).filter(r=>r.personId===person.id),
     qualifikationen: state.qualifikationen, personQualifikationen: [], hospitationen: [],
     pruefungsstatus: nurEigene(state.pruefungsstatus), findewilleProfile: nurEigene(state.findewilleProfile),
-    hausaufgaben: nurEigene(state.hausaufgaben), trainingseintraege: nurEigene(state.trainingseintraege), alltagseintraege: nurEigene(state.alltagseintraege),
+    hausaufgaben: nurEigene(state.hausaufgaben), trainingskarten: (state.trainingskarten||[]).filter(k=>k.personId===person.id), trainingseintraege: nurEigene(state.trainingseintraege), alltagseintraege: nurEigene(state.alltagseintraege),
     rhEintraege: nurEigene(state.rhEintraege), mantrailingEintraege: nurEigene(state.mantrailingEintraege),
     lehrmaterialOrdner: state.lehrmaterialOrdner, lehrmaterial: state.lehrmaterial.filter(m=>m.typ==='link'),
     orte: state.orte||[],
@@ -3119,6 +3129,7 @@ function renderModal(){
   if(modal.type==='hund') return renderModalHund();
   if(modal.type==='csvVorschau') return renderModalCsvVorschau();
   if(modal.type==='terminImport') return renderModalTerminImport();
+  if(modal.type==='trainingskarte') return renderModalTrainingskarte();
   if(modal.type==='qualifikation') return renderModalQualifikation();
   if(modal.type==='zuordnung') return renderModalZuordnung();
   if(modal.type==='zusatzrecht') return renderModalZusatzrecht();
@@ -3144,6 +3155,7 @@ function bindModal(person){
   if(modal.type==='hund') return bindModalHund();
   if(modal.type==='csvVorschau') return bindModalCsvVorschau();
   if(modal.type==='terminImport') return bindModalTerminImport();
+  if(modal.type==='trainingskarte') return bindModalTrainingskarte();
   if(modal.type==='qualifikation') return bindModalQualifikation();
   if(modal.type==='zuordnung') return bindModalZuordnung();
   if(modal.type==='zusatzrecht') return bindModalZusatzrecht();
@@ -4440,6 +4452,287 @@ function renderEntfalleneTermineHinweis(){
   </details>`;
 }
 
+/* =========================================================
+   MEIN HEUTIGES TRAINING – digitale Trainingskarte (ersetzt die Papierkarte)
+   Vor dem Training: Ziel, Vorhaben, Ausrüstung. Danach: Ziel erreicht?, gut/weniger gut, woran arbeiten.
+   Vorschläge kommen aus geteilten Zielen, Hausaufgaben, Übungsständen und der letzten Karte.
+   ========================================================= */
+const TK_CHECKLISTE = [
+  {id:'karte', label:'Karte / Kompass'},{id:'funk', label:'Funkgerät'},{id:'puder', label:'Puder'},
+  {id:'wasser', label:'Wasser für den Hund'},{id:'eh', label:'EH-Material'},{id:'abfrage', label:'Abfragekarte'},
+];
+function tkHeute(){ return new Date().toISOString().slice(0,10); }
+function tkKarteFinden(personId, hundId, datum){ return (state.trainingskarten||[]).find(k=>k.personId===personId && k.hundId===hundId && k.datum===datum); }
+function tkLetzteKarte(personId, hundId, vorDatum){
+  return (state.trainingskarten||[]).filter(k=>k.personId===personId && k.hundId===hundId && k.datum<vorDatum).sort((a,b)=>b.datum.localeCompare(a.datum))[0] || null;
+}
+function tkTerminHeute(){
+  const d=tkHeute();
+  return state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff' && String(t.beginn||'').slice(0,10)===d).sort((a,b)=>String(a.beginn).localeCompare(String(b.beginn)))[0] || null;
+}
+function tkVorschlaege(person, hund){
+  const v=[];
+  (hund.ziele||[]).filter(z=>!z.erledigt && (z.sichtbarkeit==='team' || darfTrainingBearbeiten(person))).forEach(z=>v.push({quelle:'Ziel', text:z.text}));
+  (state.hausaufgaben||[]).filter(h=>h.hundId===hund.id && !h.erledigt && h.status!=='erledigt').slice(0,3).forEach(h=>v.push({quelle:'Hausaufgabe', text:h.titel||h.thema||h.text||''}));
+  const letzte = tkLetzteKarte(person.id, hund.id, tkHeute());
+  if(letzte && letzte.arbeiten) v.push({quelle:'letztes Training', text:letzte.arbeiten});
+  Object.entries(hund.uebungsStand||{}).filter(([id,st])=>st && !st.kann && st.stufe).slice(0,4).forEach(([id,st])=>{
+    const u=ALLE_UEBUNGEN.find(x=>x.id===id); if(!u) return; const n=(u.levels||[]).length;
+    v.push({quelle:'Übung', text:`${u.name} – Stufe ${Math.min(st.stufe+1,n)} von ${n}`});
+  });
+  return v.filter(x=>x.text && String(x.text).trim());
+}
+function tkText(k){
+  const person=state.personen.find(p=>p.id===k.personId), hund=state.hunde.find(h=>h.id===k.hundId), termin=k.terminId?state.termine.find(t=>t.id===k.terminId):null;
+  const ja=TK_CHECKLISTE.filter(c=>k.check&&k.check[c.id]).map(c=>c.label), nein=TK_CHECKLISTE.filter(c=>!(k.check&&k.check[c.id])).map(c=>c.label);
+  const zeilen=[
+    `🐾 Mein heutiges Training – ${fmtDatum(k.datum)}`,
+    `Hundeführer/in: ${person?person.name:'?'} · Hund: ${hund?hund.name:'?'}`,
+    termin?`Termin: ${termin.titel}${termin.ort?' ('+termin.ort+')':''}`:'',
+    '', `1. Mein Ziel heute: ${k.ziel||'–'}`, `2. Mit meinem Hund möchte ich: ${k.plan||'–'}`,
+    `Dabei: ${ja.join(', ')||'–'}${nein.length?` · Fehlt: ${nein.join(', ')}`:''}`,
+  ];
+  if(k.erreicht || k.gut || k.weniger || k.arbeiten){
+    zeilen.push('', `3. Ziel erreicht: ${({ja:'ja',teilweise:'teilweise',nein:'nein'})[k.erreicht]||'–'}`, `4. Lief gut: ${k.gut||'–'}`, `   Lief weniger gut: ${k.weniger||'–'}`, `5. Daran arbeite ich noch: ${k.arbeiten||'–'}`);
+  }
+  return zeilen.filter((z,i)=>z!=='' || i>0).join('\n').replace(/\n{3,}/g,'\n\n');
+}
+function renderModalTrainingskarte(){
+  const person=aktuellePerson(); if(!person) return '';
+  const hunde=state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
+  if(!hunde.length) return `<div class="modal-back"><div class="modal"><div class="modal-head"><h3>Mein heutiges Training</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div><div class="modal-body"><p class="hint">Dir ist noch kein Hund zugeordnet.</p></div></div></div>`;
+  const hund=hunde.find(h=>h.id===modal.hundId) || hunde[0]; modal.hundId=hund.id;
+  const datum=modal.datum||tkHeute();
+  const k=tkKarteFinden(person.id, hund.id, datum) || {check:{}};
+  const termin=tkTerminHeute();
+  const vor=tkVorschlaege(person, hund);
+  const nachher = !!(k.erreicht||k.gut||k.weniger||k.arbeiten) || modal.nachher;
+  return `
+  <div class="modal-back"><div class="modal" style="max-width:640px">
+    <div class="modal-head"><h3>🐾 Mein heutiges Training</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
+    <div class="modal-body">
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="chip">${esc(person.name)}</span>
+        ${hunde.length>1?`<select id="tk-hund" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${h.id===hund.id?'selected':''}>🐕 ${esc(h.name)}</option>`).join('')}</select>`:`<span class="chip">🐕 ${esc(hund.name)}</span>`}
+        <span class="chip muted">${fmtDatum(datum)}</span>
+        ${termin?`<span class="chip muted">${esc(termin.titel)}</span>`:''}
+      </div>
+      <div class="field"><label>1. Welches Ziel habe ich heute?</label>
+        ${vor.length?`<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px">${vor.map((x,i)=>`<button type="button" class="chip" data-tk-vorschlag="${i}" style="cursor:pointer;border:none;text-align:left" title="übernehmen">＋ ${esc(x.text.length>60?x.text.slice(0,58)+'…':x.text)} <small class="hint">(${esc(x.quelle)})</small></button>`).join('')}</div>`:''}
+        <textarea id="tk-ziel" rows="2" style="width:100%;box-sizing:border-box" placeholder="z. B. Freiverweisen auf 30 m sicher zeigen">${esc(k.ziel||'')}</textarea></div>
+      <div class="field"><label>2. Was möchte ich mit meinem Hund machen?</label>
+        <textarea id="tk-plan" rows="2" style="width:100%;box-sizing:border-box" placeholder="z. B. zwei kurze Flächensuchen mit liegender VP, danach Unterordnung">${esc(k.plan||'')}</textarea></div>
+      <div class="field"><label>Habe ich alles dabei?</label>
+        <div class="row" style="gap:6px;flex-wrap:wrap">${TK_CHECKLISTE.map(c=>`<label class="chip ${k.check&&k.check[c.id]?'':'muted'}" style="cursor:pointer;gap:6px;display:inline-flex;align-items:center"><input type="checkbox" data-tk-check="${c.id}" ${k.check&&k.check[c.id]?'checked':''}> ${esc(c.label)}</label>`).join('')}</div></div>
+      <details id="tk-nachher" ${nachher?'open':''} style="margin-top:6px;border-top:1px dashed var(--line);padding-top:8px">
+        <summary style="cursor:pointer;font-weight:700">Nach dem Training</summary>
+        <div class="field" style="margin-top:8px"><label>3. Habe ich mein Ziel erreicht?</label>
+          <div class="row" style="gap:6px">${[['ja','Ja'],['teilweise','Teilweise'],['nein','Nein']].map(([v,l])=>`<label class="chip ${k.erreicht===v?'':'muted'}" style="cursor:pointer;display:inline-flex;gap:6px;align-items:center"><input type="radio" name="tk-erreicht" value="${v}" ${k.erreicht===v?'checked':''}> ${l}</label>`).join('')}</div></div>
+        <div class="field"><label>4. Was lief gut?</label><textarea id="tk-gut" rows="2" style="width:100%;box-sizing:border-box">${esc(k.gut||'')}</textarea></div>
+        <div class="field"><label>Was lief weniger gut?</label><textarea id="tk-weniger" rows="2" style="width:100%;box-sizing:border-box">${esc(k.weniger||'')}</textarea></div>
+        <div class="field"><label>5. Woran muss ich noch arbeiten?</label><textarea id="tk-arbeiten" rows="2" style="width:100%;box-sizing:border-box" placeholder="wird beim nächsten Training als Vorschlag angeboten">${esc(k.arbeiten||'')}</textarea></div>
+      </details>
+      <p class="hint" style="margin-top:8px">„An Ausbilder/-in senden“ öffnet das Teilen-Menü (z. B. WhatsApp, Signal, DRK.Chat) mit Name, Hund und allen Angaben.</p>
+    </div>
+    <div class="modal-foot" style="flex-wrap:wrap;gap:6px">
+      <button class="btn btn-ghost" id="tk-tagebuch" title="Als Eintrag im Trainingstagebuch speichern">📓 Ins Tagebuch</button>
+      <button class="btn" id="tk-speichern">Speichern</button>
+      <button class="btn btn-primary" id="tk-senden">📤 An Ausbilder/-in senden</button>
+    </div>
+  </div></div>`;
+}
+function tkAusFormular(person){
+  const hundId=modal.hundId, datum=modal.datum||tkHeute();
+  state.trainingskarten = state.trainingskarten || [];
+  let k=tkKarteFinden(person.id, hundId, datum);
+  if(!k){ k={id:uid(), personId:person.id, hundId, datum, check:{}}; state.trainingskarten.push(k); }
+  const termin=tkTerminHeute();
+  Object.assign(k, {
+    terminId: termin ? termin.id : (k.terminId||''),
+    ziel: document.getElementById('tk-ziel').value.trim(), plan: document.getElementById('tk-plan').value.trim(),
+    check: Object.fromEntries([...document.querySelectorAll('[data-tk-check]')].map(c=>[c.dataset.tkCheck, c.checked])),
+    erreicht: (document.querySelector('input[name="tk-erreicht"]:checked')||{}).value || '',
+    gut: document.getElementById('tk-gut').value.trim(), weniger: document.getElementById('tk-weniger').value.trim(), arbeiten: document.getElementById('tk-arbeiten').value.trim(),
+    aktualisiertAm: nowIso(),
+  });
+  return k;
+}
+function bindModalTrainingskarte(){
+  const person=aktuellePerson();
+  document.getElementById('m-schliessen').onclick = schliesseModal;
+  if(!document.getElementById('tk-speichern')) return;
+  const hs=document.getElementById('tk-hund'); if(hs) hs.onchange = ()=>{ modal.hundId=hs.value; render(); };
+  const hund=state.hunde.find(h=>h.id===modal.hundId);
+  const vor=tkVorschlaege(person, hund);
+  document.querySelectorAll('[data-tk-vorschlag]').forEach(b=>b.onclick=()=>{
+    const t=document.getElementById('tk-ziel'); const x=vor[+b.dataset.tkVorschlag].text;
+    t.value = t.value.trim() ? t.value.trim()+'\n'+x : x; b.style.opacity='.45';
+  });
+  document.querySelectorAll('[data-tk-check]').forEach(c=>c.onchange=()=>{ c.closest('label').classList.toggle('muted', !c.checked); });
+  document.querySelectorAll('input[name="tk-erreicht"]').forEach(r=>r.onchange=()=>{ document.querySelectorAll('input[name="tk-erreicht"]').forEach(x=>x.closest('label').classList.toggle('muted', !x.checked)); });
+  document.getElementById('tk-nachher').ontoggle = e=>{ modal.nachher = e.target.open; };
+  document.getElementById('tk-speichern').onclick = ()=>{ tkAusFormular(person); speichereState(); zeigeToast('Trainingskarte gespeichert.'); };
+  document.getElementById('tk-senden').onclick = async ()=>{
+    const k=tkAusFormular(person); speichereState();
+    const text=tkText(k);
+    try{ if(navigator.share){ await navigator.share({title:'Mein heutiges Training', text}); zeigeToast('Geteilt.'); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+    try{ await navigator.clipboard.writeText(text); zeigeToast('Text kopiert – jetzt im Messenger einfügen.'); }
+    catch(e){ prompt('Text kopieren und im Messenger einfügen:', text); }
+  };
+  document.getElementById('tk-tagebuch').onclick = ()=>{
+    const k=tkAusFormular(person);
+    const notizen=[k.plan?'Vorhaben: '+k.plan:'', k.erreicht?'Ziel erreicht: '+k.erreicht:'', k.gut?'Lief gut: '+k.gut:'', k.weniger?'Lief weniger gut: '+k.weniger:'', k.arbeiten?'Daran arbeiten: '+k.arbeiten:''].filter(Boolean).join('\n');
+    const vorhanden = k.tagebuchId && state.trainingseintraege.find(e=>e.id===k.tagebuchId);
+    const daten={hundId:k.hundId, personId:person.id, datum:k.datum, kategorie:'sonstiges', thema:k.ziel||'Training', notizen};
+    if(vorhanden) Object.assign(vorhanden, daten);
+    else { const e=Object.assign({id:uid(), erstelltVon:person.id}, daten); state.trainingseintraege.push(e); k.tagebuchId=e.id; }
+    speichereState(); zeigeToast(vorhanden?'Tagebucheintrag aktualisiert.':'Im Trainingstagebuch gespeichert.');
+  };
+}
+
+/* =========================================================
+   FUNK-SPICKZETTEL (Wissen & Material → Funk)
+   Quelle: „Ausbildungsunterlage Sprechfunk im BOS-Digitalfunk“, DRK Kassel,
+   Fassung 1.0 – Entwurf zur fachlichen Prüfung, Stand September 2026.
+   [H] = hergeleitet, [offen] = noch zu klären – so aus der Unterlage übernommen.
+   ========================================================= */
+const FUNK_QUELLE = 'Quelle: Ausbildungsunterlage „Sprechfunk im BOS-Digitalfunk“, DRK Kassel, Fassung 1.0 (Entwurf zur fachlichen Prüfung, Stand 09/2026). Verbindlich sind die geltenden Vorschriften und die Weisungen der Integrierten Leitstelle Kassel. Mit ⚠ markierte Punkte sind noch mit Leitstelle/Servicepoint abzustimmen.';
+const FUNK_STATUS_FZ = [
+  ['0','Prio.Sprechen','Priorisierter (dringender) Sprechwunsch','z. B. Nachforderung'],
+  ['1','E-bereit Funk','Einsatzbereit über Funk, außerhalb der Wache','z. B. auf der Rückfahrt einsatzbereit'],
+  ['2','E-bereit Wache','Einsatzbereit auf der Wache bzw. am Standort','am Stützpunkt eingetroffen'],
+  ['3','Einsatzübernahme','Einsatz übernommen – Ausrücken','Alarm quittiert, Fahrzeug rückt aus'],
+  ['4','Einsatzort eing.','Am Einsatzort eingetroffen','auch Bereitstellungsraum'],
+  ['5','Sprechwunsch','Einsatzbezogener Sprechwunsch','Regelweg, um die Leitstelle anzusprechen'],
+  ['6','Nicht E-bereit','Nicht einsatzbereit','vorher telefonisch Rücksprache mit der Leitstelle'],
+  ['7','Einsatzgebunden','Keine weiteren Aufträge möglich','im Rettungsdienst: Patient aufgenommen'],
+  ['8','Bed. Verfügbar','Eingeschränkt verfügbar, einsatzbereit mit eigenem Auftrag','im Rettungsdienst: am Zielort eingetroffen'],
+  ['9','Fremdanmeldung','Fremdanmeldung bzw. nach Regelung im Leitstellenbereich','nach örtlicher Regelung'],
+  ['*','Einsatzauftrag?','Einsatzauftrag und Einsatzzuordnung anfordern','Abruf der Einsatzdaten'],
+];
+const FUNK_STATUS_LST = [
+  ['A','An alle','Aufmerksamkeitsruf an alle'],['C','Melden','Für neuen Einsatz melden'],['E','Eigensicherung','Hinweis auf besondere Eigensicherung'],
+  ['F','Telefon','Leitstelle über Telefon ansprechen'],['H','Wache anfahren','Dienststelle bzw. Standort anfahren'],['J','Sprechen!','Sprechaufforderung'],
+  ['L','entlassen','Aus dem Einsatz entlassen'],['P','SR zugelassen','Sonder- bzw. Wegerecht möglich'],['U','Status ungültig','Status aktualisieren'],
+  ['h','Standort?','Standort durchgeben'],['u','Gerät überprüfen','Status bzw. Funkgerät überprüfen'],['–','Einrücken','Einsatz abbrechen, Standort anfahren'],['–','Lagemeldung?','Lagemeldung abgeben'],
+];
+const FUNK_BETRIEBSWOERTER = [
+  ['Kommen','Gegenstelle soll antworten'],['Verstanden','Anruf/Meldung verstanden'],['Ende','Gespräch beendet, Gruppe frei'],['Frage','Ankündigung einer Frage'],
+  ['Ich wiederhole','Meldung wird wiederholt'],['Wiederholen Sie (ab … / bis …)','Bitte um Wiederholung'],['Ich berichtige','Berichtigung eines Fehlers'],
+  ['Ich buchstabiere / Buchstabieren Sie','schwieriges Wort buchstabieren'],['Warten Sie','Gegenstelle soll warten'],['Ich rufe wieder','nicht aufnahmebereit, melde mich wieder'],
+  ['Nicht zu hören – Ende','nach dreimaligem Anruf keine Antwort'],['Übung','Kennzeichnung von Übungsnachrichten'],['Tatsache','echte Meldung während einer Übung'],
+];
+const FUNK_RUFNAMEN = [
+  ['Rotkreuz Kassel 4-10-4','vier-zehn-vier','Fahrzeug 1 (Fahrzeugfunkgerät)','TMO'],
+  ['4-10-41','vier-zehn-einundvierzig','Handfunkgerät 1 – Führung (vereinfacht: „4-10-Führung“)','DMO'],
+  ['4-10-42','vier-zehn-zwoundvierzig','Handfunkgerät 2 – Suchtrupp 1','DMO'],
+  ['4-10-43','vier-zehn-dreiundvierzig','Handfunkgerät 3 – Suchtrupp 2','DMO'],
+  ['4-10-44','vier-zehn-vierundvierzig','Handfunkgerät 4 – Suchtrupp 3','DMO'],
+  ['Rotkreuz Kassel 4-10-2','vier-zehn-zwo','Fahrzeug 2 (bei Bedarf)','TMO'],
+  ['4-10-45','vier-zehn-fünfundvierzig','Handfunkgerät 5 – Suchtrupp 4 / Bereitstellung','DMO'],
+  ['4-10-46','vier-zehn-sechsundvierzig','Handfunkgerät 6 – Verbindung (z. B. zur Polizei)','DMO'],
+];
+const FUNK_SUCHMELDUNGEN = [
+  ['Suchgebiet übernommen','„4-10-Führung von 4-10-Suchtrupp 1: Suchgebiet A übernommen, Beginn der Suche – kommen“'],
+  ['Zwischenmeldung','„4-10-Führung von 4-10-Suchtrupp 1: Suchgebiet A etwa zur Hälfte abgesucht, ohne Ergebnis, Trupp vollzählig – kommen“'],
+  ['Suchgebiet abgeschlossen','„… Suchgebiet A vollständig abgesucht, ohne Ergebnis, wir stehen für ein neues Suchgebiet bereit – kommen“'],
+  ['Fundmeldung','„4-10-Führung von 4-10-Suchtrupp 1 – Fundmeldung: Person angetroffen, Position in Grad und Dezimalminuten …, Person ansprechbar, wir betreuen und benötigen Rettungsmittel sowie Einweisung – kommen“'],
+  ['Fund ohne Lebenszeichen','„… Fundmeldung: Person angetroffen, keine Lebenszeichen, Position …, Fundstelle wird gesichert, wir erwarten weitere Weisung – kommen“'],
+  ['Eigennotfall','„4-10-Führung von 4-10-Suchtrupp 2 – Notfall: Helfer verletzt, Position …, eine Person, gehunfähig, wir benötigen Rettungsmittel und Trage – kommen“'],
+  ['Hund verletzt/abgängig','„… Hund abgängig, letzter Standort …, wir setzen die Suche nach dem Hund fort – kommen“'],
+  ['Funkprobe im Training','„Übung – 4-10-Führung von 4-10-Suchtrupp 1, Funkprobe – kommen“'],
+  ['Echte Meldung in der Übung','„Tatsache – 4-10-Führung von 4-10-Suchtrupp 2: Helfer verletzt, Übung für unseren Trupp abgebrochen – kommen“'],
+];
+const FUNK_DMO_GEMEINDEN = [['Stadt Kassel','307, 308, 309'],['Ahnatal','315'],['Bad Emstal','313'],['Bad Karlshafen','316'],['Baunatal','316'],['Breuna','315'],['Calden','311'],['Espenau','313'],['Fuldabrück','315'],['Fuldatal','315'],['Grebenstein','315'],['Habichtswald','316'],['Helsa','313'],['Hofgeismar','313'],['Immenhausen','314'],['Kaufungen','315'],['Liebenau','316'],['Lohfelden','316'],['Naumburg','315'],['Nieste','313'],['Niestetal','314'],['Reinhardshagen','314'],['Schauenburg','315'],['Söhrewald','314'],['Trendelburg','315'],['Vellmar','316'],['Wesertal','313'],['Wolfhagen','314'],['Zierenberg','313']];
+let funkSuche = '';
+function funkTabelle(kopf, zeilen){ return `<div class="table-scroll"><table><thead><tr>${kopf.map(k=>`<th>${esc(k)}</th>`).join('')}</tr></thead><tbody>${zeilen.map(z=>`<tr>${z.map((c,i)=>`<td${i===0?' style="white-space:nowrap;font-weight:700"':''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+function funkAbschnitte(){
+  const L = s=>`<ul style="margin:6px 0 0 -18px">${s.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  return [
+    {id:'status', titel:'🚑 Status Fahrzeug → Leitstelle (0–9, *)', html:`
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin:4px 0 10px">
+        <span class="chip" style="background:#f0b429;color:#000;font-weight:700">3 AUS</span><span class="chip" style="background:#e4572e;color:#fff;font-weight:700">4 AN</span>
+        <span class="chip" style="background:#2e8b57;color:#fff;font-weight:700">1 AB</span><span class="chip" style="background:#2e8b57;color:#fff;font-weight:700">2 EIN</span>
+        <span class="hint">Merkhilfe: 3 = ausgerückt, 4 = an der Einsatzstelle, 1 = ab (einsatzbereit über Funk), 2 = ein (am Standort)</span></div>
+      ${funkTabelle(['Taste','Anzeige · Bedeutung'], FUNK_STATUS_FZ.map(([t,a,b,h])=>[t, a+' – '+b+(h?' ('+h+')':'')]))}
+      <p class="hint" style="margin-top:8px"><b>Regeln:</b> Status sendet nur das dafür vorgesehene Fahrzeuggerät (meist die Fahrzeugführung) · Status 1 nur, wenn das Fahrzeug wirklich besetzt und ausgerüstet ist · keine Doppelmeldung (Status und gleicher Funkspruch) · vor Status 6 telefonisch mit der Leitstelle sprechen.</p>
+      <p class="hint">⚠ Welche Status die Leitstelle während einer laufenden Suche und im Training erwartet, ist noch abzustimmen. Im Training ohne Absprache keine Status senden.</p>`},
+    {id:'lst', titel:'📟 Meldungen Leitstelle → Fahrzeug', html: funkTabelle(['Taste','Anzeige · Bedeutung'], FUNK_STATUS_LST.map(([t,a,b])=>[t, a+' – '+b]))},
+    {id:'wen', titel:'🧭 Wen funke ich an – und wie erreiche ich die Leitstelle?', html: L([
+      '<b>Suchtrupps funken mit der Einsatzleitung (4-10-Führung), nicht mit der Leitstelle.</b> Die Einsatzleitung bündelt und gibt über das Fahrzeug an Leitstelle bzw. Polizei weiter.',
+      'Die <b>Leitstelle</b> wird vom Fahrzeug über <b>Status 5 (Sprechwunsch)</b> angesprochen; dringend über <b>Status 0</b>. Einsatzgruppen hört sie nicht ständig mit – „ins Blaue“ rufen erreicht sie nicht.',
+      'Anruf der Leitstelle: „Leitstelle Kassel von Rotkreuz Kassel 4-10-4 – kommen“. Gegenüber der Leitstelle immer den <b>vollständigen</b> Rufnamen.',
+      'Im Suchgebiet gilt das vereinfachte Sprechverfahren: „4-10-Führung“, „4-10-Suchtrupp 1“ … (nur im Einsatzstellenfunk).',
+      '<b>Einzelruf</b> nur ausnahmsweise – währenddessen hört man die Gruppe nicht (z. B. eine Fundmeldung).',
+      'Zusammenarbeit mit der Polizei läuft über die Einsatzleitung bzw. die Verbindungskraft (4-10-46) auf der zugewiesenen Gruppe.'])},
+    {id:'regeln', titel:'🎙 Grundregeln & Gesprächsaufbau', html: L([
+      'Vor dem Sprechen mithören: Ist die Gruppe frei?',
+      'Sprechtaste drücken, <b>kurz warten</b>, dann sprechen – sonst fehlen die ersten Worte.',
+      'Mikrofon eine Handbreit vor den Mund, normal laut, deutlich, nicht zu schnell. <b>Klar – kurz – präzise.</b>',
+      'Alle mit „Sie“ ansprechen; „zwo“ statt „zwei“.',
+      'Personenbezogene Daten (Namen, Diagnosen) nur, wenn für den Auftrag zwingend nötig.',
+      'Funkverkehr nicht mitschneiden, fotografieren oder weitergeben – auch nicht im Training.'])+`
+      <p style="margin:10px 0 4px"><b>Gespräch:</b> Gegenstelle – „von“ – eigener Rufname – „kommen“ · Antwort „Hier … – kommen“ · Nachricht · „Verstanden – Ende“ (beendet, wer eröffnet hat). Keine Antwort: bis zu dreimal anrufen, dann „Nicht zu hören – Ende“.</p>
+      <p style="margin:4px 0"><b>Lagemeldung – vier Fragen:</b> Wo bin ich? · Was ist hier los? · Was habe ich unternommen? · Was brauche ich noch?</p>
+      <p style="margin:4px 0"><b>Fundmeldung – Reihenfolge:</b> Wer meldet – was gefunden – wo (Koordinate mit Formatangabe, Empfänger wiederholt) – Zustand in Stichworten – was wird benötigt. Danach ruht der übrige Funkverkehr, bis die Einsatzleitung freigibt.</p>
+      <p style="margin:4px 0"><b>Aufträge</b> im vollen Wortlaut wiederholen – auch Koordinaten.</p>
+      <h4 style="margin:10px 0 4px">Betriebswörter</h4>${funkTabelle(['Wort','Bedeutung'], FUNK_BETRIEBSWOERTER)}`},
+    {id:'muster', titel:'📋 Mustermeldungen im Suchdienst', html: funkTabelle(['Anlass','Wortlaut'], FUNK_SUCHMELDUNGEN)},
+    {id:'geraet', titel:'📻 Motorola MTP 850 bedienen', html: funkTabelle(['Bedienelement','Funktion'], [
+      ['Rote Hörertaste','ca. 3 s drücken: Ein/Aus'],['Drehknopf (oben)','Lautstärke; senkrecht drücken → Gruppenwahl, erneut drücken bestätigt'],
+      ['Sprechtaste (links)','Senden: drücken, kurz warten, sprechen'],['Grüne Taste (über der Sprechtaste)','Umschalten Netzmodus TMO ↔ Direktmodus DMO'],
+      ['Schwarze Taste (unter der Sprechtaste)','Totmannfunktion ein/aus (nicht bei allen Geräten)'],['Orange Taste (oben)','NOTRUF – länger als 3 s drücken; löst auch bei ausgeschaltetem Gerät aus!'],
+      ['Softkeys / 4-Wege-Taste','Menü „Option“, „KWlist“; links/rechts = Gruppe im Ordner wechseln'],['Grüne LED blinkt regelmäßig','betriebsbereit, im Netz eingebucht'],
+      ['MENU dann *','Tastensperre (Lautstärke geht weiter)'],['MENU → Mehr … → Standort → Position','GPS-Position – in Grad und Dezimalminuten, nicht UTM!']])+`
+      <p style="margin:10px 0 4px"><b>Gruppe („Kanal“) einstellen:</b></p>${L([
+      'Drehknopf senkrecht drücken → Gruppe im Ordner drehen → erneut drücken zum Bestätigen, <b>oder</b>',
+      'Softkey „Option“ → „Grp nach Ord.“ → Ordner (z. B. HE_NPOL) → Gruppe wählen, <b>oder</b>',
+      'Richtungstasten links/rechts → Softkey „Wählen“.',
+      'Die zuletzt eingestellte Gruppe und Betriebsart bleiben nach dem Ausschalten gespeichert.',
+      'Gruppen nur nach Zuweisung durch Leitstelle bzw. Einsatzleitung schalten. Wer TMO/DMO wechselt, kündigt es vorher an.'])}
+      <p class="hint">Vor Inbetriebnahme: Antenne fest (nie ohne Antenne senden) · Akku geladen, Ersatzakku · Gruppe und Betriebsart richtig · Sicherheitskarte drin, LED blinkt grün. Antenne senkrecht und frei halten.</p>`},
+    {id:'gruppen', titel:'📶 Sprechgruppen & Betriebsarten (TMO / DMO)', html: L([
+      '<b>TMO</b> (Netz): über Basisstationen, Leitstelle erreichbar – Fahrzeugfunk, Führungsebene. <b>DMO</b> (direkt): Gerät zu Gerät, <b>keine</b> Leitstelle – Regelfall im Suchgebiet; Handfunkgeräte grundsätzlich DMO.',
+      '<b>603_R*</b>: DMO-Präferenzgruppe für Rettungs-, Sanitäts- und Betreuungsdienst.',
+      '<b>307_F* – 316_F*</b>: Einsatzstellenfunk nach Gemeinde (Tabelle unten); <b>310_F*</b> = hessenweit erste zusätzliche Gruppe (Abschnittsbildung).',
+      '<b>403_K*, 404_K*</b>: organisationsübergreifende Zusammenarbeit.',
+      'TMO-Gruppen nach Muster: {KS bzw. KS#}_BG_RD (Betriebsgruppe), _EG n / _RD (Einsatzgruppe), _EL, _EA_A/B, _AUSB (Ausbildung), _nPOL_POL (Polizei).',
+      'Rufaufbau abgewiesen? <b>Sprechtaste gedrückt halten</b> – der Ruf kommt in den nächsten freien Zeitschlitz.',
+      '⚠ Welche Gruppen konkret uns zugewiesen und in unseren Geräten programmiert sind, ist noch mit Leitstelle/Servicepoint zu klären. <b>Die Einsatzleitung gibt die Gruppe vor.</b>'])+
+      `<h4 style="margin:10px 0 4px">DMO-Gruppe des örtlichen Brandschutzes (Kassel)</h4>${funkTabelle(['Gebiet','Gruppe (_F*)'], FUNK_DMO_GEMEINDEN)}`},
+    {id:'koord', titel:'📍 Koordinaten übermitteln', html: L([
+      'Immer zuerst <b>Ostwert</b>, dann <b>Nordwert</b> (Eselsbrücke: K<b>O</b>ordi<b>N</b>ate).',
+      'Genauigkeit: vierstellig 1 km, sechsstellig 100 m, achtstellig 10 m.',
+      'Zonenfeld und 100-km-Quadrat angeben, wenn unklar (rund um Kassel meist <b>32U NB</b>).',
+      'Ziffernweise sprechen; der Empfänger wiederholt vollständig.',
+      'Das Funkgerät zeigt <b>Grad und Dezimalminuten</b> – das Format immer mit ansagen („Position in Grad und Dezimalminuten …“).'])},
+    {id:'rufnamen', titel:'🏷 Unsere Funkrufnamen', html: funkTabelle(['Rufname','Gesprochen · Gerät · Betriebsart'], FUNK_RUFNAMEN.map(([r,g,f,b])=>[r, '„'+g+'“ · '+f+' · '+b]))+'<p class="hint">⚠ Nummerierung 4-10-45/-46 und vereinfachtes Sprechverfahren noch mit der Leitstelle bzw. intern festzulegen.</p>'},
+    {id:'abc', titel:'🔤 Buchstabieralphabet', html:`<p style="line-height:1.8">A Anton · Ä Ärger · B Berta · C Cäsar · Ch Charlotte · D Dora · E Emil · F Friedrich · G Gustav · H Heinrich · I Ida · J Julius · K Kaufmann · L Ludwig · M Martha · N Nordpol · O Otto · Ö Ökonom · P Paula · Q Quelle · R Richard · S Samuel · Sch Schule · T Theodor · U Ulrich · Ü Übermut · V Viktor · W Wilhelm · X Xanthippe · Y Ypsilon · Z Zacharias</p>`},
+    {id:'check', titel:'✅ Checkliste Funk – Training & Einsatz', html:`<p style="margin:0"><b>Vorher:</b></p>${L(['Anzahl Handfunkgeräte geprüft (Soll: 6), Geräteliste','Akkus geprüft, Ersatzakkus dabei','Sicherheitskarten drin, Geräte eingebucht (grünes Blinken)','Betriebsart und Gruppe eingestellt','Antennen fest und unbeschädigt','Zuordnung Gerät – Person – Funktion festgelegt','Funkprobe gemacht (im Training mit „Übung“)'])}<p style="margin:8px 0 0"><b>Nachher:</b></p>${L(['Alle Geräte zurück und gezählt (Soll: 6)','Geräte gereinigt, Akkus geladen','Defekte dokumentiert, ggf. Servicepoint informiert','Fahrzeuggeräte auf Betriebsgruppe zurück','Funkauswertung in der Nachbesprechung'])}<p class="hint">Im Training: Notruftaste nicht auslösen; bei echtem Notfall gilt sie uneingeschränkt.</p>`},
+    {id:'stoerung', titel:'🛠 Keine Verbindung? Störungen', html: funkTabelle(['Beobachtung','Maßnahme'], [
+      ['Keine Verbindung im DMO','einige Meter versetzen, höher gehen, Gerät aus der Tasche, Antenne senkrecht, Körper nicht zwischen Antenne und Gegenstelle; Gruppe/Betriebsart prüfen; Meldekette'],
+      ['Kein grünes Blinken (nicht eingebucht)','Standort wechseln, Sicherheitskarte prüfen, Servicepoint der Leitstelle informieren'],
+      ['Rufaufbau abgewiesen','Sprechtaste gedrückt halten'],
+      ['Gruppe wird nicht gehört','Einzelruf beenden, Gruppe und Betriebsart prüfen'],
+      ['Notruf versehentlich ausgelöst','sofort der Leitstelle melden'],
+      ['Gerät oder Karte verloren','unverzüglich auf dem Dienstweg melden (Sperrung)']])},
+  ];
+}
+function renderWissenFunk(person){
+  const q = funkSuche.trim().toLowerCase();
+  const abschnitte = funkAbschnitte();
+  const sichtbar = q ? abschnitte.filter(a=>(a.titel+' '+a.html.replace(/<[^>]+>/g,' ')).toLowerCase().includes(q)) : abschnitte;
+  return `
+    <p class="lead">Funk-Spickzettel für Training und Einsatz – jederzeit abrufbar, auch offline.</p>
+    <input id="funk-suche" inputmode="search" placeholder="Suchen, z. B. Status 5, Gruppe einstellen, Fundmeldung" value="${esc(funkSuche)}" style="width:100%;box-sizing:border-box;margin-bottom:10px">
+    ${sichtbar.map((a,i)=>`<details class="card card-pad" style="margin-bottom:10px" ${q||a.id==='status'?'open':''}><summary style="cursor:pointer;font-weight:700;font-size:1rem">${a.titel}</summary><div style="margin-top:8px">${a.html}</div></details>`).join('') || '<p class="hint">Kein Treffer.</p>'}
+    <p class="hint" style="margin-top:10px">${esc(FUNK_QUELLE)}</p>`;
+}
+function bindWissenFunk(person){
+  const s=document.getElementById('funk-suche');
+  if(s){ s.oninput = ()=>{ const pos=s.selectionStart; funkSuche=s.value; render(); const n=document.getElementById('funk-suche'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} } }; }
+}
+
 /* ---- Termin ---- */
 function renderModalTermin(){
   const bestehend = modal.id ? state.termine.find(t=>t.id===modal.id) : null;
@@ -4756,6 +5049,7 @@ const WISSEN_TABS = [
   {id:'fehlerdiagnose', label:'Fehlerdiagnose'},
   {id:'sparten', label:'Sparten, Helfer & Erste Hilfe'},
   {id:'material', label:'Lehrmaterial'},
+  {id:'funk', label:'📻 Funk'},
 ];
 const HOSPITATION_ZUSATZTHEMEN = ['Praxis Fläche','Praxis Trümmer','Praxis Mantrailing','Gehorsam / Unterordnung','Gewandtheit','Anzeigeaufbau','Sanitätsausbildung','Einsatzübung'];
 function hospitationThemen(){
@@ -4926,7 +5220,7 @@ function renderWissen(person){
     <div class="row" style="margin:14px 0 20px;border-bottom:1px solid var(--line);padding-bottom:2px">
       ${WISSEN_TABS.map(t=>`<button class="btn ${wissenTab===t.id?'btn-primary':'btn-ghost'}" data-wtab="${t.id}">${esc(t.label)}</button>`).join('')}
     </div>
-    ${wissenTab==='pruefung' ? renderAusbildungPruefung(person) : wissenTab==='fehlerdiagnose' ? renderAusbildungFehlerdiagnose(person) : wissenTab==='sparten' ? renderAusbildungSparten(person) : renderAusbildungMaterial(person)}
+    ${wissenTab==='pruefung' ? renderAusbildungPruefung(person) : wissenTab==='fehlerdiagnose' ? renderAusbildungFehlerdiagnose(person) : wissenTab==='sparten' ? renderAusbildungSparten(person) : wissenTab==='funk' ? renderWissenFunk(person) : renderAusbildungMaterial(person)}
     ${modal ? renderModal() : ''}
   `;
 }
@@ -4935,6 +5229,7 @@ function bindWissen(person){
   if(wissenTab==='pruefung') bindAusbildungPruefung(person);
   else if(wissenTab==='fehlerdiagnose') bindAusbildungFehlerdiagnose(person);
   else if(wissenTab==='sparten') bindAusbildungSparten(person);
+  else if(wissenTab==='funk') bindWissenFunk(person);
   else bindAusbildungMaterial(person);
   if(modal) bindModal(person);
 }
@@ -8756,6 +9051,8 @@ const HILFE_ARTIKEL = [
   {id:"passwort-vergessen", kategorie:"Erste Schritte", titel:"Passwort vergessen / nach Import ausgesperrt", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Mitglieder:</strong> Ohne Synchronisation liegt das Passwort nur auf dem eigenen Gerät. Die Leitung erstellt deshalb unter Verwaltung → Personen → Person öffnen ein <strong>Zugangspaket</strong> mit neuem Startpasswort (enthält nur Namen, Termine und die Daten des eigenen Teams – keine Kontaktdaten oder internen Notizen anderer). Das Mitglied spielt die Datei am Anmeldebildschirm unter „Kein Zugang mehr? Datei von der Leitung einspielen“ ein und meldet sich mit dem Startpasswort an. Auf einem gemeinsam genutzten Gerät genügt „Passwort zurücksetzen“ im Personen-Dialog.</p>\n<p><strong>Gerät zurücksetzen:</strong> Am Anmeldebildschirm im selben Kasten „Alle BARRY-Daten auf diesem Gerät löschen“ – entfernt Bestand, Sicherheitskopien und Zwischenspeicher; das Home-Icon kann danach gelöscht werden.</p>\n<p><strong>Leitung/Admin selbst:</strong> Wurde gerade ein kompletter Datenbestand importiert und kein Passwort aus der importierten Datei ist bekannt, erscheint auf dem Anmeldebildschirm der Kasten <strong>„Passwort vergessen / Import war ein Fehler?“</strong> – damit lässt sich der Stand von direkt vor dem letzten Import wiederherstellen (BARRY legt diese Sicherheitskopie bei jedem Import automatisch an). Auf einem ganz neuen Gerät ohne Daten gilt der Erstzugang <strong>Admin / admin</strong>.</p>\n"},
   {id:"hund-felder", kategorie:"Verwaltung", titel:"Hundeprofil: Geschlecht, Chipnummer, Plaketten", rollen:["ausbilder", "leitung"], text:"\n<p>Im Dialog <strong>Verwaltung → Hunde → Hund bearbeiten</strong> lassen sich neben Name, Rasse und Wurftag auch <strong>Geschlecht</strong> (Rüde/Hündin), die <strong>Chip-/Identifikationsnummer</strong> und beliebig viele <strong>Plaketten</strong> (Sparte, Plaketten-/ID-Nr., Datum) erfassen – genau die Angaben, die die offiziellen Bewertungsbögen und Anmeldeformulare abfragen. Zusätzlich: Sparten, Rassegruppe (für automatische Trainingshinweise) und die festgelegte Anzeigeart.</p>\n"},
   {id:"terminplan", kategorie:"Organisation & Termine", titel:"Terminplan an Mitglieder verteilen und aktualisieren", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Leitung/Ausbildung:</strong> Nach Änderungen am Jahresplan unter Organisation &amp; Termine → Kalender → „🔄 Terminplan verteilen / aktualisieren“ auf <strong>Terminplan exportieren</strong> tippen und die Datei an die Mitglieder schicken. Sie enthält nur die Staffeltermine (keine Ausbilder-internen oder persönlichen Termine, keine Planungsnotizen, keine Personendaten) sowie die Löschvermerke.</p>\n<p>Wird ein Staffeltermin gelöscht, fragt BARRY nach einem kurzen <strong>Vermerk</strong> (z. B. „fällt wegen Unwetter aus – Ersatz am 17.10.“). Der Vermerk wird mit dem nächsten Export verteilt; der Termin verschwindet dann auch bei den Mitgliedern und erscheint dort unter „Entfallene Termine“.</p>\n<p><strong>Mitglieder:</strong> Im selben Kasten auf <strong>Terminplan einlesen</strong> tippen und die Datei auswählen. Eine Vorschau zeigt neue, geänderte und entfallene Termine. Abgeglichen wird über eine feste Termin-Kennung (zusätzlich über Titel + Beginn), deshalb entsteht nichts doppelt; eigene Zusagen/Absagen und persönliche Termine bleiben erhalten. Ein älterer Plan holt bereits gelöschte Termine nicht zurück.</p>\n"},
+  {id:"trainingskarte", kategorie:"Ausbildung & Team", titel:"Mein heutiges Training (digitale Trainingskarte)", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Ersetzt die Papierkarte „Mein heutiges Training“. Aufruf über die Startseite: <strong>🐾 Mein heutiges Training</strong>.</p>\n<p><strong>Vor dem Training:</strong> Ziel für heute, Vorhaben mit dem Hund und die Ausrüstung (Karte/Kompass, Funkgerät, Puder, Wasser, EH-Material, Abfragekarte). Als Vorschläge zum Antippen erscheinen geteilte Ziele aus „Stand &amp; Planung“, offene Hausaufgaben, begonnene Übungen mit der nächsten Stufe und „Woran muss ich noch arbeiten?“ vom letzten Training.</p>\n<p><strong>Nach dem Training:</strong> Ziel erreicht? Was lief gut, was weniger gut, woran muss ich noch arbeiten?</p>\n<p><strong>📤 An Ausbilder/-in senden</strong> öffnet das Teilen-Menü (z. B. WhatsApp, Signal, DRK.Chat) mit Name, Hund, Datum und allen Angaben. <strong>📓 Ins Tagebuch</strong> legt daraus einen Eintrag im Trainingstagebuch an bzw. aktualisiert ihn. Je Hund und Tag gibt es eine Karte; sie lässt sich jederzeit wieder öffnen und ergänzen.</p>\n"},
+  {id:"funk-spickzettel", kategorie:"Wissen & Material", titel:"Funk-Spickzettel", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Wissen &amp; Material → 📻 Funk</strong> (oder über die Startseite) stehen – durchsuchbar und offline – Statusmeldungen Fahrzeug → Leitstelle (0–9, *) mit Merkhilfe „3 AUS · 4 AN · 1 AB · 2 EIN“, Meldungen der Leitstelle, wen man anfunkt (Suchtrupp → Einsatzleitung; Leitstelle über Status 5), Grundregeln, Betriebswörter, Lage- und Fundmeldung, Mustermeldungen im Suchdienst, Bedienung des Motorola MTP 850 (Gruppe einstellen, TMO/DMO, Notruf, GPS), Sprechgruppen einschließlich DMO-Gruppen der Gemeinden im Raum Kassel, Koordinaten, unsere Funkrufnamen, Buchstabieralphabet, Checkliste und Störungshilfe.</p>\n<p>Grundlage ist die Ausbildungsunterlage „Sprechfunk im BOS-Digitalfunk“ des DRK Kassel (Entwurf zur fachlichen Prüfung, 09/2026). Mit ⚠ markierte Punkte sind noch mit Leitstelle bzw. Servicepoint abzustimmen; verbindlich sind die Weisungen der Leitstelle.</p>\n"},
   {id:"datensicherung", kategorie:"Daten sichern & teilen", titel:"Backup exportieren und einspielen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung \u2192 Datensicherung</strong> l\u00e4sst sich der komplette Datenbestand als eine\neinzelne Datei <strong>exportieren</strong> \u2013 das sollte regelm\u00e4\u00dfig geschehen, am besten vor gr\u00f6\u00dferen\n\u00c4nderungen. Beim <strong>Import</strong> einer solchen Datei zeigt BARRY vorher eine Vorschau (Inhalt,\nHerkunft, Datum) und legt automatisch eine Sicherheitskopie des bisherigen Standes an, die sich bei\nBedarf mit einem Klick wiederherstellen l\u00e4sst. Eine Datei ohne anmeldef\u00e4hige Admin-Person wird\ngrunds\u00e4tzlich abgelehnt, damit sich niemand versehentlich aussperrt.</p>\n"},
   {id:"keine-automatische-sync", kategorie:"Daten sichern & teilen", titel:"Wichtig: Keine automatische Synchronisation zwischen Ger\u00e4ten", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>BARRY speichert alle Daten <strong>ausschlie\u00dflich lokal auf dem jeweiligen Ger\u00e4t</strong>. Es gibt\nkeinen Server im Hintergrund, der die Daten automatisch zwischen mehreren Handys oder Tablets abgleicht.\nMeldet sich jemand auf einem <em>anderen</em> Ger\u00e4t an, sieht diese Person eine eigenst\u00e4ndige,\nunabh\u00e4ngige Kopie \u2013 neue Eintr\u00e4ge auf dem einen Ger\u00e4t erscheinen nicht von selbst auf dem anderen.</p>\n<p><strong>F\u00fcr die Praxis bedeutet das:</strong> BARRY funktioniert am besten auf einem\n<strong>gemeinsam genutzten Ger\u00e4t</strong> (z. B. ein Staffel-Tablet), auf dem sich alle mit dem\neigenen Login anmelden. Soll BARRY auf mehreren eigenen Handys parallel genutzt werden, m\u00fcssen Daten\nbewusst per Export/Import \u00fcbertragen werden \u2013 siehe Artikel \u201eBackup exportieren und einspielen\".</p>\n"},
   {id:"austauschpaket", kategorie:"Daten sichern & teilen", titel:"Team-Stammdaten mit eigenst\u00e4ndigen Apps austauschen", rollen:["ausbilder", "leitung"], text:"\n<p>F\u00fcr einzelne Hundeteams l\u00e4sst sich unter <strong>Verwaltung \u2192 Hunde \u2192 Teamdaten</strong> eine kleine\nTeamdaten-Datei (Name, Rasse, Geburtsdatum, Sparten, Anzeigeart) exportieren und in eine der\neigenst\u00e4ndigen RHS-Apps (z. B. Tr\u00fcmmersuchassistent) importieren, und umgekehrt. Es handelt sich\nbewusst nur um Stammdaten, nicht um Trainings- oder Einsatzdaten; ein Import zeigt vorher immer eine\nVorschau inklusive Warnung, falls Name oder Hundef\u00fchrer/-in nicht zum gew\u00e4hlten Team passen.</p>\n"},
