@@ -1666,7 +1666,8 @@ function render(){
         <div class="who clickable" id="btn-mein-profil" title="Mein Profil bearbeiten">${esc(person.name)} ✎</div>
         <div style="margin-bottom:8px">${(person.rollen||[]).map(r=>`<span class="chip muted">${esc(rolleInfo(r).label)}</span>`).join(' ')}</div>
         <button class="btn btn-sm" data-datei-einlesen style="width:100%;margin-bottom:6px">📂 Datei einlesen</button>
-        <button class="btn btn-sm btn-ghost" data-bereiche-waehlen style="width:100%;margin-bottom:8px">⚙️ Bereiche auswählen</button>
+        <button class="btn btn-sm btn-ghost" data-bereiche-waehlen style="width:100%;margin-bottom:4px">⚙️ Bereiche auswählen</button>
+        <button class="btn btn-sm btn-ghost" data-goto-apps style="width:100%;margin-bottom:8px">🧰 Weitere Apps der Staffel</button>
         <button class="link" id="btn-abmelden">Abmelden</button>
         <div class="hint" style="margin-top:8px;font-size:.75rem">BARRY ${BARRY_APP_VERSION} · Stand ${BARRY_APP_STAND}</div>
       </div>
@@ -4153,6 +4154,7 @@ function bindModalBereicheWahl(){
   document.getElementById('bw-alle').onclick=()=>fertig([]);
   document.getElementById('bw-ok').onclick=()=>fertig([...document.querySelectorAll('[data-bw]')].filter(c=>!c.checked).map(c=>c.dataset.bw));
 }
+document.addEventListener('click', e=>{ const ap=e.target.closest && e.target.closest('[data-goto-apps]'); if(ap){ e.preventDefault(); sidebarOffen=false; route={bereich:'wissen',unter:null,id:null}; wissenTab='apps'; render(); window.scrollTo(0,0); } });
 document.addEventListener('click', e=>{ const vp=e.target.closest && e.target.closest('[data-vorpruefung]'); if(vp){ e.preventDefault(); modal={type:'vorpruefung', hundId:vp.dataset.vorpruefung}; render(); } });
 document.addEventListener('click', e=>{ const el=e.target.closest && e.target.closest('[data-bereiche-waehlen]'); if(el){ e.preventDefault(); sidebarOffen=false; modal={type:'bereicheWahl'}; render(); } });
 /* =========================================================
@@ -4424,6 +4426,69 @@ function bindOrganisationOrte(person){
     }catch(e){ alert('Berechnung nicht möglich: '+e.message); }
     render();
   };
+}
+
+/* =========================================================
+   APP-FAMILIE: Hinweise und Links auf die eigenständigen Staffel-Apps (GitHub Pages)
+   Die Leitung kann Links ändern oder ausblenden; die Liste geht mit dem Zugangspaket an die Mitglieder.
+   ========================================================= */
+const APP_FAMILIE = [
+  {id:'fla', name:'RH-Flächensuchassistent', icon:'🌲', url:'https://mwhog-hue.github.io/Claudes-Fl-Assistenten-/', rolle:'ergaenzt',
+   text:'Taktik, Laufschema, Wetter, Fund und Erste Hilfe für Training, Prüfung und Einsatz. Die Übergabe liest BARRY über „Datei einlesen“ ein.',
+   fuerWen:'Für alle Flächensuchteams – im Training, in der Prüfungsvorbereitung und im Einsatz auf dem eigenen Handy.'},
+  {id:'tr', name:'RH-Trümmersuchassistent', icon:'🧱', url:'https://mwhog-hue.github.io/Tr-mmerassistent-/', rolle:'ergaenzt',
+   text:'Das Gegenstück zum Flächensuchassistenten für die Trümmersuche: Auftrag, Planung und Taktik, Suche, Fund und Erste Hilfe sowie Auswertung für Training, Prüfung und Einsatz.',
+   fuerWen:'Für Teams und Ausbilder/-innen der Sparte Trümmersuche.'},
+  {id:'mt', name:'RH-Mantrailing-Assistent', icon:'👣', url:'https://mwhog-hue.github.io/Claudes-Mantrailing-/', rolle:'ergaenzt',
+   text:'Das Gegenstück zum Flächensuchassistenten für das Mantrailing: Auftrag, Planung und Taktik, Trail, Fund und Erste Hilfe sowie Auswertung für Training, Prüfung und Einsatz.',
+   fuerWen:'Für Teams und Ausbilder/-innen der Sparte Mantrailing.'},
+  {id:'werkstatt', name:'Werkstatt & Bibliothek für Lehrunterlagen', icon:'📚', url:'https://mwhog-hue.github.io/Werkstatt-und-Bibliothek-f-r-Lehrunterlagen-und-Dokumente/', rolle:'ergaenzt',
+   text:'Lehrunterlagen und Dokumente ordnen, Doppelte finden und aufbereiten.',
+   fuerWen:'Für Ausbilder/-innen und die Leitung, die Unterlagen pflegen oder Schulungen vorbereiten – für Mitglieder nicht nötig.'},
+  {id:'barry', name:'BARRY online', icon:'🐕', url:'https://mwhog-hue.github.io/Barry-Der-Rettungendekompass-leer/', rolle:'barry',
+   text:'Adresse dieser App zum Installieren auf weiteren Geräten.',
+   fuerWen:'Wichtig: Auf einem weiteren Gerät startet BARRY leer – es gibt keinen automatischen Datenaustausch zwischen den Geräten. Dort das eigene Zugangspaket (Mitglieder) bzw. die aktuelle Datensicherung (Leitung) über „📂 Datei einlesen“ einspielen; neue Termine und Ausbildungsstände kommen danach wieder per Terminplan und Stand-Update.'},
+  {id:'teambegleiter', name:'RH-Team-Begleiter', icon:'🤝', url:'https://mwhog-hue.github.io/RH-Team-Begleiter-/', rolle:'enthalten',
+   text:'Einzelteam-Begleiter (Findewille, Anzeigeaufbau, Module). Die Inhalte sind in BARRY unter Ausbildung & Team enthalten, in der eigenen App aber übersichtlicher und schöner aufbereitet.',
+   fuerWen:'Lohnt sich für Hundeführer/-innen in der Ausbildung, die zu Hause gezielt am Anzeigeaufbau und an den Modulen 1.1–1.3 arbeiten möchten. Wer vor allem Termine, Nachweise und Tagebücher pflegt, kommt mit BARRY aus.'},
+  {id:'pfotenalltag', name:'Pfotenalltag', icon:'🐾', url:'https://mwhog-hue.github.io/Pfotenalltag-/', rolle:'enthalten',
+   text:'Alltagstraining mit über 500 Übungen. Die Inhalte sind in BARRY unter Alltag & Zuhause enthalten, in der eigenen App aber übersichtlicher und schöner aufbereitet.',
+   fuerWen:'Lohnt sich für alle, die regelmäßig mit ihrem Hund im Alltag üben – auch für Familienmitglieder, Welpen- und Junghundehalter/-innen außerhalb der Staffel.'},
+  {id:'einsatzprotokoll', name:'RHS-Einsatzprotokoll', icon:'📋', url:'https://mwhog-hue.github.io/RHS-Einsatzprotokoll-/', rolle:'enthalten',
+   text:'Eigenständiges Einsatzprotokoll – in BARRY unter Einsatz enthalten.',
+   fuerWen:'Für Einsatzleitung und Protokollführung auf einem Zweitgerät oder Tablet ohne BARRY-Zugang, z. B. im Einsatzfahrzeug.'},
+];
+function appFamilieListe(){
+  const eigene=(state.organisation && state.organisation.appLinks) || {};
+  return APP_FAMILIE.map(a=>({...a, url:(eigene[a.id]&&eigene[a.id].url)||a.url, aus:!!(eigene[a.id]&&eigene[a.id].aus)}));
+}
+function renderWissenApps(person){
+  const leitung=istLeitungOderAdmin(person);
+  const liste=appFamilieListe().filter(a=>leitung || !a.aus);
+  const karte=a=>`<div class="card card-pad" style="margin-bottom:8px;${a.aus?'opacity:.55':''}">
+      <div class="spread"><b>${a.icon} ${esc(a.name)}</b>${a.aus?'<span class="chip muted">ausgeblendet</span>':''}</div>
+      <p class="hint" style="margin:4px 0 4px">${esc(a.text)}</p>
+      ${a.fuerWen?`<p class="hint" style="margin:0 0 8px;color:var(--ink)"><b>${a.rolle==='barry'?'':'Für wen? '}</b>${esc(a.fuerWen)}</p>`:''}
+      <div class="row" style="gap:6px;flex-wrap:wrap"><a class="btn btn-sm btn-primary" href="${esc(a.url)}" target="_blank" rel="noopener">Öffnen ↗</a>
+      <button class="btn btn-sm btn-ghost" data-app-teilen="${a.id}">Link teilen</button>
+      ${leitung?`<button class="btn btn-sm btn-ghost" data-app-bearbeiten="${a.id}">Link ändern</button><button class="btn btn-sm btn-ghost" data-app-aus="${a.id}">${a.aus?'Einblenden':'Ausblenden'}</button>`:''}</div></div>`;
+  const gruppe=(titel, rolle, hinweis)=>{ const g=liste.filter(a=>a.rolle===rolle); return g.length?`<h3 style="margin:14px 0 4px">${titel}</h3>${hinweis?`<p class="hint" style="margin:0 0 8px">${hinweis}</p>`:''}${g.map(karte).join('')}`:''; };
+  return `
+    <p class="lead">Die eigenständigen Apps der Staffel. Sie laufen ohne Konto im Browser und lassen sich wie BARRY installieren. Zum Öffnen ist Internet nötig; danach funktionieren sie weitgehend offline.</p>
+    ${gruppe('Ergänzen BARRY','ergaenzt','Für Aufgaben, die BARRY bewusst nicht selbst übernimmt. Ergebnisse kommen über Übergabedateien zurück.')}
+    ${gruppe('Diese App','barry','')}
+    ${gruppe('Einzel-Apps, deren Inhalte auch in BARRY stehen','enthalten','In den eigenen Apps übersichtlicher aufgebaut. Daten werden zwischen den Einzel-Apps und BARRY nicht automatisch abgeglichen.')}
+    <p class="hint" style="margin-top:10px">Die Apps liegen auf GitHub Pages. Wird eine Adresse geändert oder eine App eingestellt, kann die Leitung den Link hier anpassen oder ausblenden; die Änderung geht mit dem nächsten Zugangspaket an die Mitglieder.</p>`;
+}
+function bindWissenApps(person){
+  document.querySelectorAll('[data-app-teilen]').forEach(b=>b.onclick=async()=>{ const a=appFamilieListe().find(x=>x.id===b.dataset.appTeilen);
+    try{ if(navigator.share){ await navigator.share({title:a.name, text:a.text, url:a.url}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+    try{ await navigator.clipboard.writeText(a.url); zeigeToast('Link kopiert.'); }catch(e){ prompt('Link kopieren:', a.url); } });
+  document.querySelectorAll('[data-app-bearbeiten]').forEach(b=>b.onclick=()=>{ const a=appFamilieListe().find(x=>x.id===b.dataset.appBearbeiten);
+    const neu=prompt(`Neue Adresse für „${a.name}“ (leer = ursprüngliche Adresse):`, a.url); if(neu===null) return;
+    state.organisation.appLinks=state.organisation.appLinks||{}; const e=state.organisation.appLinks[a.id]=state.organisation.appLinks[a.id]||{};
+    e.url = neu.trim() && neu.trim()!==(APP_FAMILIE.find(x=>x.id===a.id)||{}).url ? neu.trim() : ''; speichereState(); render(); });
+  document.querySelectorAll('[data-app-aus]').forEach(b=>b.onclick=()=>{ state.organisation.appLinks=state.organisation.appLinks||{}; const e=state.organisation.appLinks[b.dataset.appAus]=state.organisation.appLinks[b.dataset.appAus]||{}; e.aus=!e.aus; speichereState(); render(); });
 }
 
 /* ---------- Zentraler Knopf „Datei einlesen“: erkennt jede BARRY-Datei und leitet weiter ---------- */
@@ -6531,6 +6596,7 @@ const WISSEN_TABS = [
   {id:'sparten', label:'Sparten, Helfer & Erste Hilfe'},
   {id:'material', label:'Lehrmaterial'},
   {id:'funk', label:'📻 Funk'},
+  {id:'apps', label:'🧰 Weitere Apps'},
 ];
 const HOSPITATION_ZUSATZTHEMEN = ['Praxis Fläche','Praxis Trümmer','Praxis Mantrailing','Gehorsam / Unterordnung','Gewandtheit','Anzeigeaufbau','Sanitätsausbildung','Einsatzübung'];
 function hospitationThemen(){
@@ -6705,7 +6771,7 @@ function renderWissen(person){
     <div class="row" style="margin:14px 0 20px;border-bottom:1px solid var(--line);padding-bottom:2px">
       ${WISSEN_TABS.map(t=>`<button class="btn ${wissenTab===t.id?'btn-primary':'btn-ghost'}" data-wtab="${t.id}">${esc(t.label)}</button>`).join('')}
     </div>
-    ${wissenTab==='pruefung' ? renderAusbildungPruefung(person) : wissenTab==='fehlerdiagnose' ? renderAusbildungFehlerdiagnose(person) : wissenTab==='sparten' ? renderAusbildungSparten(person) : wissenTab==='funk' ? renderWissenFunk(person) : renderAusbildungMaterial(person)}
+    ${wissenTab==='apps' ? renderWissenApps(person) : wissenTab==='pruefung' ? renderAusbildungPruefung(person) : wissenTab==='fehlerdiagnose' ? renderAusbildungFehlerdiagnose(person) : wissenTab==='sparten' ? renderAusbildungSparten(person) : wissenTab==='funk' ? renderWissenFunk(person) : renderAusbildungMaterial(person)}
     ${modal ? renderModal() : ''}
   `;
 }
@@ -6715,6 +6781,7 @@ function bindWissen(person){
   else if(wissenTab==='fehlerdiagnose') bindAusbildungFehlerdiagnose(person);
   else if(wissenTab==='sparten') bindAusbildungSparten(person);
   else if(wissenTab==='funk') bindWissenFunk(person);
+  else if(wissenTab==='apps') bindWissenApps(person);
   else bindAusbildungMaterial(person);
   if(modal) bindModal(person);
 }
