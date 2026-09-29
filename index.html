@@ -131,6 +131,10 @@ input,select,textarea{font-family:inherit;font-size:.95rem}
 .btn-danger{color:var(--accent-ink);border-color:var(--soft);background:var(--soft)}
 .btn-sm{padding:8px 12px;font-size:.8rem;min-height:34px}
 
+.quick-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin:14px 0 4px}
+.quick-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:10px 6px;min-height:70px;border:1px solid var(--line);border-radius:14px;background:var(--card,#fff);font:inherit;font-size:.8rem;font-weight:600;color:inherit;cursor:pointer;text-align:center;line-height:1.2}
+.quick-tile span{font-size:1.35rem}
+.quick-tile:first-child{border-color:var(--accent,#b3202a)}
 .chip{
   display:inline-flex;align-items:center;gap:6px;
   padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--accent-ink);
@@ -935,7 +939,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'slg', label:'SLG – Sanitätslehrgang inkl. Prüfung', kategorie:K_FA, ue:64, pflichtRHF:true, hinweis:'Voraussetzung: EKGA-S. Einmaliger Lehrgang; die regelmäßige Fortbildung wird als „Sanitätsfortbildung“ erfasst.', aliase:['SLG – Sanitätslehrgang','Sanitätslehrgang','Sanitätsl.'] },
   { code:'ekf_pruef', label:'EKF.Prüf – Fachbezogene Prüfung', kategorie:K_FA, ue:2, pflichtRHF:true },
   { code:'bos', label:'BOS – Sprechfunkausbildung (digital)', kategorie:K_FA, ue:20, pflichtRHF:true, hinweis:'Voraussetzung: EKGA-E', aliase:['BOS – Sprechfunkausbildung','BOS Funk','BOS'] },
-  { code:'suwr', label:'SuWR – Sonder- und Wegerechte im Einsatz (jährlich)', kategorie:K_FA, ue:2, pflichtRHF:true, intervallMonate:12, hinweis:'Pflicht laut Staffel-Merkblatt; jährliche Wiederholung (Fahren mit Sonderrechten).', aliase:['SuWR – Sonder-/Wegerechte','SuWR – Sonder- und Wegerechte im Einsatz','Sonderrechte im Einsatz','Sonderrechte'] },
+  { code:'suwr', label:'SuWR – Sonder- und Wegerechte im Einsatz (jährlich)', kategorie:K_FA, ue:2, intervallMonate:12, hinweis:'Jährlich; erforderlich nur für Fahrer/-innen, die mit Sonder- und Wegerechten fahren (zusätzlich zur Fahrzeugeinweisung).', aliase:['SuWR – Sonder-/Wegerechte','SuWR – Sonder- und Wegerechte im Einsatz','Sonderrechte im Einsatz','Sonderrechte'] },
   // 3) Fachdienstausbildung Rettungshund (RHd) – Gesamtkurs und Theorieteile
   { code:'rhd', label:'RHd – Fachdienstausbildung Rettungshund (gesamt)', kategorie:K_RHD, ue:35, pflichtRHF:true, hinweis:'Voraussetzung: SLG. Theorieteile siehe folgende Einträge.', aliase:['Fachdienstausbildung Rettungshunde','Rettungshundeführer'] },
   { code:'rhd_ehhund', label:'RHd · Erste Hilfe am Hund', kategorie:K_RHD, pflichtRHF:true, aliase:['EH Hund','Erste Hilfe am Hund'] },
@@ -952,6 +956,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'rhd_geruch', label:'RHd · Geruch und Geruchsausbreitung', kategorie:K_RHD, pflichtRHF:true, aliase:['Geruch','Geruch und Geruchsverteilung'] },
   { code:'rhd_orga', label:'RHd · Organisation und Struktur', kategorie:K_RHD, pflichtRHF:true, aliase:['Orga/Struktur','Organisation'] },
   // 4) Prüfung, Einsatzfähigkeit, jährliche Unterweisungen
+  { code:'modul_10', label:'Modulprüfung 1.0 – Fachfragen', kategorie:K_PR, pflichtRHF:true, hinweis:'Voraussetzung für die Modulprüfung 2; Module 1.0 bis 1.3 in beliebiger Reihenfolge.', aliase:['Modul 1.0','Modulprüfung 1.0','Fachfragen'] },
   { code:'modul_11', label:'Modulprüfung 1.1 – Verhalten und Grundfertigkeiten', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung (Hund + Hundeführer/in). Beim Eintragen werden die Elemente von DRK 1.1 unter Prüfungsordnungen für den Hund auf „bestanden“ gesetzt, wenn die Person genau einen aktiven Hund führt.', aliase:['Modul 1.1','Modulprüfung 1.1','Grundfertigkeiten und Verhalten','Verhalten und Grundfertigkeiten'] },
   { code:'modul_12', label:'Modulprüfung 1.2 – Gehorsam (oder VDH-Begleithundeprüfung mit Verkehrsteil)', kategorie:K_PR, pflichtRHF:true, hinweis:'Alternativ gilt die VDH-Begleithundeprüfung mit Verkehrsteil (BH/VT). Teamprüfung – Übertrag nach DRK 1.2 wie bei 1.1.', aliase:['Modul 1.2','Modulprüfung 1.2','Gehorsam','BH-VT','BH/VT','Begleithundeprüfung','Begleithundeprüfung VDH','VDH BH-VT'] },
   { code:'modul_13', label:'Modulprüfung 1.3 – Gewandtheit', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung – Übertrag nach DRK 1.3 wie bei 1.1.', aliase:['Modul 1.3','Modulprüfung 1.3','Gewandtheit','Gewandheit'] },
@@ -1044,7 +1049,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'btd28', label:'BtD-28 – Rückbau, Wartung, Pflege', kategorie:K_BT, ue:3 },
   { code:'btd29', label:'BtD-29 – Mat. Zubereitung / Ausgabe', kategorie:K_BT, ue:4 },
   { code:'btd30', label:'BtD-30 – Hygiene & Lebensmittelrecht', kategorie:K_BT, ue:3 },
-  { code:'ifsg', label:'IfSG-Folgebelehrung (§ 43 IfSG) – Verpflegung', kategorie:K_BT, intervallMonate:12, hinweis:'Pflichtbelehrung für den Umgang mit Lebensmitteln. Staffelvorgabe jährlich; gesetzlich mindestens alle zwei Jahre (§ 43 Abs. 4 IfSG).', aliase:['IfSG-Belehrung','Folgebelehrung IfSG'] },
+  { code:'ifsg', label:'IfSG-Folgebelehrung (§ 43 IfSG) – Verpflegung', kategorie:K_BT, intervallMonate:24, hinweis:'Pflichtbelehrung für den Umgang mit Lebensmitteln, alle zwei Jahre (§ 43 Abs. 4 IfSG, Staffelvorgabe).', aliase:['IfSG-Belehrung','Folgebelehrung IfSG'] },
   { code:'haccp', label:'Hygieneschulung Verpflegung (HACCP, jährlich)', kategorie:K_BT, intervallMonate:12, hinweis:'Unterweisung nach HACCP (Kühlketten, Hygiene in der Feldküche), jährlich.', aliase:['HACCP-Schulung','Hygieneschulung HACCP'] },
   { code:'fko', label:'FKo – Feldkoch/Feldköchin', kategorie:K_BT, ue:40 },
   // 9) Technik & Logistik
@@ -1070,7 +1075,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'psu', label:'PSU – Psycho-Soziale Unterstützung', kategorie:K_KATS, ue:4 },
   { code:'at', label:'AT# – Aktuelle Themen (alle FachD)', kategorie:K_KATS, ue:2 },
 ].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null, aliase:[], ...q }));
-const QUALI_KATALOG_VERSION = 10;
+const QUALI_KATALOG_VERSION = 12;
 // Vorbelegte Ordner (entsprechen der bestehenden Ordnerstruktur der Staffel); jederzeit umbenenn-, lösch- und erweiterbar.
 const LEHRMATERIAL_STANDARD_ORDNER = ['Flächensuche','Mantrailing','Trümmerkunde','Kynologie','Geruch und Geruchsverteilung','Orientierung und Kartenkunde','EH Hund','UVV, Sicherheit im Einsatz, Transport','Funk','PSNV','Wasserrettung, Wassersuche','Organisation','Rechtliches und Grundlagen','Geschichte und Entwicklung','Hospitationen','Formulare & Vordrucke'];
 function qualiNorm(t){ return String(t||'').toLowerCase().replace(/[‐-–—]/g,'-').replace(/\s+/g,' ').trim(); }
@@ -1161,6 +1166,12 @@ function qualiKatalogMigrieren(s){
       s.personQualifikationen.forEach(pq=>{ if(pq.qualifikationId===q.id && pq.datum && !pq.gueltigBis){ const d=new Date(pq.datum); d.setMonth(d.getMonth()+q.intervallMonate); pq.gueltigBis=d.toISOString().slice(0,10); } });
     });
   }
+  if(alteKatalogVersion>0 && alteKatalogVersion<12){ const q=s.qualifikationen.find(x=>x.code==='suwr'); if(q){ q.hinweis=(QUALIFIKATIONEN_KATALOG_VORSCHLAG.find(c=>c.code==='suwr')||{}).hinweis||q.hinweis; } }
+  if(alteKatalogVersion>0 && alteKatalogVersion<11){
+    const q=s.qualifikationen.find(x=>x.code==='ifsg');
+    if(q){ q.intervallMonate=24; q.hinweis=(QUALIFIKATIONEN_KATALOG_VORSCHLAG.find(c=>c.code==='ifsg')||{}).hinweis||q.hinweis;
+      s.personQualifikationen.forEach(pq=>{ if(pq.qualifikationId===q.id && pq.datum){ const d=new Date(pq.datum); d.setMonth(d.getMonth()+24); pq.gueltigBis=d.toISOString().slice(0,10); } }); }
+  }
   s.meta.qualiKatalogVersion = QUALI_KATALOG_VERSION;
 }
 
@@ -1178,7 +1189,7 @@ function alltagKategorieLabel(id){ return (ALLTAG_KATEGORIEN.find(k=>k.id===id)|
 function leererState(){
   return {
     version: 1,
-    organisation: { name:'', staffelOrt:'' },
+    organisation: { name:'', staffelOrt:'', kmSatz:0.32 },
     personen: [],       // {id,name,benutzername,mitgliedsnummer,dienstbuchNr,strasse,plz,ort,email,telefon,
                          //  rollen:[], zusatzrechte:[], status:'aktiv'|'inaktiv',
                          //  passwortHash, mussPasswortAendern, angelegtAm}
@@ -1203,6 +1214,8 @@ function leererState(){
     trainingseintraege: [], // {id,personId,hundId,datum,kategorie,thema,notizen,erstelltVon}
     alltagseintraege: [], // {id,personId,hundId,datum,kategorie,thema,notizen,erstelltVon}
     kurswuensche: [], // {id,personId,kursCode,bemerkung,datum,status,antwort}
+    fahrzeuge: [], // {id,rufname,bezeichnung,kennzeichen}
+    fahrzeugEinweisungen: [], // {id,personId,fahrzeugId,datum,gueltigBis,eingewiesenVon}
     trainingskarten: [], // „Mein heutiges Training“: {id,personId,hundId,datum,terminId,ziel,plan,check,erreicht,gut,weniger,arbeiten,tagebuchId}
     hausaufgaben: [], // {id,hundId,titel,beschreibung,faelligBis,zugewiesenVon,zugewiesenAm,status:'offen'|'erledigt',erledigtAm,rueckmeldung}
     einsaetze: [], // {id,alarmierungZeit,meldender,einsatzort,vermisstName,vermisstAlter,vermisstBeschreibung,
@@ -1281,9 +1294,75 @@ function einfacherHash(text){
   return 'h'+h.toString(36);
 }
 
+/* =========================================================
+   FAHRZEUGE & FAHRZEUGEINWEISUNGEN
+   Fahren darf nur, wer eine gültige Einweisung auf das jeweilige Fahrzeug hat; mit Sonderrechten zusätzlich gültige SuWR.
+   ========================================================= */
+const FAHRZEUGE_STANDARD = [
+  {rufname:'RK KS 4-10-4', bezeichnung:'ELW Rettungshunde', typ:'ELW'},
+  {rufname:'RK KS 4-10-2', bezeichnung:'MTF Betreuung', typ:'MTF'},
+];
+function fahrzeugEinweisungGueltig(personId, fahrzeugId){
+  const heute=new Date().toISOString().slice(0,10);
+  const e=(state.fahrzeugEinweisungen||[]).filter(x=>x.personId===personId && x.fahrzeugId===fahrzeugId).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||'')))[0];
+  return e && (!e.gueltigBis || e.gueltigBis>=heute) ? e : null;
+}
+function suwrGueltig(personId){ const q=state.qualifikationen.find(x=>x.code==='suwr'); return q ? ['gueltig'].includes(qualiStatusFuer(personId,q).s) : false; }
+function fahrerFuer(fahrzeugId){
+  return state.personen.filter(p=>p.status!=='inaktiv' && fahrzeugEinweisungGueltig(p.id, fahrzeugId)).map(p=>({p, suwr:suwrGueltig(p.id)}))
+    .sort((a,b)=>(b.suwr-a.suwr)||a.p.name.localeCompare(b.p.name,'de'));
+}
+function renderTabFahrzeuge(){
+  const fz=state.fahrzeuge||[];
+  return `
+    <p class="lead">Einsatzfahrzeuge mit Funkrufnamen und die Einweisungen der Fahrer/-innen (unbefristet gültig). Fahren darf nur, wer auf das jeweilige Fahrzeug eingewiesen ist (Einweisungen gelten unbefristet); mit Sonder- und Wegerechten zusätzlich mit gültiger SuWR-Unterweisung.</p>
+    <div class="card card-pad" style="margin-bottom:14px">
+      <h3 style="margin-top:0">Fahrzeug anlegen</h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <input id="fz-rufname" placeholder="Funkrufname, z. B. RK KS 4-10-4" style="flex:1 1 180px">
+        <input id="fz-bez" placeholder="Bezeichnung, z. B. ELW Rettungshunde" style="flex:1 1 180px">
+        <input id="fz-kennz" placeholder="Kennzeichen (optional)" style="flex:1 1 130px">
+        <button class="btn btn-primary btn-sm" id="fz-neu">+ Anlegen</button>
+      </div>
+    </div>
+    ${fz.map(f=>{ const fahrer=fahrerFuer(f.id);
+      return `<div class="card card-pad" style="margin-bottom:10px">
+        <div class="spread"><span><b>${esc(f.rufname)}</b> · ${esc(f.bezeichnung||'')}${f.kennzeichen?` <span class="hint">(${esc(f.kennzeichen)})</span>`:''}</span><button class="btn btn-ghost btn-sm" data-fz-del="${f.id}">Löschen</button></div>
+        <p class="hint" style="margin:6px 0 4px">Eingewiesen (${fahrer.length}): ${fahrer.map(x=>esc(x.p.name)+(x.suwr?' ✓SuWR':'')).join(' · ')||'noch niemand'}</p>
+        <div class="row" style="gap:6px;flex-wrap:wrap">
+          <select data-fz-person="${f.id}" style="flex:1 1 160px"><option value="">– Person –</option>${state.personen.filter(p=>p.status!=='inaktiv' && p.name!=='Admin' && !p.name.startsWith('#')).sort((a,b)=>a.name.localeCompare(b.name,'de')).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+          <input type="date" data-fz-datum="${f.id}" value="${new Date().toISOString().slice(0,10)}" title="Datum der Einweisung">
+          <button class="btn btn-sm" data-fz-einweisen="${f.id}">Einweisung eintragen</button>
+        </div></div>`; }).join('') || '<p class="hint">Noch keine Fahrzeuge.</p>'}`;
+}
+function bindTabFahrzeuge(){
+  const neu=document.getElementById('fz-neu');
+  if(neu) neu.onclick=()=>{ const r=document.getElementById('fz-rufname').value.trim(); if(!r){ alert('Bitte den Funkrufnamen eintragen.'); return; }
+    state.fahrzeuge=state.fahrzeuge||[]; state.fahrzeuge.push({id:uid(), rufname:r, bezeichnung:document.getElementById('fz-bez').value.trim(), kennzeichen:document.getElementById('fz-kennz').value.trim()}); speichereState(); render(); };
+  document.querySelectorAll('[data-fz-del]').forEach(b=>b.onclick=()=>{ if(!confirm('Fahrzeug und alle Einweisungen darauf löschen?')) return; const id=b.dataset.fzDel;
+    state.fahrzeuge=state.fahrzeuge.filter(f=>f.id!==id); state.fahrzeugEinweisungen=(state.fahrzeugEinweisungen||[]).filter(e=>e.fahrzeugId!==id); speichereState(); render(); });
+  document.querySelectorAll('[data-fz-einweisen]').forEach(b=>b.onclick=()=>{ const id=b.dataset.fzEinweisen; const pid=document.querySelector(`[data-fz-person="${id}"]`).value; if(!pid){ alert('Bitte eine Person wählen.'); return; }
+    state.fahrzeugEinweisungen=state.fahrzeugEinweisungen||[]; const ich=aktuellePerson();
+    state.fahrzeugEinweisungen.push({id:uid(), personId:pid, fahrzeugId:id, datum:document.querySelector(`[data-fz-datum="${id}"]`).value, gueltigBis:null, eingewiesenVon:ich?ich.id:''});
+    speichereState(); zeigeToast('Einweisung eingetragen.'); render(); });
+}
+function renderFahrerEinsatzbereit(){
+  const fz=state.fahrzeuge||[]; if(!fz.length) return '';
+  return `<p style="margin:12px 0 2px"><b>Fahrzeuge und Fahrer/-innen</b></p><ul class="hint" style="margin:4px 0 0 -18px">${fz.map(f=>{ const fahrer=fahrerFuer(f.id);
+    return `<li><b>${esc(f.rufname)}</b> (${esc(f.bezeichnung||'')}): ${fahrer.length?fahrer.map(x=>esc(x.p.name)+(x.suwr?' <span title="mit Sonder- und Wegerechten">🚨</span>':'')).join(', '):'<span style="color:var(--accent-ink)">keine eingewiesene Person</span>'}</li>`; }).join('')}</ul>
+    <p class="hint" style="margin:2px 0 0">🚨 = gültige SuWR-Unterweisung (Fahren mit Sonder- und Wegerechten)</p>`;
+}
+function renderMeineFahrzeuge(person){
+  const eig=(state.fahrzeugEinweisungen||[]).filter(e=>e.personId===person.id);
+  if(!eig.length) return '';
+  return `<div class="card card-pad" style="margin-bottom:12px"><h3 style="margin-top:0">🚗 Meine Fahrzeugeinweisungen</h3><ul class="hint" style="margin:0 0 0 -18px">${eig.map(e=>{ const f=(state.fahrzeuge||[]).find(x=>x.id===e.fahrzeugId); const ok=fahrzeugEinweisungGueltig(person.id,e.fahrzeugId)===e;
+    return `<li>${ok?'✓':'⚠'} ${esc(f?f.rufname+' · '+(f.bezeichnung||''):'Fahrzeug')} – eingewiesen am ${fmtDatum(e.datum)}${e.gueltigBis?', gültig bis '+fmtDatum(e.gueltigBis):''}</li>`; }).join('')}</ul>
+    <p class="hint" style="margin:6px 0 0">Mit Sonder- und Wegerechten: ${suwrGueltig(person.id)?'✓ SuWR gültig':'⚠ SuWR fehlt oder abgelaufen'}</p></div>`;
+}
+
 const BARRY_SCHEMA_VERSION = 1; // muss VOR ladeState() definiert sein (temporal dead zone)
 const BARRY_APP_VERSION = '2.0';
-const BARRY_APP_STAND = '27.09.2026';
+const BARRY_APP_STAND = '29.09.2026';
 let state = ladeState();
 // Internes Datenschema von BARRY selbst (unabhängig vom RHS-Austauschformat-Schema).
 // Bei künftigen strukturellen Änderungen am state-Objekt: Versionsnummer hochzählen und
@@ -1319,6 +1398,11 @@ function migriereState(s){
   if(!Array.isArray(s.geloeschteTermine)) s.geloeschteTermine = [];
   if(!Array.isArray(s.trainingskarten)) s.trainingskarten = [];
   if(!Array.isArray(s.kurswuensche)) s.kurswuensche = [];
+  if(!Array.isArray(s.fahrzeugEinweisungen)) s.fahrzeugEinweisungen = [];
+  if(!Array.isArray(s.fahrzeuge)){ s.fahrzeuge = []; }
+  if(!s.meta.fahrzeugeVorbelegt){ FAHRZEUGE_STANDARD.forEach(f=>{ if(!s.fahrzeuge.some(x=>x.rufname===f.rufname)) s.fahrzeuge.push({id:uid(), ...f, kennzeichen:''}); }); s.meta.fahrzeugeVorbelegt=true; }
+  s.organisation = s.organisation || {}; if(!s.organisation.leitungEmail) s.organisation.leitungEmail = 'Michaela.Weisse@rotkreuz.team';
+  if(s.organisation.kmSatz===undefined) s.organisation.kmSatz = 0.32;
   s.hunde.forEach(h=>{
     if(!Array.isArray(h.einschaetzungen)) h.einschaetzungen = [];
     if(h.ausbilderNotiz && !h.einschaetzungen.length){
@@ -1463,11 +1547,16 @@ function renderLogin(){
     <div class="field"><label>Passwort</label><input type="password" id="in-pw" autofocus autocapitalize="off" autocorrect="off" spellcheck="false"></div>
     ${loginHinweis?`<div class="card card-pad" style="background:var(--soft);border:none;margin-bottom:12px"><p class="hint" style="margin:0">${esc(loginHinweis)}</p></div>`:''}
     ${loginFehler?`<p class="hint" style="color:var(--accent-ink)">${esc(loginFehler)}</p>`:''}
+    <details id="login-bereiche" style="margin:0 0 12px">
+      <summary class="hint" style="cursor:pointer;color:var(--ink)">⚙️ Bereiche auswählen (optional)</summary>
+      <p class="hint" style="margin:6px 0">Nur angehakte Bereiche erscheinen im Menü. Ohne Änderung wird alles angezeigt, wofür du berechtigt bist. Start und Hilfe sind immer sichtbar.</p>
+      ${BEREICHE.filter(b=>!BEREICHE_FEST.includes(b.id)).map(b=>`<label class="row" style="gap:8px;align-items:center;padding:4px 0;cursor:pointer"><input type="checkbox" data-login-bereich="${b.id}" checked> <span>${b.icon} ${esc(b.label)}</span></label>`).join('')}
+    </details>
     <button class="btn btn-primary" id="btn-anmelden" style="width:100%">Anmelden</button>
     ${istErststartOhneDaten()?`
     <div class="card card-pad" style="background:var(--soft);border:none;margin-top:16px">
       <strong>Erste Einrichtung auf diesem Gerät</strong>
-      <p class="hint" style="margin:6px 0 10px">Sie haben von Ihrer Staffelleitung eine Datendatei erhalten? Dann importieren Sie sie hier direkt – eine Anmeldung als „Admin“ ist dafür nicht nötig. Danach melden Sie sich mit Ihrem eigenen Namen an.</p>
+      <p class="hint" style="margin:6px 0 10px">Du hast von deiner Staffelleitung eine Datendatei erhalten? Dann importiere sie hier direkt – eine Anmeldung als „Admin“ ist dafür nicht nötig. Danach meldest du dich mit deinem eigenen Namen an.</p>
       <label class="btn" style="display:inline-flex;cursor:pointer">📂 Datendatei importieren<input type="file" id="in-erststart-import" accept="application/json,.json" style="display:none"></label>
     </div>`:''}
     ${!istErststartOhneDaten()?`
@@ -1481,7 +1570,7 @@ function renderLogin(){
     ${localStorage.getItem(STORAGE_KEY+'-vor-import-backup')?`
     <div class="card card-pad" style="background:var(--soft);border:none;margin-top:16px">
       <strong>Passwort vergessen / Import war ein Fehler?</strong>
-      <p class="hint" style="margin:6px 0 10px">Auf diesem Gerät gibt es eine automatische Sicherheitskopie von direkt vor dem letzten Import. Falls Sie sich mit keinem Zugang aus dem aktuellen Bestand mehr anmelden können, lässt sich dieser vorherige Stand hier zurückholen.</p>
+      <p class="hint" style="margin:6px 0 10px">Auf diesem Gerät gibt es eine automatische Sicherheitskopie von direkt vor dem letzten Import. Falls du dich mit keinem Zugang aus dem aktuellen Bestand mehr anmelden kannst, lässt sich dieser vorherige Stand hier zurückholen.</p>
       <button class="btn" id="btn-login-backup-wiederherstellen">Vorherigen Stand (vor letztem Import) wiederherstellen</button>
     </div>`:''}
     <p class="hint" style="margin-top:14px">Beim Tippen erscheinen passende Namen zur Auswahl. Wer einen Benutzernamen hat, kann diesen statt des vollen Namens eingeben. Erstzugang erhältst du von der Leitung. Alle Daten bleiben ausschließlich auf diesem Gerät.</p>
@@ -1529,6 +1618,8 @@ function bindLogin(){
       loginFehler = 'Name/Benutzername oder Passwort stimmt nicht.'; render(); return;
     }
     loginFehler=''; loginHinweis='';
+    p.bereicheAusgeblendet = [...document.querySelectorAll('[data-login-bereich]')].filter(c=>!c.checked).map(c=>c.dataset.loginBereich);
+    p.bereicheGewaehlt = true; speichereState();
     if(p.mussPasswortAendern){ loginSchrittNeuesPasswort = p.id; render(); return; }
     session = { personId:p.id };
     try{ localStorage.setItem('barry-last-login', p.benutzername || p.name); }catch(e){}
@@ -1563,7 +1654,7 @@ function render(){
         <div class="brand">${esc(APP_NAME)}<small>${esc(state.organisation.name||APP_CLAIM)}</small></div>
       </div>
       <nav class="nav">
-        ${BEREICHE.filter(b=>darfBereichSehen(b,person)).map(b=>`
+        ${BEREICHE.filter(b=>darfBereichSehen(b,person) && !(person.bereicheAusgeblendet||[]).includes(b.id)).map(b=>`
           <div class="nav-group">
             <button class="nav-item ${route.bereich===b.id?'active':''}" style="--dot:var(${b.dot});--dot-soft:var(${b.dot}-soft)" data-goto="${b.id}">
               <span class="nav-dot" style="--dot:var(${b.dot})"></span>${b.icon?b.icon+' ':''}${esc(b.label)}
@@ -1574,6 +1665,8 @@ function render(){
       <div class="sidebar-foot">
         <div class="who clickable" id="btn-mein-profil" title="Mein Profil bearbeiten">${esc(person.name)} ✎</div>
         <div style="margin-bottom:8px">${(person.rollen||[]).map(r=>`<span class="chip muted">${esc(rolleInfo(r).label)}</span>`).join(' ')}</div>
+        <button class="btn btn-sm" data-datei-einlesen style="width:100%;margin-bottom:6px">📂 Datei einlesen</button>
+        <button class="btn btn-sm btn-ghost" data-bereiche-waehlen style="width:100%;margin-bottom:8px">⚙️ Bereiche auswählen</button>
         <button class="link" id="btn-abmelden">Abmelden</button>
         <div class="hint" style="margin-top:8px;font-size:.75rem">BARRY ${BARRY_APP_VERSION} · Stand ${BARRY_APP_STAND}</div>
       </div>
@@ -1622,12 +1715,15 @@ function renderStart(person){
     + state.rhEintraege.filter(e=>new Date(e.datum)>=dreissigTageAb).length
     + state.mantrailingEintraege.filter(e=>new Date(e.worked||e.laid||e.datum)>=dreissigTageAb).length;
 
-  return `
-    <div class="eyebrow" style="--dot:var(--t-start)">Start</div>
-    <h1>Hallo ${esc(person.name.split(' ')[0]||person.name)} 👋</h1>
-    <p class="lead">Schön, dass du da bist – hier findest du auf einen Blick, was als Nächstes ansteht.</p>
-
-    <div class="grid-2" style="margin:20px 0;align-items:start;gap:16px">
+  const schnell = `
+    <div class="quick-tiles">
+      ${eigeneHunde.length?`<button class="quick-tile" id="btn-start-trainingskarte"><span>🐾</span>Mein heutiges Training</button>`:''}
+      <button class="quick-tile" data-goto-meinstand><span>🎓</span>Mein Stand</button>
+      <button class="quick-tile" data-goto-inline="organisation"><span>📅</span>Termine</button>
+      <button class="quick-tile" id="btn-start-funk"><span>📻</span>Funk</button>
+      <button class="quick-tile" data-datei-einlesen><span>📂</span>Datei einlesen</button>
+    </div>`;
+  const termineKarte = `<div style="margin:16px 0">${`
       <div class="card card-pad">
         <div class="spread"><h3>Nächste Termine</h3><span class="chip muted" data-goto-inline="organisation">alle ansehen →</span></div>
         ${naechsteTermine.map(t=>{
@@ -1644,30 +1740,33 @@ function renderStart(person){
           </div>`;
         }).join('') || '<p class="hint">Keine anstehenden Termine.</p>'}
       </div>
-
+`}</div>`;
+  const teamKarte = `<div style="margin:16px 0">${`
       <div class="card card-pad">
         <h3>${eigeneHunde.length?'Mein Team':'Schnellzugriff Training'}</h3>
         ${eigeneHunde.length?eigeneHunde.map(h=>`
           <div style="border-top:1px solid var(--line);padding:10px 0">
             <strong>${esc(teamLabel(h))}</strong>
             ${(()=>{ const n = state.hausaufgaben.filter(a=>a.hundId===h.id && a.status!=='erledigt').length; return n?`<div><span class="chip" data-goto-hausaufgaben="${h.id}" style="cursor:pointer">📝 ${n} offene Hausaufgabe${n===1?'':'n'}</span></div>`:''; })()}
-            <div class="hint" style="margin-top:6px">Training eintragen:</div>
+            <div class="hint" style="margin-top:4px">Training eintragen:</div>
             <div class="row" style="margin-top:4px;flex-wrap:wrap">
-              ${spartenSortiert.map(s=>`<button class="btn btn-sm" data-start-art="${s.art}" data-start-sparte="${s.id}" data-start-hund="${h.id}">+ ${esc(s.label)}</button>`).join('')}
+              ${spartenFuerHund(h, spartenSortiert).map(s=>`<button class="btn btn-sm" data-start-art="${s.art}" data-start-sparte="${s.id}" data-start-hund="${h.id}">+ ${esc(s.label)}</button>`).join('')}
             </div>
           </div>
         `).join(''):`<p class="hint">Dir ist aktuell kein eigener Hund als Hundeführer/in zugeordnet. Sobald das der Fall ist, erscheinen hier direkte Schnellzugriffe zum Eintragen eures Trainings.</p>`}
       </div>
-    </div>
-
-    ${(istLeitung || hatAusbilderRecht(person)) ? renderStartLeitungsHinweise(person) : ''}
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px">
-      ${eigeneHunde.length?`<button class="btn btn-primary" id="btn-start-trainingskarte">🐾 Mein heutiges Training</button>`:''}
-      <button class="btn" id="btn-start-funk">📻 Funk-Spickzettel</button>
-    </div>
-    ${(()=>{ const f=eigeneFristen(person.id, 60); const pr=meineZielProfile(person)[0]; const r=pr?profilAuswerten(person.id,pr):null; const offen=r?(r.fehlt.length+r.abgelaufen.length):0;
+`}</div>`;
+  const meinStandKarte = `${(()=>{ const f=eigeneFristen(person.id, 60); const pr=meineZielProfile(person)[0]; const r=pr?profilAuswerten(person.id,pr):null; const offen=r?(r.fehlt.length+r.abgelaufen.length):0;
       return `<div class="card card-pad" style="margin-top:16px;cursor:pointer" data-goto-meinstand><div class="spread"><h3 style="font-size:1.05rem;margin:0">🎓 Mein Ausbildungsstand</h3><span class="chip muted">öffnen →</span></div>
-        <p class="hint" style="margin:6px 0 0">${f.abgelaufen.length?`<b style="color:#b00020">${f.abgelaufen.length} abgelaufen</b> · `:''}${f.bald.length?`${f.bald.length} in den nächsten 60 Tagen fällig · `:''}${pr?`${esc(pr.label)}: ${offen?offen+' Punkt(e) offen':'vollständig ✅'}`:''}</p></div>`; })()}
+        <p class="hint" style="margin:6px 0 0">${f.abgelaufen.length?`<b style="color:#b00020">${f.abgelaufen.length} abgelaufen</b> · `:''}${f.bald.length?`${f.bald.length} in den nächsten 60 Tagen fällig · `:''}${pr?`${esc(pr.label)}: ${offen?offen+' Punkt(e) offen':'vollständig ✅'}`:''}</p></div>`; })()}`;
+  const leitungKarte = (istLeitung || hatAusbilderRecht(person)) ? renderStartLeitungsHinweise(person) : '';
+  const einsatzKarte = (istLeitung || hatAusbilderRecht(person)) && typeof renderStartEinsatzbereit==='function' ? renderStartEinsatzbereit(person) : '';
+  return `
+    <h1>Hallo ${esc(person.name.split(' ')[0]||person.name)} 👋</h1>
+    <p class="lead">Schön, dass du da bist – hier findest du auf einen Blick, was als Nächstes ansteht.</p>
+    ${schnell}
+    ${renderStartSicherung(person)}
+    ${(istLeitung || hatAusbilderRecht(person)) ? leitungKarte + einsatzKarte + termineKarte + teamKarte + (eigeneHunde.length?meinStandKarte:'') : meinStandKarte + termineKarte + teamKarte}
     ${renderStartGeteilteZiele(eigeneHunde)}
     ${renderUebungDesTages(person, eigeneHunde)}
     <div class="card card-pad" style="margin:20px 0">
@@ -1683,6 +1782,11 @@ function renderStart(person){
     </div>
     ${modal ? renderModal() : ''}
   `;
+}
+function spartenFuerHund(h, liste){
+  const map={flaeche:'flaechensuche', truemmer:'truemmersuche', mantrailing:'mantrailing'};
+  const eigene=(h.sparten||[]).map(x=>map[x]).filter(Boolean);
+  return eigene.length ? liste.filter(s=>eigene.includes(s.id)) : liste;
 }
 function uebungDesTagesWaehlen(eigeneHunde){
   // Deterministisch pro Tag (gleiche Übung den ganzen Tag), gewichtet nach den Sparten der eigenen Hunde.
@@ -1752,6 +1856,7 @@ function bindStart(person){
     el.onclick = ()=>{ route = {bereich:'verwaltung', unter:el.dataset.gotoVerwaltung, id:null}; render(); };
   });
   document.querySelectorAll('[data-goto-meinstand]').forEach(el=>el.onclick=()=>{ route={bereich:'ausbildung',unter:null,id:null}; ausbildungTab='meinstand'; render(); window.scrollTo(0,0); });
+  const sich=document.getElementById('btn-start-sichern'); if(sich) sich.onclick=()=>{ datensicherungJetzt(); render(); };
   const tkBtn=document.getElementById('btn-start-trainingskarte');
   if(tkBtn) tkBtn.onclick = ()=>{ modal={type:'trainingskarte'}; render(); };
   const fkBtn=document.getElementById('btn-start-funk');
@@ -1796,11 +1901,13 @@ function bindStart(person){
    ========================================================= */
 const VERWALTUNG_TABS = [
   {id:'personen', label:'Personen', nur:'leitungAdmin'},
+  {id:'austausch', label:'Mitglieder & Austausch', nur:'leitungAdmin'},
   {id:'hunde', label:'Hunde', nur:null},
   {id:'qualifikationen', label:'Qualifikationen', nur:null},
   {id:'fristen', label:'Fristen & Lücken', nur:null},
   {id:'anwesenheit', label:'Anwesenheit', nur:null},
   {id:'orte', label:'Orte & Gebiete', nur:null},
+  {id:'fahrzeuge', label:'Fahrzeuge', nur:null},
   {id:'rechte', label:'Rollen & Rechte', nur:'leitungAdmin'},
   {id:'datensicherung', label:'Datensicherung', nur:'leitungAdmin'},
 ];
@@ -1837,11 +1944,13 @@ function renderVerwaltung(person){
 function renderVerwaltungTab(tab, person){
   switch(tab){
     case 'personen': return renderTabPersonen();
+    case 'austausch': return renderTabAustausch();
     case 'hunde': return renderTabHunde();
     case 'qualifikationen': return renderTabQualifikationen();
     case 'fristen': return renderTabFristen();
     case 'anwesenheit': return renderTabAnwesenheit();
     case 'orte': return renderTabOrte();
+    case 'fahrzeuge': return renderTabFahrzeuge();
     case 'rechte': return renderTabRechte();
     case 'datensicherung': return renderTabDatensicherung();
     default: return renderTabPersonen();
@@ -1865,13 +1974,65 @@ function bindVerwaltung(person){
 }
 function bindVerwaltungTab(tab, person){
   if(tab==='personen') bindTabPersonen();
+  else if(tab==='austausch') bindTabAustausch();
   else if(tab==='hunde') bindTabHunde();
   else if(tab==='qualifikationen') bindTabQualifikationen();
   else if(tab==='fristen') bindTabFristen();
   else if(tab==='anwesenheit') bindTabAnwesenheit();
   else if(tab==='orte') bindTabOrte();
+  else if(tab==='fahrzeuge') bindTabFahrzeuge();
   else if(tab==='rechte') bindTabRechte();
   else if(tab==='datensicherung') bindTabDatensicherung();
+}
+
+/* ---------- Mitglieder & Austausch ---------- */
+function renderTabAustausch(){
+  const offeneWuensche=(state.kurswuensche||[]).filter(w=>w.status==='offen').length;
+  const ohnePw=zugangsberechtigtePersonen().filter(p=>!p.startPasswort).length;
+  const ohnePaket=zugangsberechtigtePersonen().filter(p=>!p.zugangErstelltAm).length;
+  return `
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="chip ${ohnePw?'':'muted'}">${ohnePw} ohne Startpasswort</span>
+      <span class="chip ${ohnePaket?'':'muted'}">${ohnePaket} ohne Zugangspaket</span>
+      <span class="chip ${offeneWuensche?'':'muted'}" data-goto-kurswuensche style="cursor:pointer">${offeneWuensche} offene Kurswünsche →</span>
+    </div>
+    <div class="card card-pad" style="margin-bottom:14px">
+      <h3 style="margin-top:0">📧 E-Mail der Staffelleitung</h3>
+      <p class="hint" style="margin:0 0 6px">An diese Adresse schicken Mitglieder Meldungen, Kurswünsche und Trainingskarten per „📧 Per E-Mail“. Sie wird mit dem Zugangspaket an die Mitglieder weitergegeben.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><input id="org-leitung-email" type="email" value="${esc(state.organisation.leitungEmail||'')}" placeholder="name@beispiel.de" style="flex:1 1 220px"><button class="btn btn-sm" id="org-leitung-email-ok">Speichern</button></div>
+    </div>
+    <div class="card card-pad" style="margin-bottom:14px">
+      <h3 style="margin-top:0">🔑 Zugänge <span class="chip muted">${zugangsberechtigtePersonen().filter(p=>p.startPasswort).length} von ${zugangsberechtigtePersonen().length} mit Startpasswort</span></h3>
+      <p class="hint" style="margin-top:8px">Jedes Mitglied erhält ein <b>eigenes Startpasswort</b> und ein eigenes Zugangspaket mit nur seinen Daten und Rechten. Die Startpasswörter bleiben hier in der Zugangsliste nachlesbar; bei der ersten Anmeldung muss jede Person ihr Passwort ändern.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btn-startpw-vergeben">Fehlende Startpasswörter vergeben</button>
+        <button class="btn btn-sm" id="btn-zugangsliste">Zugangsliste (CSV)</button>
+        <button class="btn btn-sm btn-primary" id="btn-alle-zugangspakete">Alle Zugangspakete (ZIP)</button>
+      </div>
+      <p class="hint" style="margin-top:6px">Die ZIP-Datei enthält je Person eine Datei „BARRY_Zugang_Name.json“. Datei und Passwort bitte getrennt weitergeben.</p>
+      <p class="hint" style="margin-top:4px">🔒 Bereits vergebene Startpasswörter werden nie automatisch geändert – „Fehlende Startpasswörter vergeben“ ergänzt nur Personen ohne Passwort. Hinweis: Spielt ein Mitglied ein Zugangspaket <b>erneut</b> ein, gilt auf seinem Gerät wieder das Startpasswort. Pakete daher nur an neue Mitglieder oder bei vergessenem Passwort erneut schicken.</p>
+      <h4 style="margin:12px 0 4px">📋 Selbstauskunft (Excel)</h4>
+      <p class="hint" style="margin:0 0 6px">Je Mitglied eine vorausgefüllte Excel-Datei mit persönlichen Daten, Hunden und allen Ausbildungen/Modulen zum Ergänzen. Zurückgeschickte Dateien hier einlesen – mit Vorschau, nichts wird ungefragt überschrieben.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btn-alle-selbstauskuenfte">Selbstauskünfte für alle (ZIP)</button>
+        <label class="btn btn-sm btn-primary" style="cursor:pointer">Meldungen der Mitglieder einlesen<input type="file" id="in-meldungen" multiple style="display:none"></label>
+        <button class="btn btn-sm" id="btn-alle-standupdates" title="Aktueller Ausbildungsstand je Mitglied – ändert keine Passwörter">Stand-Updates für alle (ZIP)</button>
+        <label class="btn btn-sm btn-primary" style="cursor:pointer">Ausgefüllte Selbstauskunft einlesen<input type="file" id="in-selbstauskunft" multiple style="display:none"></label>
+      </div>
+    </div>
+  `;
+}
+function bindTabAustausch(){
+  const spv=document.getElementById('btn-startpw-vergeben');
+  if(spv) spv.onclick = ()=>{ const n=fehlendeStartpasswoerterVergeben(); zeigeToast(n?`${n} Startpasswörter vergeben.`:'Alle haben bereits ein Startpasswort.'); render(); };
+  const zl=document.getElementById('btn-zugangsliste'); if(zl) zl.onclick = ()=>{ fehlendeStartpasswoerterVergeben(); zugangslisteHerunterladen(); render(); };
+  const az=document.getElementById('btn-alle-zugangspakete'); if(az) az.onclick = ()=>{ alleZugangspaketeHerunterladen(); render(); };
+  const asa=document.getElementById('btn-alle-selbstauskuenfte'); if(asa) asa.onclick = ()=>alleSelbstauskuenfteHerunterladen();
+  const imd=document.getElementById('in-meldungen'); if(imd) imd.onchange=e=>{ const fs=Array.from(e.target.files||[]); e.target.value=''; meldungenEinlesen(fs); };
+  const asu=document.getElementById('btn-alle-standupdates'); if(asu) asu.onclick = ()=>alleStandUpdatesHerunterladen();
+  const isa=document.getElementById('in-selbstauskunft'); if(isa) isa.onchange = e=>{ const fs=Array.from(e.target.files||[]); e.target.value=''; selbstauskunftEinlesen(fs); };
+  const em=document.getElementById('org-leitung-email-ok'); if(em) em.onclick=()=>{ state.organisation.leitungEmail=document.getElementById('org-leitung-email').value.trim(); speichereState(); zeigeToast('E-Mail-Adresse gespeichert.'); };
+  document.querySelectorAll('[data-goto-kurswuensche]').forEach(el=>el.onclick=()=>{ route={bereich:'ausbildung',unter:null,id:null}; ausbildungTab='auswertung'; auswAnsicht='wuensche'; render(); });
 }
 
 /* ---------- Personen ---------- */
@@ -1908,24 +2069,6 @@ function renderTabPersonen(){
           <button class="btn btn-sm" data-duplikat-zusammenfuehren="${gi}">Zusammenführen</button>
         </div>`).join('')}
     </div>`:''}
-    <details class="card card-pad" style="margin-bottom:14px">
-      <summary style="cursor:pointer;font-weight:700">🔑 Zugänge & Selbstauskunft <span class="chip muted">${zugangsberechtigtePersonen().filter(p=>p.startPasswort).length} von ${zugangsberechtigtePersonen().length} mit Startpasswort</span></summary>
-      <p class="hint" style="margin-top:8px">Jedes Mitglied erhält ein <b>eigenes Startpasswort</b> und ein eigenes Zugangspaket mit nur seinen Daten und Rechten. Die Startpasswörter bleiben hier in der Zugangsliste nachlesbar; bei der ersten Anmeldung muss jede Person ihr Passwort ändern.</p>
-      <div class="row" style="gap:6px;flex-wrap:wrap">
-        <button class="btn btn-sm" id="btn-startpw-vergeben">Fehlende Startpasswörter vergeben</button>
-        <button class="btn btn-sm" id="btn-zugangsliste">Zugangsliste (CSV)</button>
-        <button class="btn btn-sm btn-primary" id="btn-alle-zugangspakete">Alle Zugangspakete (ZIP)</button>
-      </div>
-      <p class="hint" style="margin-top:6px">Die ZIP-Datei enthält je Person eine Datei „BARRY_Zugang_Name.json“. Datei und Passwort bitte getrennt weitergeben.</p>
-      <p class="hint" style="margin-top:4px">🔒 Bereits vergebene Startpasswörter werden nie automatisch geändert – „Fehlende Startpasswörter vergeben“ ergänzt nur Personen ohne Passwort. Hinweis: Spielt ein Mitglied ein Zugangspaket <b>erneut</b> ein, gilt auf seinem Gerät wieder das Startpasswort. Pakete daher nur an neue Mitglieder oder bei vergessenem Passwort erneut schicken.</p>
-      <h4 style="margin:12px 0 4px">📋 Selbstauskunft (Excel)</h4>
-      <p class="hint" style="margin:0 0 6px">Je Mitglied eine vorausgefüllte Excel-Datei mit persönlichen Daten, Hunden und allen Ausbildungen/Modulen zum Ergänzen. Zurückgeschickte Dateien hier einlesen – mit Vorschau, nichts wird ungefragt überschrieben.</p>
-      <div class="row" style="gap:6px;flex-wrap:wrap">
-        <button class="btn btn-sm" id="btn-alle-selbstauskuenfte">Selbstauskünfte für alle (ZIP)</button>
-        <button class="btn btn-sm" id="btn-alle-standupdates" title="Aktueller Ausbildungsstand je Mitglied – ändert keine Passwörter">Stand-Updates für alle (ZIP)</button>
-        <label class="btn btn-sm btn-primary" style="cursor:pointer">Ausgefüllte Selbstauskunft einlesen<input type="file" id="in-selbstauskunft" multiple style="display:none"></label>
-      </div>
-    </details>
     <div class="spread" style="margin-bottom:14px">
       <p class="hint">${state.personen.length} Personen im Bestand · Zum Bearbeiten anklicken</p>
       <button class="btn btn-primary" id="btn-neue-person">+ Person anlegen</button>
@@ -1934,13 +2077,6 @@ function renderTabPersonen(){
   `;
 }
 function bindTabPersonen(){
-  const spv=document.getElementById('btn-startpw-vergeben');
-  if(spv) spv.onclick = ()=>{ const n=fehlendeStartpasswoerterVergeben(); zeigeToast(n?`${n} Startpasswörter vergeben.`:'Alle haben bereits ein Startpasswort.'); render(); };
-  const zl=document.getElementById('btn-zugangsliste'); if(zl) zl.onclick = ()=>{ fehlendeStartpasswoerterVergeben(); zugangslisteHerunterladen(); render(); };
-  const az=document.getElementById('btn-alle-zugangspakete'); if(az) az.onclick = ()=>{ alleZugangspaketeHerunterladen(); render(); };
-  const asa=document.getElementById('btn-alle-selbstauskuenfte'); if(asa) asa.onclick = ()=>alleSelbstauskuenfteHerunterladen();
-  const asu=document.getElementById('btn-alle-standupdates'); if(asu) asu.onclick = ()=>alleStandUpdatesHerunterladen();
-  const isa=document.getElementById('in-selbstauskunft'); if(isa) isa.onchange = e=>{ const fs=Array.from(e.target.files||[]); e.target.value=''; selbstauskunftEinlesen(fs); };
   const btn = document.getElementById('btn-neue-person');
   if(btn) btn.onclick = ()=>{ modal = {type:'person', id:null}; render(); };
   document.querySelectorAll('[data-person]').forEach(tr=>{
@@ -2522,7 +2658,7 @@ function renderTabOrte(){
   return `
     <div class="card card-pad" style="margin-bottom:16px">
       <h3>Ort / Gelände anlegen</h3>
-      <p class="hint">Gemeinsame Pflege von Unterkunft, Trainings- und Übungsgebieten. Eine Straßenadresse ist nicht erforderlich: Wald-, Trümmer- und Übungsflächen können direkt über GPS-Koordinaten oder eine importierte KML-/GPX-Datei (z. B. aus Gaia GPS oder CalTopo) gespeichert werden.</p>
+      <p class="hint">Gemeinsame Pflege von Unterkunft, Trainings- und Übungsgebieten. Mit Adresse (oder Koordinaten) können die Mitglieder unter Organisation → 📍 Trainingsorte ihre Entfernung berechnen; die Orte gehen mit dem Terminplan an alle. Eine Straßenadresse ist nicht erforderlich: Wald-, Trümmer- und Übungsflächen können direkt über GPS-Koordinaten oder eine importierte KML-/GPX-Datei (z. B. aus Gaia GPS oder CalTopo) gespeichert werden.</p>
       <div class="grid-2">
         <div class="field"><label>Name</label><input id="ort-name" placeholder="z. B. Waldgebiet Beberbeck"></div>
         <div class="field"><label>Art</label><select id="ort-art">${ORT_ARTEN.map(a=>`<option value="${a}">${esc(a)}</option>`).join('')}</select></div>
@@ -2681,7 +2817,7 @@ function renderTabDatensicherung(){
       <button class="btn" id="btn-backup-wiederherstellen" style="align-self:flex-start">Vorherigen Stand wiederherstellen</button>
     </div>`:''}
     <div class="card card-pad" style="margin-top:16px">
-      <p class="hint">Erstellt am ${fmtDatum(state.meta.erstelltAm)} · Letzte Änderung ${fmtDatum(state.meta.letzteAenderung)}</p>
+      <p class="hint">Erstellt am ${fmtDatum(state.meta.erstelltAm)} · Letzte Änderung ${fmtDatum(state.meta.letzteAenderung)} · Letzte Sicherung ${state.meta.letzteSicherungAm?fmtDatum(state.meta.letzteSicherungAm):'noch keine'}</p>
     </div>
   `;
 }
@@ -2694,7 +2830,7 @@ function bindTabDatensicherung(){
       state = migriereState(Object.assign(leererState(), JSON.parse(roh)));
       speichereState();
       session = null; loginEingabe = ''; loginFehler = '';
-        loginHinweis = 'Der vorherige Datenbestand wurde wiederhergestellt. Bitte melden Sie sich jetzt mit einer Person aus dem neuen Bestand an (Name oder Benutzername). Zugänge aus dem vorherigen Bestand – z. B. „Admin“ – gelten nicht mehr. Bei importierten Personen gilt das Startpasswort, das Ihnen die Leitung mitgeteilt hat.';
+        loginHinweis = 'Der vorherige Datenbestand wurde wiederhergestellt. Bitte melde dich jetzt mit einer Person aus dem neuen Bestand an (Name oder Benutzername). Zugänge aus dem vorherigen Bestand – z. B. „Admin“ – gelten nicht mehr. Bei importierten Personen gilt das Startpasswort, das dir die Leitung mitgeteilt hat.';
         zeigeToast('Vorheriger Stand wiederhergestellt.');
       render();
     }catch(e){ alert('Sicherheitskopie konnte nicht gelesen werden.'); }
@@ -2706,6 +2842,7 @@ function bindTabDatensicherung(){
     const a = document.createElement('a');
     a.href=url; a.download = `RHS_Sicherung_BARRY_${new Date().toISOString().slice(0,10)}.json`;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+    state.meta.letzteSicherungAm = nowIso(); speichereState();
     zeigeToast('Export gestartet.');
   };
   document.getElementById('in-import').onchange = (e)=>{
@@ -3028,7 +3165,7 @@ function renderModalCsvVorschau(){
       </label>
       <label class="row" style="gap:8px;align-items:flex-start;margin:0 0 10px;cursor:pointer">
         <input type="checkbox" id="m-csv-startpw" style="margin-top:3px">
-        <span class="hint" style="color:var(--ink)"><strong>Auch vorhandenen Personen ohne Startpasswort ein eigenes vergeben</strong> (ausgenommen Sie selbst und das Admin-Konto). Neue Personen erhalten immer ein eigenes. Alle Startpasswörter stehen danach in der Zugangsliste unter Verwaltung → Personen.</span>
+        <span class="hint" style="color:var(--ink)"><strong>Auch vorhandenen Personen ohne Startpasswort ein eigenes vergeben</strong> (ausgenommen du selbst und das Admin-Konto). Neue Personen erhalten immer ein eigenes. Alle Startpasswörter stehen danach in der Zugangsliste unter Verwaltung → Personen.</span>
       </label>
       <div class="table-scroll" style="max-height:40vh;overflow:auto"><table><thead><tr><th>Zeile</th><th>Name</th><th>Ergebnis</th></tr></thead><tbody>
         ${a.protokoll.map(z=>`<tr><td>${z.nr}</td><td>${esc(z.text)}</td><td class="hint">${esc(z.status)}</td></tr>`).join('')}
@@ -3118,7 +3255,8 @@ function zugangspaketDaten(person, startpasswort){
   const nurTeam = e => e.sichtbarkeit==='team';
   const personenReduziert = state.personen.filter(p=>p.status!=='inaktiv').map(p=>({
     id:p.id, name:p.name, benutzername:p.benutzername||'', rollen:(p.rollen||[]).filter(r=>r==='mitglied' || r.startsWith('ausbilder') || r==='leitung' || r==='bereitschaftsleitung' || r==='admin'), zusatzrechte:[], status:'aktiv',
-    mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum:'', mitgliedSeit:'', strasse:'', plz:'', ort:'', email:'', telefon:'',
+    mitgliedsnummer:'', dienstbuchNr:'', geburtsdatum:'', mitgliedSeit:'',
+    strasse: p.id===person.id?(p.strasse||''):'', plz: p.id===person.id?(p.plz||''):'', ort: p.id===person.id?(p.ort||''):'', email: p.id===person.id?(p.email||''):'', telefon: p.id===person.id?(p.telefon||''):'',
     passwortHash: p.id===person.id ? einfacherHash(startpasswort) : '', mussPasswortAendern: p.id===person.id, angelegtAm: p.angelegtAm||nowIso(),
   }));
   const hundeReduziert = state.hunde.filter(h=>h.status!=='inaktiv').map(h=>{
@@ -3137,7 +3275,7 @@ function zugangspaketDaten(person, startpasswort){
     termine: state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff').map(t=>{ const {planungsnotiz, ...rest} = t; return rest; }),
     geloeschteTermine: state.geloeschteTermine||[],
     ruckmeldungen: (state.ruckmeldungen||[]).filter(r=>r.personId===person.id),
-    qualifikationen: state.qualifikationen, personQualifikationen: state.personQualifikationen.filter(pq=>pq.personId===person.id), hospitationen: [], kurswuensche: (state.kurswuensche||[]).filter(w=>w.personId===person.id),
+    qualifikationen: state.qualifikationen, personQualifikationen: state.personQualifikationen.filter(pq=>pq.personId===person.id), hospitationen: [], kurswuensche: (state.kurswuensche||[]).filter(w=>w.personId===person.id), fahrzeuge: state.fahrzeuge||[], fahrzeugEinweisungen: (state.fahrzeugEinweisungen||[]).filter(e=>e.personId===person.id),
     pruefungsstatus: nurEigene(state.pruefungsstatus), findewilleProfile: nurEigene(state.findewilleProfile),
     hausaufgaben: nurEigene(state.hausaufgaben), trainingskarten: (state.trainingskarten||[]).filter(k=>k.personId===person.id), trainingseintraege: nurEigene(state.trainingseintraege), alltagseintraege: nurEigene(state.alltagseintraege),
     rhEintraege: nurEigene(state.rhEintraege), mantrailingEintraege: nurEigene(state.mantrailingEintraege),
@@ -3270,7 +3408,7 @@ function selbstauskunftBlaetter(p){
     ['3. Blatt „Ausbildungen“: bei jeder abgeschlossenen Ausbildung das Datum eintragen (TT.MM.JJJJ; nur Monat bekannt: MM.JJJJ; Datum unbekannt: x).'],
     ['   Modulprüfungen 1.1–1.3 und Modulprüfung 2 (Suchprüfung) sind Teamprüfungen: je Hund eine Zeile; bei der Suchprüfung auch Sparte und Plakettennummer.'],
     ['   Weitere Ausbildungen, die nicht aufgeführt sind, ganz unten unter „Sonstige Ausbildungen“ mit eigenem Namen eintragen.'],
-    ['4. Datei speichern (Dateiname und Format .xlsx beibehalten) und an die Staffelleitung zurückschicken.'],
+    ['4. Datei speichern (Dateiname und Format .xlsx beibehalten) und an die Staffelleitung zurückschicken'+(leitungEmail()?': '+leitungEmail():'.')],
     [''], ['Bitte den Namen und die grauen Kennungen in Spalte A nicht ändern – daran erkennt BARRY die Einträge.'],
     ['Bereits bekannte Angaben sind schon eingetragen. Nichts löschen: fehlende oder falsche Angaben einfach ergänzen bzw. korrigieren.'],
   ]};
@@ -3441,10 +3579,12 @@ const RHD_HELFER = ['eh','rke','ds','ekga_e','ekga_s','ekga_b','ekga_t','slg','e
 const AUSBILDUNGSPROFILE = [
   {id:'rhf_einsatz', gruppe:'Rettungshundearbeit', label:'Einsatzfähig als Rettungshundeführer/in (alle ★ gültig)', pflichtRHF:true, nurHundefuehrende:true,
    quelle:'Dienstanweisung 8.2 und Staffel-Festlegungen (wiederkehrende Nachweise)'},
+  {id:'helfer_einsatz', gruppe:'Rettungshundearbeit', label:'Einsatzbereite/r Helfer/in (ohne Hund)', codes:['rke','ekga_e','eh','ds_jaehrlich','uvv_jaehrlich','hlw'], empfohlen:['slg','bos'],
+   quelle:'Festlegung der Staffelleitung (29.09.2026): Mindestvoraussetzung RKE, EKGA-E (EGA Einsatz), gültige Erste Hilfe sowie jährlich Datenschutz, UVV und HLW/AED; Sanitätsausbildung und BOS-Funk empfohlen'},
   {id:'rhd_helfer', gruppe:'Rettungshundearbeit', label:'Rettungshundehelfer/in (RHd)', codes:RHD_HELFER,
    quelle:'Dienstanweisung 8.1 / Übersicht Seminare; EKF.Prüf laut Übersicht „Notwendige Qualifikation Rettungshundeführende“'},
-  {id:'zul_suchpruefung', gruppe:'Rettungshundearbeit', label:'Zulassung zur Rettungshundeprüfung (Modul 2)', codes:[...RHD_HELFER,'modul_11','modul_12','modul_13'], nurHundefuehrende:true,
-   quelle:'Seminarbroschüre 2025: „gemäß Dienstanweisung“; Übersicht: Voraussetzung RHd. Module 1.1–1.3 nach Festlegung der Staffel.'},
+  {id:'zul_suchpruefung', gruppe:'Rettungshundearbeit', label:'Zulassung zur Rettungshundeprüfung (Modul 2)', codes:[...RHD_HELFER,'modul_10','modul_11','modul_12','modul_13'], nurHundefuehrende:true,
+   quelle:'Seminarbroschüre 2025: „gemäß Dienstanweisung“; Übersicht: Voraussetzung RHd. Module 1.0–1.3 (in beliebiger Reihenfolge) nach Festlegung der Staffelleitung.'},
   {id:'ekf_rha', gruppe:'Rettungshundearbeit', label:'Qualifikationsstufe Einsatzkraft Fachdienst (RHA)', codes:RHD_HELFER, quelle:'Übersicht Seminare: Einsatzkraft Fachdienst (für RHA: RHd); Seminarbroschüre 2025 (Voraussetzung TEuKM/SuSM)'},
   {id:'tf', gruppe:'Führung', label:'Truppführer/in (TF)', codes:['tf'], quelle:'Übersicht Seminare (RHF)'},
   {id:'zul_gfue', gruppe:'Führung', label:'Zulassung Lehrgang Gruppenführer/in (GFü)', codes:[...RHD_HELFER,'rh_pruef','tf'],
@@ -3532,7 +3672,7 @@ function renderAusbildungAuswertung(person){
     const alle = (state.kurswuensche||[]).slice().sort((a,b)=>(a.status==='offen'?0:1)-(b.status==='offen'?0:1) || String(b.datum).localeCompare(String(a.datum)));
     const allePers = state.personen.filter(p=>p.status!=='inaktiv' && (p.name||'').toLowerCase()!=='admin').sort((a,b)=>a.name.localeCompare(b.name,'de'));
     inhalt = `
-      <p class="hint" style="margin:0 0 8px">Kurswünsche, die Mitglieder in BARRY gemeldet und Ihnen geschickt haben, hier erfassen – die Prüfung der Voraussetzungen erfolgt automatisch.</p>
+      <p class="hint" style="margin:0 0 8px">Kurswünsche, die Mitglieder in BARRY gemeldet und dir geschickt haben, hier erfassen – die Prüfung der Voraussetzungen erfolgt automatisch.</p>
       <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
         <select id="aw-kw-person" style="flex:1 1 150px">${allePers.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
         <select id="aw-kw-kurs" style="flex:2 1 220px">${kursOptionenHtml('')}</select>
@@ -3722,7 +3862,7 @@ function eigeneFristen(personId, tage){
 }
 function meineZielProfile(person){
   const hatHund = state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,person.id));
-  const ids = hatHund ? (hatSuchpruefung(person.id) ? ['rhf_einsatz'] : ['zul_suchpruefung','rhf_einsatz']) : ['rhd_helfer','ekb'];
+  const ids = hatHund ? (hatSuchpruefung(person.id) ? ['rhf_einsatz'] : ['zul_suchpruefung','rhf_einsatz']) : [...new Set([person.eigenesZiel||'helfer_einsatz','ekb'])];
   return ids.map(id=>AUSBILDUNGSPROFILE.find(p=>p.id===id)).filter(Boolean);
 }
 let msKurs = '';
@@ -3742,6 +3882,7 @@ function renderMeinStand(person){
     </div>
     <div class="card card-pad" style="margin-bottom:12px">
       <h3 style="margin-top:0">🎯 Was noch fehlt</h3>
+      ${!state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,person.id))?`<label class="hint" style="display:block;margin:0 0 6px">Mein Ziel: <select id="ms-ziel" style="width:auto">${AUSBILDUNGSPROFILE.filter(p=>!p.nurHundefuehrende).map(p=>`<option value="${p.id}" ${(person.eigenesZiel||'helfer_einsatz')===p.id?'selected':''}>${esc(p.label)}</option>`).join('')}</select></label>`:''}
       ${meineZielProfile(person).map(pr=>{ const r=profilAuswerten(person.id, pr); return `<p style="margin:8px 0 2px"><b>${esc(pr.label)}</b> <span class="hint">${r.erfuellt}/${r.gesamt}</span></p>${r.fehlt.length||r.abgelaufen.length?`<ul class="hint" style="margin:0 0 0 -18px">${r.abgelaufen.map(x=>`<li>⚠ ${esc(x.q.label)} (abgelaufen)</li>`).join('')}${r.fehlt.map(x=>`<li>– ${esc(x.q?x.q.label:x.code)}</li>`).join('')}</ul>`:'<p class="hint" style="margin:0">✅ vollständig</p>'}`; }).join('')}
     </div>
     <div class="card card-pad" style="margin-bottom:12px">
@@ -3750,18 +3891,39 @@ function renderMeinStand(person){
       <select id="ms-kurs" style="width:100%;box-sizing:border-box">${kursOptionenHtml(kurs.code)}</select>
       ${kursErgebnisHtml(person.id, kurs)}
       <input id="ms-bemerkung" placeholder="Bemerkung (optional), z. B. Wunschtermin" style="width:100%;box-sizing:border-box;margin-top:8px">
-      <button class="btn btn-primary btn-sm" id="ms-wunsch" style="margin-top:6px">📤 Kurswunsch an die Leitung senden</button>
+      <button class="btn btn-primary btn-sm" id="ms-wunsch-mail" style="margin-top:6px">📧 Kurswunsch per E-Mail</button>
+      <button class="btn btn-sm" id="ms-wunsch" style="margin-top:6px">📤 Kurswunsch teilen</button>
       ${meineWuensche.length?`<p class="hint" style="margin:10px 0 2px">Meine Kurswünsche:</p><ul class="hint" style="margin:0 0 0 -18px">${meineWuensche.map(w=>`<li>${esc(kursLabel({code:w.kursCode}))} – ${fmtDatum(w.datum)} · ${esc((KW_STATUS.find(s=>s[0]===w.status)||['',w.status])[1])}</li>`).join('')}</ul>`:''}
     </div>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <h3 style="margin-top:0">✏️ Nachweis ergänzen</h3>
+      <p class="hint" style="margin:0 0 6px">${darfTrainingBearbeiten(person)?'Eigene Nachweise direkt eintragen.':'Neue Ausbildung, Prüfung oder Unterweisung eintragen – sie erscheint sofort bei dir (⏳ bis zur Bestätigung durch die Leitung) und wird mit „Meine Angaben senden“ an die Staffelleitung übermittelt.'}</p>
+      <select id="ms-q" style="width:100%;box-sizing:border-box"><option value="">– Ausbildung wählen –</option>${qualiOptionenHtml('')}</select>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:6px">
+        <input type="date" id="ms-datum" style="flex:1 1 140px" title="Datum (leer lassen, wenn unbekannt)">
+        <select id="ms-hund" style="flex:1 1 140px;display:none"><option value="">– mit welchem Hund? –</option>${state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,person.id)).map(h=>`<option value="${h.id}">🐕 ${esc(h.name)}</option>`).join('')}</select>
+        <select id="ms-sparte" style="flex:1 1 120px;display:none"><option value="">– Sparte –</option>${SUCHPRUEFUNG_SPARTEN.map(x=>`<option value="${x.id}">${x.label}</option>`).join('')}</select>
+        <input id="ms-plakette" placeholder="Plakettennummer" style="flex:1 1 130px;display:none">
+        <button class="btn btn-sm btn-primary" id="ms-add">Hinzufügen</button>
+      </div>
+      ${(()=>{ const off=offeneMeldungen(person.id); return off.length?`<p class="hint" style="margin:10px 0 2px">⏳ Noch nicht bestätigt (${off.length}):</p><ul class="hint" style="margin:0 0 0 -18px">${off.map(pq=>{ const q=q2(pq.qualifikationId); return `<li>${esc(q?q.label:'?')}${pq.datum?' · '+fmtDatum(pq.datum):''}${pq.gemeldetAm?' · gemeldet am '+fmtDatum(pq.gemeldetAm):' · noch nicht gesendet'} <button class="btn btn-ghost btn-sm" data-ms-del="${pq.id}" title="entfernen">✕</button></li>`; }).join('')}</ul>`:''; })()}
+      ${!darfTrainingBearbeiten(person) && kontaktOffen(person)?'<p class="hint" style="margin:8px 0 0">📇 Geänderte Kontaktdaten werden mitgesendet.</p>':''}
+      ${!darfTrainingBearbeiten(person)?`<button class="btn btn-sm btn-primary" id="ms-mail" style="margin-top:8px">📧 Per E-Mail an die Leitung</button> <button class="btn btn-sm" id="ms-senden" style="margin-top:8px">📤 Meine Angaben teilen${offeneMeldungen(person.id).filter(x=>!x.gemeldetAm).length?' ('+offeneMeldungen(person.id).filter(x=>!x.gemeldetAm).length+' neu)':''}</button>`:''}
+    </div>
+    ${renderMeineFahrzeuge(person)}
+    ${renderMeineKontaktdaten(person)}
     <details class="card card-pad" style="margin-bottom:12px">
       <summary style="cursor:pointer;font-weight:700">📜 Meine Nachweise (${hdl.length})</summary>
-      <ul class="hint" style="margin:8px 0 0 -18px">${hdl.map(pq=>({pq,q:q2(pq.qualifikationId)})).filter(x=>x.q).sort((a,b)=>a.q.label.localeCompare(b.q.label,'de')).map(({pq,q})=>`<li>${esc(q.label)}${pq.hundId?' · 🐕 '+esc((state.hunde.find(h=>h.id===pq.hundId)||{}).name||''):''}${pq.datum?' · '+fmtDatum(pq.datum):''}${pq.gueltigBis?' · bis '+fmtDatum(pq.gueltigBis):''}</li>`).join('') || '<li>Noch keine Nachweise eingetragen.</li>'}</ul>
+      <ul class="hint" style="margin:8px 0 0 -18px">${hdl.map(pq=>({pq,q:q2(pq.qualifikationId)})).filter(x=>x.q).sort((a,b)=>a.q.label.localeCompare(b.q.label,'de')).map(({pq,q})=>`<li>${pq.vomMitglied&&!pq.bestaetigt?'⏳ ':''}${esc(q.label)}${pq.hundId?' · 🐕 '+esc((state.hunde.find(h=>h.id===pq.hundId)||{}).name||''):''}${pq.datum?' · '+fmtDatum(pq.datum):''}${pq.gueltigBis?' · bis '+fmtDatum(pq.gueltigBis):''}</li>`).join('') || '<li>Noch keine Nachweise eingetragen.</li>'}</ul>
     </details>
     ${!darfTrainingBearbeiten(person)?`<div class="card card-pad"><h3 style="margin-top:0">📥 Stand aktualisieren</h3><p class="hint" style="margin:0 0 6px">Hat die Leitung dir ein „Stand-Update“ geschickt, hier einlesen. Dein Passwort und deine übrigen Daten bleiben unverändert.</p><label class="btn btn-sm" style="cursor:pointer">Stand-Update einlesen<input type="file" id="ms-update" style="display:none"></label></div>`:''}
     <p class="hint" style="margin-top:8px">Fehlt etwas oder stimmt etwas nicht? Bitte der Staffelleitung melden – sie pflegt die Nachweise.</p>`;
 }
 function bindMeinStand(person){
   const k=document.getElementById('ms-kurs'); if(k) k.onchange=()=>{ msKurs=k.value; render(); };
+  const wm=document.getElementById('ms-wunsch-mail');
+  if(wm) wm.onclick=()=>{ state.kurswuensche=state.kurswuensche||[]; const wunsch={id:uid(), personId:person.id, kursCode:msKurs, bemerkung:document.getElementById('ms-bemerkung').value.trim(), datum:nowIso(), status:'offen'};
+    state.kurswuensche.push(wunsch); speichereState(); textPerMail(`BARRY – Kurswunsch ${kursLabel({code:msKurs})}`, kurswunschText(wunsch)); render(); };
   const w=document.getElementById('ms-wunsch');
   if(w) w.onclick=async ()=>{
     state.kurswuensche=state.kurswuensche||[];
@@ -3773,11 +3935,28 @@ function bindMeinStand(person){
     render();
   };
   const u=document.getElementById('ms-update'); if(u) u.onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(f) standUpdateEinlesen(f); };
+  const qs=document.getElementById('ms-q');
+  if(qs) qs.onchange=()=>{ const q=state.qualifikationen.find(x=>x.id===qs.value); const team=istTeamPruefung(q), such=!!(q&&q.code==='rh_pruef');
+    document.getElementById('ms-hund').style.display=team?'':'none'; document.getElementById('ms-sparte').style.display=such?'':'none'; document.getElementById('ms-plakette').style.display=such?'':'none';
+    const hs=document.getElementById('ms-hund'); if(team && hs.options.length===2) hs.selectedIndex=1; };
+  const add=document.getElementById('ms-add');
+  if(add) add.onclick=()=>{ const q=state.qualifikationen.find(x=>x.id===qs.value); if(!q){ zeigeToast('Bitte eine Ausbildung wählen.'); return; }
+    const hund=document.getElementById('ms-hund').value, sparte=document.getElementById('ms-sparte').value;
+    if(istTeamPruefung(q) && state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,person.id)) && !hund){ zeigeToast('Bitte den Hund wählen.'); return; }
+    if(q.code==='rh_pruef' && !sparte){ zeigeToast('Bitte die Sparte wählen.'); return; }
+    eigenerNachweisHinzufuegen(person, q.id, document.getElementById('ms-datum').value, hund, sparte, document.getElementById('ms-plakette').value.trim());
+    zeigeToast(darfTrainingBearbeiten(person)?'Nachweis eingetragen.':'Eingetragen – bitte „Meine Angaben senden“.'); render(); };
+  document.querySelectorAll('[data-ms-del]').forEach(b=>b.onclick=()=>{ state.personQualifikationen=state.personQualifikationen.filter(pq=>!(pq.id===b.dataset.msDel && pq.vomMitglied && !pq.bestaetigt)); speichereState(); render(); });
+  const snd=document.getElementById('ms-senden'); if(snd) snd.onclick=()=>meldungSenden(person);
+  const zs=document.getElementById('ms-ziel'); if(zs) zs.onchange=()=>{ person.eigenesZiel=zs.value; speichereState(); render(); };
+  bindMeineKontaktdaten(person);
+  const ml=document.getElementById('ms-mail'); if(ml) ml.onclick=()=>meldungPerMail(person);
 }
 /* ---------- Stand-Update: nur eigene Nachweise + Katalog, ohne Passwort ---------- */
 function standUpdateDaten(p){
   return {exportInfo:{format:'barry-mein-stand', app:'BARRY', appVersion:BARRY_APP_VERSION, fuer:p.name, personId:p.id, exportiertAm:nowIso()},
     qualifikationen: state.qualifikationen, personQualifikationen: state.personQualifikationen.filter(pq=>pq.personId===p.id),
+    fahrzeuge: state.fahrzeuge||[], fahrzeugEinweisungen: (state.fahrzeugEinweisungen||[]).filter(e=>e.personId===p.id),
     kurswuensche: (state.kurswuensche||[]).filter(w=>w.personId===p.id), pruefungsstatus: state.pruefungsstatus.filter(s=>state.hunde.some(h=>h.id===s.hundId && h.status!=='inaktiv' && hundGefuehrtVon(h,p.id))),
     plaketten: state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)).map(h=>({hundId:h.id, plaketten:h.plaketten||[], sparten:h.sparten||[]}))};
 }
@@ -3804,12 +3983,15 @@ function standUpdateEinlesen(file){
       // Katalog ergänzen/aktualisieren (IDs der Leitung übernehmen)
       (d.qualifikationen||[]).forEach(q=>{ const vorh=state.qualifikationen.find(x=>x.id===q.id) || (q.code && state.qualifikationen.find(x=>x.code===q.code));
         if(!vorh) state.qualifikationen.push(q); else if(vorh.id!==q.id){ state.personQualifikationen.forEach(pq=>{ if(pq.qualifikationId===vorh.id) pq.qualifikationId=q.id; }); Object.assign(vorh,q); } else Object.assign(vorh,q); });
-      state.personQualifikationen = state.personQualifikationen.filter(pq=>pq.personId!==pid).concat(d.personQualifikationen||[]);
+      const offenLokal = state.personQualifikationen.filter(pq=>pq.personId===pid && pq.vomMitglied && !pq.bestaetigt && !(d.personQualifikationen||[]).some(x=>x.id===pq.id));
+      state.personQualifikationen = state.personQualifikationen.filter(pq=>pq.personId!==pid).concat(d.personQualifikationen||[], offenLokal);
       const eigeneW=(state.kurswuensche||[]).filter(w=>w.personId===pid); const neu=d.kurswuensche||[];
       state.kurswuensche=(state.kurswuensche||[]).filter(w=>w.personId!==pid).concat(neu, eigeneW.filter(w=>!neu.some(n=>n.id===w.id)));
       const hundIds=new Set((d.plaketten||[]).map(x=>x.hundId));
       state.pruefungsstatus=state.pruefungsstatus.filter(s=>!hundIds.has(s.hundId)).concat(d.pruefungsstatus||[]);
       (d.plaketten||[]).forEach(x=>{ const h=state.hunde.find(h=>h.id===x.hundId); if(h){ h.plaketten=x.plaketten; h.sparten=x.sparten; } });
+      if(Array.isArray(d.fahrzeuge)) state.fahrzeuge=d.fahrzeuge;
+      if(Array.isArray(d.fahrzeugEinweisungen)) state.fahrzeugEinweisungen=(state.fahrzeugEinweisungen||[]).filter(e=>e.personId!==pid).concat(d.fahrzeugEinweisungen);
       state.meta.standUpdateAm=d.exportInfo.exportiertAm; speichereState();
       zeigeToast('Ausbildungsstand aktualisiert.'); render();
     }catch(err){ alert('Stand-Update konnte nicht eingelesen werden: '+err.message); }
@@ -3854,12 +4036,489 @@ function kalenderCsvHerunterladen(person){
   a.href=url; a.download=`BARRY_Kalender_${new Date().getFullYear()}.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
 
+/* =========================================================
+   MITGLIEDER PFLEGEN EIGENE NACHWEISE → Meldung an die Leitung → Bestätigung per Stand-Update
+   ========================================================= */
+function eigenerNachweisHinzufuegen(person, qualId, datum, hundId, sparte, plakette){
+  const q=state.qualifikationen.find(x=>x.id===qualId); if(!q) return null;
+  const bis = datum && q.intervallMonate ? (()=>{ const d=new Date(datum); d.setMonth(d.getMonth()+q.intervallMonate); return d.toISOString().slice(0,10); })() : null;
+  const leitung = darfTrainingBearbeiten(person);
+  const e={id:uid(), personId:person.id, qualifikationId:q.id, datum:datum||'', gueltigBis:bis, hundId:hundId||undefined, sparte:sparte||undefined, plakette:plakette||undefined,
+    vomMitglied:!leitung, bestaetigt:leitung, erfasstAm:nowIso()};
+  state.personQualifikationen.push(e);
+  if(leitung){ const h=hundId?state.hunde.find(x=>x.id===hundId):null; modulQualiUebertragen(person.id, q.id, h); if(q.code==='rh_pruef' && h && sparte) suchpruefungAufHundUebertragen(h, sparte, plakette, datum); }
+  speichereState(); return e;
+}
+function offeneMeldungen(personId){ return state.personQualifikationen.filter(pq=>pq.personId===personId && pq.vomMitglied && !pq.bestaetigt); }
+function meldungDaten(person){
+  return {exportInfo:{format:'barry-mitglied-meldung', app:'BARRY', appVersion:BARRY_APP_VERSION, von:person.name, personId:person.id, exportiertAm:nowIso()},
+    nachweise: offeneMeldungen(person.id).map(pq=>{ const q=state.qualifikationen.find(x=>x.id===pq.qualifikationId)||{}; return {...pq, code:q.code||'', label:q.label||''}; }),
+    kurswuensche: (state.kurswuensche||[]).filter(w=>w.personId===person.id && w.status==='offen'),
+    kontakt: kontaktOffen(person) ? Object.fromEntries(KONTAKT_FELDER.map(([k])=>[k, person[k]||''])) : null};
+}
+async function meldungPerMail(person){
+  const daten=meldungDaten(person);
+  if(!daten.nachweise.length && !daten.kurswuensche.length && !daten.kontakt){ zeigeToast('Keine neuen Angaben zum Senden.'); return; }
+  const name=`BARRY_Meldung_${person.name.replace(/[^\p{L}\p{N}-]+/gu,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  const ok = await dateiPerMail(new File([JSON.stringify(daten)], name, {type:'application/json'}), `BARRY – neue Angaben von ${person.name}`, `Neue Angaben von ${person.name}: ${daten.nachweise.length} Nachweis(e), ${daten.kurswuensche.length} Kurswunsch/-wünsche.`);
+  if(ok){ offeneMeldungen(person.id).forEach(pq=>pq.gemeldetAm=nowIso()); if(daten.kontakt) person.kontaktGemeldetAm=nowIso(); speichereState(); render(); }
+}
+async function meldungSenden(person){
+  const daten=meldungDaten(person);
+  if(!daten.nachweise.length && !daten.kurswuensche.length && !daten.kontakt){ zeigeToast('Keine neuen Angaben zum Senden.'); return; }
+  const name=`BARRY_Meldung_${person.name.replace(/[^\p{L}\p{N}-]+/gu,'_')}_${new Date().toISOString().slice(0,10)}.json`;
+  const datei=new File([JSON.stringify(daten)], name, {type:'application/json'});
+  offeneMeldungen(person.id).forEach(pq=>pq.gemeldetAm=nowIso()); if(daten.kontakt) person.kontaktGemeldetAm=nowIso(); speichereState();
+  try{ if(navigator.canShare && navigator.canShare({files:[datei]})){ await navigator.share({files:[datei], title:'BARRY – meine Angaben', text:`Neue Angaben von ${person.name} für BARRY (${daten.nachweise.length} Nachweis(e)).`}); zeigeToast('Meldung geteilt.'); render(); return; } }catch(e){ if(e&&e.name==='AbortError'){ render(); return; } }
+  const url=URL.createObjectURL(new Blob([datei],{type:datei.type||'application/json'})); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast('Meldung gespeichert – bitte die Datei an die Staffelleitung schicken.'); render();
+}
+/* ---------- Leitung: Meldungen einlesen ---------- */
+let meldungVorschau=null;
+function meldungenEinlesen(files){
+  const liste=Array.from(files||[]).filter(Boolean); if(!liste.length) return;
+  Promise.all(liste.map(f=>f.text().then(t=>{ try{ return JSON.parse(t); }catch(e){ return null; } }))).then(dat=>{
+    const eintraege=[], wuensche=[], fehler=[], kontakte=[];
+    dat.forEach((d,i)=>{
+      if(!d || !d.exportInfo || d.exportInfo.format!=='barry-mitglied-meldung'){ fehler.push(liste[i].name); return; }
+      const person=state.personen.find(p=>p.id===d.exportInfo.personId) || state.personen.find(p=>p.name===d.exportInfo.von);
+      if(!person){ fehler.push(liste[i].name+' (Person unbekannt)'); return; }
+      (d.nachweise||[]).forEach(n=>{
+        const q=state.qualifikationen.find(x=>x.id===n.qualifikationId) || (n.code && state.qualifikationen.find(x=>x.code===n.code)) || qualiFindenNachBezeichnung(n.label||'');
+        const doppelt = q && state.personQualifikationen.some(pq=>pq.id===n.id || (pq.personId===person.id && pq.qualifikationId===q.id && (pq.datum||'')===(n.datum||'') && (pq.hundId||'')===(n.hundId||'')));
+        eintraege.push({person, n, q, doppelt, uebernehmen: !doppelt});
+      });
+      (d.kurswuensche||[]).forEach(w=>{ if(!(state.kurswuensche||[]).some(x=>x.id===w.id)) wuensche.push({person, w}); });
+      if(d.kontakt){ const diff=KONTAKT_FELDER.filter(([k])=>(d.kontakt[k]||'')!==(person[k]||'')).map(([k,l])=>({k,l,alt:person[k]||'',neu:d.kontakt[k]||''})); if(diff.length) kontakte.push({person, diff}); }
+    });
+    meldungVorschau={eintraege, wuensche, fehler, kontakte}; modal={type:'meldungImport'}; render();
+  });
+}
+function renderModalMeldungImport(){
+  const v=meldungVorschau; if(!v) return '';
+  return `<div class="modal-back"><div class="modal" style="max-width:680px">
+    <div class="modal-head"><h3>Meldungen der Mitglieder</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
+    <div class="modal-body">
+      ${v.fehler.length?`<p class="hint" style="color:#b00020">Nicht lesbar: ${v.fehler.map(esc).join(', ')}</p>`:''}
+      <p class="hint">Bitte prüfen und die zutreffenden Angaben bestätigen. Nichts wird ohne Haken übernommen.</p>
+      ${v.eintraege.map((e,i)=>`<label class="row" style="gap:8px;align-items:flex-start;padding:6px 0;border-top:1px dashed var(--line);cursor:pointer">
+        <input type="checkbox" data-mi="${i}" ${e.uebernehmen?'checked':''} ${!e.q?'disabled':''} style="margin-top:3px">
+        <span><b>${esc(e.person.name)}</b>: ${esc(e.q?e.q.label:(e.n.label||'unbekannte Ausbildung'))}${e.n.datum?' · '+fmtDatum(e.n.datum):' · Datum unbekannt'}${e.n.hundId?' · 🐕 '+esc((state.hunde.find(h=>h.id===e.n.hundId)||{}).name||''):''}${e.n.sparte?' · '+esc(spartenLabel(e.n.sparte)):''}${e.n.plakette?' · Plakette '+esc(e.n.plakette):''}
+        ${e.doppelt?'<br><span class="hint">bereits vorhanden</span>':''}${!e.q?'<br><span class="hint">nicht im Katalog – bitte manuell eintragen</span>':''}</span></label>`).join('') || '<p class="hint">Keine neuen Nachweise.</p>'}
+      ${(v.kontakte||[]).map((k,i)=>`<label class="row" style="gap:8px;align-items:flex-start;padding:6px 0;border-top:1px dashed var(--line);cursor:pointer"><input type="checkbox" data-mk="${i}" checked style="margin-top:3px"><span><b>${esc(k.person.name)}</b> – Kontaktdaten: ${k.diff.map(d=>`${esc(d.l)}: <s>${esc(d.alt||'–')}</s> → ${esc(d.neu||'–')}`).join(' · ')}</span></label>`).join('')}
+      ${v.wuensche.length?`<p style="margin:12px 0 4px"><b>Kurswünsche (${v.wuensche.length})</b> – werden unter Auswertung → Kurswünsche übernommen:</p><ul class="hint" style="margin:0 0 0 -18px">${v.wuensche.map(x=>`<li>${esc(x.person.name)}: ${esc(kursLabel({code:x.w.kursCode}))}</li>`).join('')}</ul>`:''}
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button><button class="btn btn-primary" id="m-meldung-ok">Bestätigen und übernehmen</button></div>
+  </div></div>`;
+}
+function bindModalMeldungImport(){
+  const zu=()=>{ meldungVorschau=null; schliesseModal(); };
+  document.getElementById('m-schliessen').onclick=zu; document.getElementById('m-abbrechen').onclick=zu;
+  document.getElementById('m-meldung-ok').onclick=()=>{
+    const v=meldungVorschau; const ich=aktuellePerson(); let n=0;
+    document.querySelectorAll('[data-mi]').forEach(cb=>{ const e=v.eintraege[+cb.dataset.mi]; if(!cb.checked || !e.q || e.doppelt) return;
+      const bis = e.n.gueltigBis || (e.n.datum && e.q.intervallMonate ? (()=>{ const d=new Date(e.n.datum); d.setMonth(d.getMonth()+e.q.intervallMonate); return d.toISOString().slice(0,10); })() : null);
+      state.personQualifikationen.push({id:e.n.id||uid(), personId:e.person.id, qualifikationId:e.q.id, datum:e.n.datum||'', gueltigBis:bis, hundId:e.n.hundId||undefined, sparte:e.n.sparte||undefined, plakette:e.n.plakette||undefined, vomMitglied:true, bestaetigt:true, bestaetigtVon:ich?ich.id:'', bestaetigtAm:nowIso()});
+      const h=e.n.hundId?state.hunde.find(x=>x.id===e.n.hundId):null; modulQualiUebertragen(e.person.id, e.q.id, h); if(e.q.code==='rh_pruef' && h && e.n.sparte) suchpruefungAufHundUebertragen(h, e.n.sparte, e.n.plakette, e.n.datum);
+      n++; });
+    state.kurswuensche=state.kurswuensche||[]; v.wuensche.forEach(x=>state.kurswuensche.push(x.w));
+    document.querySelectorAll('[data-mk]').forEach(cb=>{ if(!cb.checked) return; const k=v.kontakte[+cb.dataset.mk]; k.diff.forEach(d=>{ k.person[d.k]=d.neu; }); n++; });
+    speichereState(); meldungVorschau=null;
+    zeigeToast(`${n} Nachweis(e) bestätigt${v.wuensche.length?`, ${v.wuensche.length} Kurswunsch/-wünsche übernommen`:''}. Tipp: Stand-Update an die Person zurückschicken.`);
+    schliesseModal();
+  };
+}
+
+(function(){ const mo=new MutationObserver(()=>{ document.querySelectorAll('#content .eyebrow').forEach(e=>{ const h=e.nextElementSibling; if(h && h.tagName==='H1' && h.textContent.trim()===e.textContent.trim()) e.style.display='none'; }); }); document.addEventListener('DOMContentLoaded',()=>{ const app=document.getElementById('app'); if(app) mo.observe(app,{childList:true,subtree:true}); }); })();
+
+/* ---------- Bereiche auswählen: jede Person blendet nicht benötigte Bereiche aus dem Menü aus ---------- */
+var BEREICHE_FEST = ['start','hilfe'];
+function renderModalBereicheWahl(){
+  const person=aktuellePerson(); if(!person) return '';
+  const aus=person.bereicheAusgeblendet||[];
+  const waehlbar=BEREICHE.filter(b=>darfBereichSehen(b,person) && !BEREICHE_FEST.includes(b.id));
+  return `<div class="modal-back"><div class="modal" style="max-width:520px">
+    <div class="modal-head"><h3>Welche Bereiche möchtest du nutzen?</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
+    <div class="modal-body">
+      <p class="hint">Nicht benötigte Bereiche werden im Menü ausgeblendet – die Daten bleiben erhalten, und du kannst die Auswahl jederzeit unter „⚙️ Bereiche auswählen“ im Menü ändern. Start und Hilfe sind immer sichtbar.</p>
+      ${waehlbar.map(b=>`<label class="row" style="gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--line);cursor:pointer"><input type="checkbox" data-bw="${b.id}" ${aus.includes(b.id)?'':'checked'}> <span>${b.icon} ${esc(b.label)}</span></label>`).join('')}
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="bw-alle">Alle anzeigen</button><button class="btn btn-primary" id="bw-ok">Übernehmen</button></div>
+  </div></div>`;
+}
+function bindModalBereicheWahl(){
+  const person=aktuellePerson();
+  const fertig=aus=>{ person.bereicheAusgeblendet=aus; person.bereicheGewaehlt=true; speichereState(); if(aus.includes(route.bereich)) route={bereich:'start',unter:null,id:null}; schliesseModal(); };
+  document.getElementById('m-schliessen').onclick=()=>fertig(person.bereicheAusgeblendet||[]);
+  document.getElementById('bw-alle').onclick=()=>fertig([]);
+  document.getElementById('bw-ok').onclick=()=>fertig([...document.querySelectorAll('[data-bw]')].filter(c=>!c.checked).map(c=>c.dataset.bw));
+}
+document.addEventListener('click', e=>{ const vp=e.target.closest && e.target.closest('[data-vorpruefung]'); if(vp){ e.preventDefault(); modal={type:'vorpruefung', hundId:vp.dataset.vorpruefung}; render(); } });
+document.addEventListener('click', e=>{ const el=e.target.closest && e.target.closest('[data-bereiche-waehlen]'); if(el){ e.preventDefault(); sidebarOffen=false; modal={type:'bereicheWahl'}; render(); } });
+/* =========================================================
+   PAKET 2: Einsatzbereit heute · Sicherungserinnerung · Kontaktdaten · Vorprüfungsbogen · Übergabe Flächensuchassistent
+   ========================================================= */
+/* ---------- Einsatzbereit heute (laut BARRY-Daten, keine Einsatzfreigabe) ---------- */
+function einsatzbereitAuswertung(){
+  const heute=new Date().toISOString().slice(0,10);
+  const qs=state.qualifikationen.find(q=>q.code==='rh_pruef');
+  const pr=AUSBILDUNGSPROFILE.find(p=>p.id==='rhf_einsatz');
+  const teams=[];
+  state.hunde.filter(h=>h.status!=='inaktiv').forEach(h=>{
+    [h.hundefuehrerId, h.zweitHundefuehrerId].filter(Boolean).forEach(pid=>{
+      const p=state.personen.find(x=>x.id===pid && x.status!=='inaktiv'); if(!p) return;
+      const pruef = qs ? state.personQualifikationen.filter(pq=>pq.personId===pid && pq.qualifikationId===qs.id && pq.hundId===h.id && pq.sparte) : [];
+      const sparten = [...new Set(pruef.filter(pq=>!pq.gueltigBis || pq.gueltigBis>=heute).map(pq=>pq.sparte))];
+      if(!sparten.length) return;
+      const r=profilAuswerten(pid, pr);
+      const offen=[...r.abgelaufen, ...r.fehlt].filter(x=>x.q && x.q.code!=='rh_pruef');
+      teams.push({h, p, sparten, voll: !offen.length, offen});
+    });
+  });
+  return teams;
+}
+function einsatzbereiteHelfer(){
+  const pr=AUSBILDUNGSPROFILE.find(p=>p.id==='helfer_einsatz');
+  const heute=new Date().toISOString().slice(0,10);
+  return state.personen.filter(p=>p.status!=='inaktiv' && (p.name||'').toLowerCase()!=='admin' && !(p.name||'').startsWith('#') && !state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)))
+    .map(p=>{ const r=profilAuswerten(p.id, pr);
+      const empf=(pr.empfohlen||[]).map(c=>state.qualifikationen.find(q=>q.code===c)).filter(q=>q && !['gueltig','durchSuch'].includes(qualiStatusFuer(p.id,q).s));
+      const abgelaufenSonst=state.personQualifikationen.filter(pq=>pq.personId===p.id && pq.gueltigBis && pq.gueltigBis<heute)
+        .map(pq=>state.qualifikationen.find(q=>q.id===pq.qualifikationId)).filter(q=>q && !pr.codes.includes(q.code) && qualiStatusFuer(p.id,q).s==='abgelaufen');
+      return {p, bereit: r.erfuellt===r.gesamt, fehlt:[...r.abgelaufen,...r.fehlt], empf, abgelaufenSonst:[...new Set(abgelaufenSonst)]}; })
+    .sort((a,b)=>(b.bereit-a.bereit)||a.p.name.localeCompare(b.p.name,'de'));
+}
+function renderStartEinsatzbereit(person){
+  const teams=einsatzbereitAuswertung();
+  const helfer=einsatzbereiteHelfer(); const hBereit=helfer.filter(h=>h.bereit);
+  const zaehl=sp=>teams.filter(t=>t.voll && t.sparten.includes(sp)).length;
+  const eing=teams.filter(t=>!t.voll).length;
+  return `<details class="card card-pad" style="margin-top:16px;border-left:4px solid #2e8b57">
+    <summary style="cursor:pointer"><span style="font-family:var(--font-head);font-weight:600;font-size:1.05rem">🚨 Einsatzbereit heute</span>
+      <div class="row" style="gap:6px;margin-top:6px">${SUCHPRUEFUNG_SPARTEN.map(s=>`<span class="chip ${zaehl(s.id)?'':'muted'}">${s.label}: ${zaehl(s.id)}</span>`).join('')}<span class="chip ${hBereit.length?'':'muted'}">Helfer/-innen: ${hBereit.length}</span>${eing?`<span class="chip muted">⚠ ${eing} Team(s) eingeschränkt</span>`:''}</div></summary>
+    <p style="margin:10px 0 2px"><b>Rettungshundeteams</b></p>
+    <ul class="hint" style="margin:10px 0 0 -18px">${teams.sort((a,b)=>(b.voll-a.voll)||a.h.name.localeCompare(b.h.name,'de')).map(t=>`<li>${t.voll?'✅':'⚠️'} <b>${esc(t.h.name)}</b> (${esc(t.p.name)}) · ${t.sparten.map(spartenLabel).join(', ')}${t.voll?'':` <span style="color:var(--accent-ink)">– offen: ${t.offen.slice(0,4).map(x=>esc(x.q.label.split(' – ')[0])).join(', ')}${t.offen.length>4?' …':''}</span>`}</li>`).join('') || '<li>Keine Teams mit gültiger Suchprüfung eingetragen.</li>'}</ul>
+    <p style="margin:12px 0 2px"><b>Helfer/-innen ohne Hund</b> <span class="hint">(${hBereit.length} von ${helfer.length} einsatzbereit)</span></p>
+    <ul class="hint" style="margin:4px 0 0 -18px">${hBereit.map(h=>`<li>✅ <b>${esc(h.p.name)}</b>${h.empf.length?` <span>– empfohlen fehlt: ${h.empf.map(q=>esc(q.label.split(' – ')[0])).join(', ')}</span>`:''}${h.abgelaufenSonst.length?` <span style="color:var(--accent-ink)">· abgelaufen: ${h.abgelaufenSonst.map(q=>esc(q.label.split(' – ')[0])).join(', ')}</span>`:''}</li>`).join('') || '<li>Derzeit niemand mit vollständiger Mindestvoraussetzung.</li>'}</ul>
+    ${helfer.length>hBereit.length?`<details style="margin-top:4px"><summary class="hint" style="cursor:pointer">Noch nicht einsatzbereit (${helfer.length-hBereit.length})</summary><ul class="hint" style="margin:4px 0 0 -18px">${helfer.filter(h=>!h.bereit).map(h=>`<li>⬜ ${esc(h.p.name)} – fehlt: ${h.fehlt.map(x=>esc((x.q?x.q.label:x.code).split(' – ')[0])+(x.st&&x.st.s==='abgelaufen'?' (abgelaufen)':'')).join(', ')}</li>`).join('')}</ul></details>`:''}
+    ${renderFahrerEinsatzbereit()}
+    <p class="hint" style="margin:8px 0 0">Teams: gültige Modulprüfung 2 je Hund und Sparte sowie alle ★-Nachweise der Hundeführerin bzw. des Hundeführers. Helfer/-innen: RKE, EKGA-E (EGA Einsatz), gültige Erste Hilfe (bei Sanitätsausbildung gilt die Sanitätsfortbildung) sowie jährlich Datenschutz, UVV und HLW/AED; Sanitätsausbildung und BOS-Funk empfohlen. Fahrzeuge: nur mit gültiger Einweisung, Sonderrechte zusätzlich mit SuWR. Keine Einsatzfreigabe – Tagesform, Gesundheit und Verfügbarkeit bitte zusätzlich prüfen.</p>
+  </details>`;
+}
+/* ---------- Sicherungserinnerung ---------- */
+function renderStartSicherung(person){
+  if(!istLeitungOderAdmin(person)) return '';
+  const am=state.meta.letzteSicherungAm; const tage = am ? Math.floor((Date.now()-new Date(am))/86400000) : null;
+  if(tage!==null && tage<30) return '';
+  return `<div class="card card-pad" style="margin-top:16px;background:var(--soft);border:none"><div class="spread"><span>💾 <b>${tage===null?'Noch keine Datensicherung erstellt.':`Letzte Datensicherung vor ${tage} Tagen.`}</b> <span class="hint">Die Daten liegen nur auf diesem Gerät.</span></span><button class="btn btn-sm btn-primary" id="btn-start-sichern">Jetzt sichern</button></div></div>`;
+}
+function datensicherungJetzt(){
+  const exportDaten = Object.assign({ exportInfo:{ format:'barry-bestand', app:'BARRY', appVersion:BARRY_APP_VERSION, schemaVersion:BARRY_SCHEMA_VERSION, exportiertAm:nowIso(), organisation:state.organisation.name||'' } }, state);
+  const blob = new Blob([JSON.stringify(exportDaten,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href=url; a.download = `RHS_Sicherung_BARRY_${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  state.meta.letzteSicherungAm = nowIso(); speichereState();
+  zeigeToast('Datensicherung erstellt – bitte an einem sicheren Ort ablegen.');
+}
+/* ---------- Eigene Kontaktdaten (Mitglied) ---------- */
+const KONTAKT_FELDER = [['strasse','Straße, Hausnummer'],['plz','PLZ'],['ort','Ort'],['email','E-Mail'],['telefon','Telefon']];
+function kontaktOffen(person){ return !!(person.kontaktGeaendertAm && (!person.kontaktGemeldetAm || person.kontaktGemeldetAm < person.kontaktGeaendertAm)); }
+function renderMeineKontaktdaten(person){
+  return `<details class="card card-pad" style="margin-bottom:12px">
+    <summary style="cursor:pointer;font-weight:700">📇 Meine Kontaktdaten${kontaktOffen(person)?' <span class="chip">⏳ geändert, noch nicht gesendet</span>':''}</summary>
+    <p class="hint" style="margin:8px 0">${darfTrainingBearbeiten(person)?'Eigene Kontaktdaten direkt pflegen.':'Änderungen werden mit „Meine Angaben an die Leitung senden“ übermittelt; die Leitung bestätigt sie.'}</p>
+    ${KONTAKT_FELDER.map(([k,l])=>`<div class="field" style="margin-bottom:8px"><label>${l}</label><input data-kontakt="${k}" value="${esc(person[k]||'')}"></div>`).join('')}
+    <button class="btn btn-sm" id="ms-kontakt-speichern">Speichern</button>
+  </details>`;
+}
+function bindMeineKontaktdaten(person){
+  const b=document.getElementById('ms-kontakt-speichern');
+  if(b) b.onclick=()=>{ let geaendert=false;
+    document.querySelectorAll('[data-kontakt]').forEach(i=>{ const v=i.value.trim(); if((person[i.dataset.kontakt]||'')!==v){ person[i.dataset.kontakt]=v; geaendert=true; } });
+    if(geaendert && !darfTrainingBearbeiten(person)) person.kontaktGeaendertAm=nowIso();
+    speichereState(); zeigeToast(geaendert?(darfTrainingBearbeiten(person)?'Kontaktdaten gespeichert.':'Gespeichert – bitte „Meine Angaben senden“.'):'Keine Änderungen.'); render(); };
+}
+/* ---------- Vorprüfungs-Bewertungsbogen (staffelintern) ---------- */
+const VORPRUEF_KRITERIEN = {
+  flaeche:['Einweisung/Lagebesprechung verstanden','Suchtaktik und Wind genutzt','Revieren/Suchintensität des Hundes','Nasenarbeit','Anzeige/Verweisen','Führigkeit und Kontrollierbarkeit','Orientierung und Gebietsgrenzen','Funk und Meldungen','Zeitmanagement','Sicherheit, Kondition von Hund und Hundeführer/in'],
+  truemmer:['Einweisung/Lagebesprechung verstanden','Sicheres Bewegen auf Trümmern','Revieren/Suchintensität des Hundes','Nasenarbeit','Anzeige/Verweisen','Führigkeit und Lenkbarkeit auf Distanz','Umgang mit Verleitungen','Funk und Meldungen','Eigensicherung','Kondition von Hund und Hundeführer/in'],
+  mantrailing:['Einweisung, Geruchsartikel, Ansatz','Trailaufnahme','Trailarbeit und Richtungsentscheidungen','Lesen des Hundes','Leinenhandling','Umgang mit Verleitungen/Kreuzungen','Fundverhalten','Funk und Meldungen','Zeitmanagement','Sicherheit im Verkehr'],
+};
+const VP_WERTE = [['sicher','✓ sicher'],['teilweise','~ teilweise'],['nicht','✗ nicht gezeigt']];
+function renderModalVorpruefung(){
+  const hund=state.hunde.find(h=>h.id===modal.hundId); if(!hund) return '';
+  const sparte=modal.sparte || ((hund.sparten||[])[0]) || 'flaeche'; modal.sparte=sparte;
+  const bisher=(hund.vorpruefungen||[]).slice().sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
+  return `<div class="modal-back"><div class="modal" style="max-width:680px">
+    <div class="modal-head"><h3>📝 Vorprüfung – ${esc(teamLabel(hund))}</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
+    <div class="modal-body">
+      <p class="hint">Staffelinterner Beobachtungsbogen zur Prüfungsvorbereitung – keine Bewertung nach der offiziellen Prüfungsordnung.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <select id="vp-sparte">${SUCHPRUEFUNG_SPARTEN.map(s=>`<option value="${s.id}" ${s.id===sparte?'selected':''}>${s.label}</option>`).join('')}</select>
+        <input type="date" id="vp-datum" value="${new Date().toISOString().slice(0,10)}">
+        <input id="vp-pruefer" placeholder="Beobachtet von" value="${esc((aktuellePerson()||{}).name||'')}" style="flex:1 1 150px">
+      </div>
+      ${VORPRUEF_KRITERIEN[sparte].map((k,i)=>`<div style="border-top:1px dashed var(--line);padding:6px 0"><div style="font-weight:600;font-size:.9rem">${esc(k)}</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:4px">${VP_WERTE.map(([v,l])=>`<label class="chip muted" style="cursor:pointer;display:inline-flex;gap:4px;align-items:center"><input type="radio" name="vp-${i}" value="${v}"> ${l}</label>`).join('')}
+        <input data-vp-notiz="${i}" placeholder="Bemerkung" style="flex:1 1 140px"></div></div>`).join('')}
+      <div class="field" style="margin-top:8px"><label>Gesamteindruck</label><select id="vp-ergebnis"><option value="bereit">prüfungsbereit</option><option value="fast">fast bereit – Punkte nacharbeiten</option><option value="nicht">noch nicht bereit</option></select></div>
+      <div class="field"><label>Zusammenfassung</label><textarea id="vp-text" rows="2" style="width:100%;box-sizing:border-box"></textarea></div>
+      <label class="row" style="gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="vp-ziele" checked> <span class="hint" style="color:var(--ink)">Für jeden Punkt „teilweise“ oder „nicht gezeigt“ ein Ausbildungsziel anlegen (für das Team sichtbar)</span></label>
+      ${bisher.length?`<p class="hint" style="margin:12px 0 2px"><b>Bisherige Vorprüfungen</b></p><ul class="hint" style="margin:0 0 0 -18px">${bisher.map(v=>`<li>${fmtDatum(v.datum)} · ${spartenLabel(v.sparte)} · ${({bereit:'prüfungsbereit',fast:'fast bereit',nicht:'noch nicht bereit'})[v.ergebnis]} · ${v.kriterien.filter(k=>k.wert==='sicher').length}/${v.kriterien.length} sicher</li>`).join('')}</ul>`:''}
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button><button class="btn btn-primary" id="vp-speichern">Speichern</button></div>
+  </div></div>`;
+}
+function bindModalVorpruefung(){
+  const hund=state.hunde.find(h=>h.id===modal.hundId);
+  document.getElementById('m-schliessen').onclick=schliesseModal; document.getElementById('m-abbrechen').onclick=schliesseModal;
+  document.getElementById('vp-sparte').onchange=e=>{ modal.sparte=e.target.value; render(); };
+  document.getElementById('vp-speichern').onclick=()=>{
+    const sparte=modal.sparte, datum=document.getElementById('vp-datum').value||new Date().toISOString().slice(0,10);
+    const kriterien=VORPRUEF_KRITERIEN[sparte].map((k,i)=>({kriterium:k, wert:(document.querySelector(`input[name="vp-${i}"]:checked`)||{}).value||'', notiz:document.querySelector(`[data-vp-notiz="${i}"]`).value.trim()}));
+    if(!kriterien.some(k=>k.wert)){ alert('Bitte mindestens einen Punkt bewerten.'); return; }
+    const ergebnis=document.getElementById('vp-ergebnis').value, text=document.getElementById('vp-text').value.trim();
+    const ich=aktuellePerson();
+    const vp={id:uid(), datum, sparte, pruefer:document.getElementById('vp-pruefer').value.trim(), kriterien, ergebnis, text, erstelltVon:ich?ich.id:''};
+    hund.vorpruefungen=hund.vorpruefungen||[]; hund.vorpruefungen.push(vp);
+    const offen=kriterien.filter(k=>k.wert==='teilweise'||k.wert==='nicht');
+    hund.einschaetzungen=hund.einschaetzungen||[];
+    hund.einschaetzungen.push({id:uid(), datum, sichtbarkeit:'team', vonPersonId:ich?ich.id:'', am:nowIso(),
+      text:`Vorprüfung ${spartenLabel(sparte)}: ${({bereit:'prüfungsbereit',fast:'fast bereit',nicht:'noch nicht bereit'})[ergebnis]} – ${kriterien.filter(k=>k.wert==='sicher').length}/${kriterien.filter(k=>k.wert).length} Punkte sicher.${offen.length?' Nacharbeiten: '+offen.map(k=>k.kriterium).join(', ')+'.':''}${text?' '+text:''}`});
+    if(document.getElementById('vp-ziele').checked){ hund.ziele=hund.ziele||[]; offen.forEach(k=>hund.ziele.push({id:uid(), text:`${spartenLabel(sparte)}: ${k.kriterium}${k.notiz?' – '+k.notiz:''}`, sichtbarkeit:'team', erledigt:false, angelegtAm:nowIso(), quelle:'Vorprüfung'})); }
+    speichereState(); zeigeToast(`Vorprüfung gespeichert${offen.length?`, ${offen.length} Ziel(e) angelegt`:''}.`); schliesseModal();
+  };
+}
+/* ---------- Übergabe aus dem RH-Flächensuchassistenten ins Einsatzprotokoll ---------- */
+function flUebergabeEinlesen(einsatz, d){
+  if(!d || d.bridgeFormat!=='rhs-taktik-assistent-export') throw new Error('Das ist keine Übergabedatei des Flächensuchassistenten.');
+  einsatz.suchtrupps=einsatz.suchtrupps||[]; einsatz.ereignisse=einsatz.ereignisse||[]; einsatz.tracks=einsatz.tracks||[];
+  einsatz.importierteUebergaben=einsatz.importierteUebergaben||[];
+  if(d.exportId && einsatz.importierteUebergaben.includes(d.exportId)) return {doppelt:true};
+  const tf=(d.rhsExchange&&d.rhsExchange.teamFields)||{};
+  const teamName=[tf.dogName, tf.handler].filter(Boolean).join(' / ') || 'Team aus Flächensuchassistent';
+  const hund=state.hunde.find(h=>h.rhsTeamId && d.rhsExchange && h.rhsTeamId===d.rhsExchange.teamId) || state.hunde.find(h=>tf.dogName && h.name===tf.dogName);
+  const zeit=iso=>iso?new Date(iso).toTimeString().slice(0,5):'';
+  const funde=(d.funde||[]).filter(Boolean);
+  const pr=d.einsatzprotokoll||{};
+  const strecke=d.track&&d.track.streckeMeter ? `${(d.track.streckeMeter/1000).toFixed(2)} km gelaufen` : '';
+  einsatz.suchtrupps.push({id:uid(), team:teamName, rufname:(d.auftrag&&d.auftrag.radioCallsigns)||'', gebietNr:(d.auftrag&&d.auftrag.assignedArea)||(d.gebiet&&d.gebiet.placeName)||'', suchart:{FL:true}, status:pr.status==='beendet'?'abgeschlossen':'im-einsatz',
+    rueckmeldeintervall:(d.lage&&d.lage.radioInterval)||'', auftrag:(d.auftrag&&d.auftrag.incidentWhat)||'', gefahren:((d.lage&&d.lage.risiken)||[]).join(', '),
+    beginn:zeit(pr.begonnenAt), ende:zeit(pr.beendetAt), letzterKontakt:'', abdeckung:[d.gebiet&&d.gebiet.areaSize?d.gebiet.areaSize:'', strecke].filter(Boolean).join(' · '),
+    ergebnisart: funde.length?'fund':'ohne', ergebnis: funde.length?funde.map(f=>f.meldung||('Fund '+f.nr)).join(' | '):'ohne Ergebnis',
+    externesTeam:!hund, externTeamName:hund?'':teamName, hundefuehrerId:hund?hund.hundefuehrerId:null, hundId:hund?hund.id:null, helferIds:[], helferExternText:'', quelle:'Flächensuchassistent'});
+  const truppId=einsatz.suchtrupps[einsatz.suchtrupps.length-1].id;
+  (pr.ereignisse||[]).forEach(e=>einsatz.ereignisse.push({id:uid(), zeit:zeit(e.zeitAt), text:`[${teamName}] ${e.titel}${e.angabe?' – '+e.angabe:''}`}));
+  funde.forEach(f=>einsatz.ereignisse.push({id:uid(), zeit:f.zeitAt?zeit(f.zeitAt):(f.zeit||''), text:`[${teamName}] FUND: ${f.meldung||''}${f.lat?` (${Number(f.lat).toFixed(5)}, ${Number(f.lon).toFixed(5)})`:''}`}));
+  const geo=d.geometrie||{};
+  const km=pts=>{ let s=0; for(let i=1;i<pts.length;i++){ const a=pts[i-1],b=pts[i],R=6371,dl=(b.lat-a.lat)*Math.PI/180,dn=(b.lon-a.lon)*Math.PI/180,x=Math.sin(dl/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dn/2)**2; s+=2*R*Math.asin(Math.sqrt(x)); } return s; };
+  const norm=p=>({lat:+(p.lat??p[0]), lon:+(p.lon??p.lng??p[1])});
+  if(Array.isArray(geo.hundefuehrerTrack)) geo.hundefuehrerTrack.forEach((seg,i)=>{ const pts=(seg||[]).map(norm).filter(p=>isFinite(p.lat)&&isFinite(p.lon)); if(pts.length>1) einsatz.tracks.push({id:uid(), name:`${teamName} – Weg${geo.hundefuehrerTrack.length>1?' '+(i+1):''}`, format:'Flächensuchassistent', typ:'track', distanzKm:km(pts), points:pts, notiz:'', truppId}); });
+  if(Array.isArray(geo.hundeTrack) && geo.hundeTrack.length>1){ const pts=geo.hundeTrack.map(norm).filter(p=>isFinite(p.lat)); einsatz.tracks.push({id:uid(), name:`${teamName} – Hund`, format:'Flächensuchassistent', typ:'track', distanzKm:km(pts), points:pts, notiz:'Hundetracker', truppId}); }
+  if(Array.isArray(geo.suchgebiet) && geo.suchgebiet.length>2){ const pts=geo.suchgebiet.map(norm); einsatz.tracks.push({id:uid(), name:`Suchgebiet ${(d.auftrag&&d.auftrag.assignedArea)||(d.gebiet&&d.gebiet.placeName)||''}`.trim(), format:'Flächensuchassistent', typ:'gebiet', flaecheHa:null, points:pts, notiz:'', truppId}); }
+  if(d.exportId) einsatz.importierteUebergaben.push(d.exportId);
+  return {doppelt:false, team:teamName, funde:funde.length, ereignisse:(pr.ereignisse||[]).length};
+}
+
+/* Training/Prüfung aus dem Flächensuchassistenten → Flächen-Trainingstagebuch des Hundes */
+function flUebergabeInsTagebuch(d, person){
+  const tf=(d.rhsExchange&&d.rhsExchange.teamFields)||{};
+  const eigene=state.hunde.filter(h=>h.status!=='inaktiv' && (darfTrainingBearbeiten(person) || hundGefuehrtVon(h, person.id)));
+  const hund = eigene.find(h=>h.rhsTeamId && d.rhsExchange && h.rhsTeamId===d.rhsExchange.teamId) || eigene.find(h=>tf.dogName && h.name===tf.dogName) || (eigene.length===1?eigene[0]:null);
+  if(!hund) throw new Error('Der Hund dieser Übergabe ist auf diesem Gerät nicht bekannt'+(tf.dogName?` („${tf.dogName}“)`:'')+'.');
+  state.rhEintraege=state.rhEintraege||[];
+  if(d.exportId && state.rhEintraege.some(e=>e.quelleExportId===d.exportId)) return {doppelt:true, hund};
+  const e=rhLeer('flaechensuche'); const pr=d.einsatzprotokoll||{}; const beg=pr.begonnenAt?new Date(pr.begonnenAt):new Date(d.exportedAt||Date.now());
+  const ort = state.orte.find(o=>d.gebiet && o.name===d.gebiet.placeName);
+  const funde=(d.funde||[]).filter(Boolean);
+  const dauerMin = pr.begonnenAt&&pr.beendetAt ? Math.round((new Date(pr.beendetAt)-new Date(pr.begonnenAt))/60000) : null;
+  Object.assign(e, {id:uid(), hundId:hund.id, personId:hund.hundefuehrerId||person.id, erstelltVon:person.id, quelleExportId:d.exportId||'', quelle:'Flächensuchassistent',
+    datum:beg.toISOString().slice(0,10), uhrzeit:beg.toTimeString().slice(0,5), ort:(d.gebiet&&d.gebiet.placeName)||'', ortId:ort?ort.id:''});
+  if(ort){ const en=meineEntfernung(state.personen.find(p=>p.id===e.personId)||person, ort.id); if(en) e.entfernungHeim=String(en.km).replace('.',','); }
+  e.gelaende.groesse=(d.gebiet&&d.gebiet.areaSize)||''; if(dauerMin!=null) e.gelaende.dauer=dauerMin+' min';
+  if(d.wetter){ if(d.wetter.temperature!=null) e.wetter.temp=String(d.wetter.temperature); if(d.wetter.windDirectionCompass) e.wetter.windrichtung=d.wetter.windDirectionCompass; }
+  const zus=d.zusammenfassung||{}, ausw=d.auswertung||{};
+  e.notizen.beobachtungen=[`Aus dem Flächensuchassistenten (${d.mode==='pruefung'?'Prüfung':'Training'}).`, d.personenzahl?`Versteckpersonen: ${d.personenzahl}.`:'', funde.length?`Funde: ${funde.length} – ${funde.map(f=>f.meldung||('Fund '+f.nr)).join(' | ')}`:'Kein Fund.', d.track&&d.track.streckeMeter?`Weg: ${(d.track.streckeMeter/1000).toFixed(2)} km.`:''].filter(Boolean).join(' ');
+  e.notizen.freitext=[zus.strategyName?'Strategie: '+zus.strategyName:'', zus.decisionTitle||''].filter(Boolean).join(' · ');
+  state.rhEintraege.push(e);
+  return {doppelt:false, hund, funde:funde.length};
+}
+function flUebergabeDateiEinlesen(einsatzId, file){
+  const r=new FileReader();
+  r.onload=()=>{ try{ const einsatz=state.einsaetze.find(e=>e.id===einsatzId); const d=JSON.parse(r.result); const e=flUebergabeEinlesen(einsatz, d);
+      if(e.doppelt){ zeigeToast('Diese Übergabe wurde bereits eingelesen.'); return; }
+      speichereState(); zeigeToast(`Übergabe übernommen: Suchtrupp „${e.team}“, ${e.ereignisse} Ereignis(se), ${e.funde} Fund(e).`); render();
+    }catch(err){ alert('Übergabe konnte nicht eingelesen werden: '+err.message); } };
+  r.readAsText(file);
+}
+
+/* =========================================================
+   TRAININGSORTE & ENTFERNUNG
+   Jede Person pflegt ihre einfache Entfernung (km) je Trainingsort – selbst eingetragen oder online berechnet.
+   Online-Berechnung (nur auf Knopfdruck): Adresse → Koordinaten über OpenStreetMap-Nominatim, Fahrstrecke über OSRM.
+   Daraus: Vorschlag „Gefahrene Km (Hin- und Rückfahrt)“ bei der Zusage und „Entfernung zur Heimatadresse“ im Trainingstagebuch.
+   ========================================================= */
+function ortFuerTermin(t){
+  if(!t) return null;
+  if(t.ortId){ const o=state.orte.find(x=>x.id===t.ortId); if(o) return o; }
+  const namen=state.orte.map(o=>o.name);
+  for(const txt of [t.ort, t.titel]){ if(!txt) continue; const m=RHSKit.matchPlace(txt, namen); if(m && m.score>=80) return state.orte.find(o=>o.name===m.name); }
+  return null;
+}
+function meineEntfernung(person, ortId){ const e=(person.ortEntfernungen||{})[ortId]; return e && e.km!=null ? e : null; }
+function kmVorschlagFuerTermin(person, t){ const o=ortFuerTermin(t); const e=o?meineEntfernung(person,o.id):null; return e ? {km:Math.round(e.km*2*10)/10, ort:o} : null; }
+async function geocodeAdresse(text){
+  const url='https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=de&q='+encodeURIComponent(text);
+  const r=await fetch(url,{headers:{'Accept-Language':'de'}}); if(!r.ok) throw new Error('Adresssuche nicht erreichbar');
+  const j=await r.json(); if(!j.length) throw new Error('Adresse nicht gefunden: '+text); return {lat:+j[0].lat, lon:+j[0].lon};
+}
+async function fahrstreckeKm(a, b){
+  try{ const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=false`);
+    if(r.ok){ const j=await r.json(); if(j.routes && j.routes[0]) return {km:Math.round(j.routes[0].distance/100)/10, art:'Fahrstrecke'}; } }catch(e){}
+  const R=6371, dl=(b.lat-a.lat)*Math.PI/180, dn=(b.lon-a.lon)*Math.PI/180, x=Math.sin(dl/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dn/2)**2;
+  return {km:Math.round(2*R*Math.asin(Math.sqrt(x))*1.3*10)/10, art:'geschätzt (Luftlinie × 1,3)'};
+}
+async function ortKoordinaten(o){
+  if(o.lat && o.lon) return {lat:+o.lat, lon:+o.lon};
+  if(!o.adresse) throw new Error(`Für „${o.name}“ sind weder Adresse noch Koordinaten hinterlegt.`);
+  const g=await geocodeAdresse(o.adresse); o.lat=String(g.lat); o.lon=String(g.lon); return g;
+}
+function renderOrganisationOrte(person){
+  const adr=[person.strasse,[person.plz,person.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const satz=state.organisation.kmSatz;
+  return `
+    <p class="lead">Trainingsorte der Staffel und deine Entfernung dorthin. Daraus schlägt BARRY bei der Zusage die gefahrenen Kilometer (Hin- und Rückfahrt) vor.</p>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <p class="hint" style="margin:0 0 6px"><b>Deine Adresse:</b> ${adr?esc(adr):'noch nicht hinterlegt (🎓 Mein Stand → Meine Kontaktdaten)'}</p>
+      <button class="btn btn-sm" id="orte-alle-berechnen" ${adr&&state.orte.length?'':'disabled'}>🌐 Alle Entfernungen online berechnen</button>
+      <p class="hint" style="margin:6px 0 0">Die Online-Berechnung überträgt deine Adresse und die Adressen der Trainingsorte an die freien Dienste von OpenStreetMap (Adresssuche Nominatim, Routenberechnung OSRM). Wer das nicht möchte, trägt die Kilometer einfach selbst ein.</p>
+      ${istLeitungOderAdmin(person)?`<div class="row" style="gap:6px;margin-top:10px;align-items:center"><label class="hint" style="color:var(--ink)">Kilometersatz der Staffel (€ je km):</label><input id="orte-kmsatz" type="number" step="0.01" min="0" value="${satz??''}" style="width:90px"><button class="btn btn-sm" id="orte-kmsatz-ok">Speichern</button></div>`:''}
+    </div>
+    ${state.orte.length?state.orte.slice().sort((a,b)=>a.name.localeCompare(b.name,'de')).map(o=>{ const e=meineEntfernung(person,o.id);
+      return `<div class="card card-pad" style="margin-bottom:8px">
+        <div class="spread"><b>${esc(o.name)}</b><span class="chip muted">${esc(o.art||'')}</span></div>
+        <p class="hint" style="margin:2px 0 6px">${esc(o.adresse||'')}${o.hinweis?' · '+esc(o.hinweis):''}${o.lat&&o.lon?` · <a href="https://www.openstreetmap.org/?mlat=${o.lat}&mlon=${o.lon}#map=15/${o.lat}/${o.lon}" target="_blank" rel="noopener">Karte</a>`:''}</p>
+        <div class="row" style="gap:6px;align-items:center;flex-wrap:wrap">
+          <label class="hint" style="color:var(--ink)">Meine Entfernung (einfach):</label>
+          <input type="number" step="0.1" min="0" data-ort-km="${o.id}" value="${e?e.km:''}" style="width:90px"> km
+          ${e?`<span class="hint">Hin + Rück ${Math.round(e.km*20)/10} km${satz?` ≈ ${(e.km*2*satz).toFixed(2).replace('.',',')} €`:''}${e.art?' · '+esc(e.art):''}</span>`:''}
+        </div></div>`; }).join(''):`<div class="card empty"><p>Noch keine Trainingsorte hinterlegt.${istLeitungOderAdmin(person)||hatAusbilderRecht(person)?' Anlegen unter Verwaltung → Orte &amp; Gebiete (mit Adresse).':' Die Leitung legt sie an.'}</p></div>`}`;
+}
+function bindOrganisationOrte(person){
+  document.querySelectorAll('[data-ort-km]').forEach(inp=>inp.onchange=()=>{ person.ortEntfernungen=person.ortEntfernungen||{};
+    if(inp.value==='') delete person.ortEntfernungen[inp.dataset.ortKm]; else person.ortEntfernungen[inp.dataset.ortKm]={km:parseFloat(inp.value), art:'selbst eingetragen', am:nowIso()};
+    speichereState(); render(); });
+  const ks=document.getElementById('orte-kmsatz-ok'); if(ks) ks.onclick=()=>{ const v=document.getElementById('orte-kmsatz').value; state.organisation.kmSatz = v===''?null:parseFloat(v); speichereState(); zeigeToast('Kilometersatz gespeichert.'); render(); };
+  const alle=document.getElementById('orte-alle-berechnen');
+  if(alle) alle.onclick=async()=>{
+    if(!navigator.onLine){ alert('Dafür ist eine Internetverbindung nötig.'); return; }
+    if(!confirm('Deine Adresse und die Adressen der Trainingsorte werden dafür an OpenStreetMap-Dienste übertragen. Fortfahren?')) return;
+    const adr=[person.strasse,[person.plz,person.ort].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    alle.disabled=true; alle.textContent='⏳ wird berechnet …';
+    try{
+      const heim=await geocodeAdresse(adr); let n=0; const fehler=[];
+      person.ortEntfernungen=person.ortEntfernungen||{};
+      for(const o of state.orte){ try{ const z=await ortKoordinaten(o); const f=await fahrstreckeKm(heim,z); person.ortEntfernungen[o.id]={km:f.km, art:f.art, am:nowIso()}; n++; await new Promise(r=>setTimeout(r,1100)); }catch(e){ fehler.push(o.name); } }
+      speichereState(); zeigeToast(`${n} Entfernung(en) berechnet${fehler.length?`, nicht gefunden: ${fehler.join(', ')}`:''}.`);
+    }catch(e){ alert('Berechnung nicht möglich: '+e.message); }
+    render();
+  };
+}
+
+/* ---------- Zentraler Knopf „Datei einlesen“: erkennt jede BARRY-Datei und leitet weiter ---------- */
+function dateiArtErkennen(name, text, bytes){
+  if(bytes && bytes[0]===0x50 && bytes[1]===0x4B) return /zip$/i.test(name) ? 'zip' : 'xlsx';
+  const t=String(text||'').replace(/^\uFEFF/,'').trim();
+  if(t.startsWith('{')){
+    try{ const d=JSON.parse(t); const f=d.exportInfo&&d.exportInfo.format;
+      if(f==='barry-termine') return 'terminplan'; if(f==='barry-mein-stand') return 'standupdate'; if(f==='barry-mitglied-meldung') return 'meldung';
+      if(f==='barry-bestand' || Array.isArray(d.personen)) return (d.exportInfo&&d.exportInfo.paket==='zugang') ? 'zugang' : 'sicherung';
+      if(d.rhsFormat) return 'rhs';
+      if(d.bridgeFormat==='rhs-taktik-assistent-export') return 'flaechenuebergabe';
+    }catch(e){}
+    return 'unbekannt';
+  }
+  if(/^BEGIN:VCALENDAR/.test(t)) return 'ics';
+  if(/[;,]/.test(t.split('\n')[0]||'') && /name/i.test(t.split('\n')[0]||'')) return 'csv';
+  return 'unbekannt';
+}
+const DATEI_ARTEN = {flaechenuebergabe:'Übergabe aus dem Flächensuchassistenten', terminplan:'Terminplan', standupdate:'Stand-Update', meldung:'Meldung eines Mitglieds', zugang:'Zugangspaket', sicherung:'Datensicherung', xlsx:'Selbstauskunft (Excel)', csv:'Mitglieder-Tabelle (CSV)', zip:'ZIP-Archiv', ics:'Kalenderdatei', rhs:'Team-Datenaustausch', unbekannt:'unbekannte Datei'};
+async function dateiEinlesenUniversal(files){
+  const liste=Array.from(files||[]); if(!liste.length) return;
+  const person=aktuellePerson(); const leitung=person && istLeitungOderAdmin(person);
+  const f=liste[0]; const buf=new Uint8Array(await f.arrayBuffer()); const text=(buf[0]===0x50&&buf[1]===0x4B)?'':new TextDecoder().decode(buf);
+  const art=dateiArtErkennen(f.name, text, buf);
+  const nurLeitung = msg=>alert(`„${f.name}“ ist ein(e) ${DATEI_ARTEN[art]}. ${msg}`);
+  switch(art){
+    case 'terminplan': route={bereich:'organisation',unter:null,id:null}; orgTab='kalender'; terminplanEinlesen(f); break;
+    case 'standupdate': route={bereich:'ausbildung',unter:null,id:null}; ausbildungTab='meinstand'; standUpdateEinlesen(f); break;
+    case 'meldung': if(!leitung) return nurLeitung('Sie wird von der Staffelleitung eingelesen.'); route={bereich:'verwaltung',unter:'austausch',id:null}; meldungenEinlesen(liste); break;
+    case 'xlsx': if(!leitung) return nurLeitung('Bitte ausfüllen und an die Staffelleitung schicken.'); route={bereich:'verwaltung',unter:'austausch',id:null}; selbstauskunftEinlesen(liste); break;
+    case 'csv': if(!leitung) return nurLeitung('Sie wird von der Staffelleitung eingelesen.'); route={bereich:'verwaltung',unter:'datensicherung',id:null}; render(); csvSchnellstartEinlesen(f); break;
+    case 'zugang': case 'sicherung':
+      if(!confirm(art==='zugang' ? 'Das ist ein Zugangspaket. Es ersetzt den gesamten Bestand auf diesem Gerät, und das Passwort wird auf das Startpasswort zurückgesetzt. Nur einlesen, wenn die Leitung es dir neu geschickt hat. Fortfahren?' : 'Das ist eine vollständige Datensicherung. Sie ersetzt den gesamten Bestand auf diesem Gerät. Fortfahren?')) return;
+      bestandAusDateiImportieren(f); break;
+    case 'flaechenuebergabe': {
+      let dFl=null; try{ dFl=JSON.parse(text); }catch(e){}
+      if(dFl && dFl.mode && dFl.mode!=='einsatz'){
+        try{ const r=flUebergabeInsTagebuch(dFl, person);
+          if(r.doppelt){ zeigeToast('Dieses Training wurde bereits ins Tagebuch übernommen.'); return; }
+          speichereState(); rhHundId=r.hund.id; route={bereich:'ausbildung',unter:null,id:null}; ausbildungTab='tagebuecher'; ausbildungTagebuchTyp='flaeche'; render();
+          zeigeToast(`Training mit ${r.hund.name} ins Flächen-Tagebuch übernommen${r.funde?` (${r.funde} Fund/e)`:''}.`);
+        }catch(err){ alert('Übergabe konnte nicht übernommen werden: '+err.message); }
+        return;
+      }
+      if(!leitung && !state.einsaetze.some(e=>e.modus==='uebung' && e.uebungsleitungPersonId===person.id)) return nurLeitung('Sie wird von der Einsatzleitung im Einsatzprotokoll eingelesen.');
+      const offen=state.einsaetze.filter(e=>e.status!=='abgeschlossen').sort((a,b)=>String(b.alarmierungZeit||'').localeCompare(String(a.alarmierungZeit||'')));
+      const ziel = (route.bereich==='einsatz' && route.id && state.einsaetze.find(e=>e.id===route.id)) || offen[0];
+      if(!ziel){ alert('Bitte zuerst ein Einsatzprotokoll anlegen oder öffnen, dann die Übergabe einlesen.'); return; }
+      if(!confirm(`Übergabe in das Einsatzprotokoll „${ziel.einsatzort||'Einsatz'}${ziel.alarmierungZeit?' ('+fmtDatum(ziel.alarmierungZeit)+')':''}“ übernehmen?`)) return;
+      route={bereich:'einsatz',unter:null,id:ziel.id}; flUebergabeDateiEinlesen(ziel.id, f); break; }
+    case 'ics': alert('Das ist eine Kalenderdatei für den Handy-Kalender – bitte in der Kalender-App öffnen, nicht in BARRY.'); break;
+    case 'zip': alert('Das ist ein ZIP-Archiv mit mehreren Dateien. Bitte zuerst entpacken und die einzelne Datei einlesen.'); break;
+    default: alert(`„${f.name}“ konnte keiner BARRY-Funktion zugeordnet werden.`);
+  }
+}
+function dateiEinlesenDialog(){
+  const inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.style.display='none';
+  inp.onchange=()=>{ const fs=Array.from(inp.files||[]); inp.remove(); dateiEinlesenUniversal(fs); };
+  document.body.appendChild(inp); inp.click();
+}
+document.addEventListener('click', e=>{ const el=e.target.closest && e.target.closest('[data-datei-einlesen]'); if(el){ e.preventDefault(); dateiEinlesenDialog(); } });
+
+/* ---------- Per E-Mail an die Staffelleitung ---------- */
+function leitungEmail(){ return (state.organisation && state.organisation.leitungEmail) || ''; }
+function mailtoOeffnen(betreff, text){
+  const adr=leitungEmail();
+  const url=`mailto:${encodeURIComponent(adr)}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
+  const a=document.createElement('a'); a.href=url; a.style.display='none'; document.body.appendChild(a); a.click(); a.remove();
+}
+/* Text-Nachricht (Kurswunsch, Trainingskarte): E-Mail mit Empfänger, Betreff und Text öffnet sich direkt */
+function textPerMail(betreff, text){
+  if(!leitungEmail()){ alert('Es ist noch keine E-Mail-Adresse der Staffelleitung hinterlegt.'); return; }
+  mailtoOeffnen(betreff, text);
+}
+/* Datei (Meldung): Datei wird gespeichert, dann öffnet sich die E-Mail – die Datei muss angehängt werden.
+   Auf dem Handy geht es bequemer über „Teilen“ → Mail-App (Datei ist dann schon angehängt, Adresse wird in die Zwischenablage kopiert). */
+async function dateiPerMail(datei, betreff, text){
+  const adr=leitungEmail();
+  if(!adr){ alert('Es ist noch keine E-Mail-Adresse der Staffelleitung hinterlegt.'); return false; }
+  try{ await navigator.clipboard.writeText(adr); }catch(e){}
+  try{ if(navigator.canShare && navigator.canShare({files:[datei]})){ await navigator.share({files:[datei], title:betreff, text:`An: ${adr}\n${text}`}); zeigeToast(`Adresse ${adr} kopiert – in der Mail-App als Empfänger einfügen.`); return true; } }catch(e){ if(e && e.name==='AbortError') return false; }
+  const url=URL.createObjectURL(new Blob([datei],{type:datei.type||'application/json'})); const a=document.createElement('a'); a.href=url; a.download=datei.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  setTimeout(()=>mailtoOeffnen(betreff, `${text}\n\nBitte die soeben gespeicherte Datei „${datei.name}“ an diese E-Mail anhängen.`), 600);
+  zeigeToast('Datei gespeichert – bitte an die geöffnete E-Mail anhängen.');
+  return true;
+}
+
 /* Gemeinsame Importlogik für Datensicherung und Erststart – alle Schutzprüfungen an einer Stelle. */
 function bestandAusDateiImportieren(file){
     const reader = new FileReader();
   reader.onload = ()=>{
     try{
       const parsed = JSON.parse(reader.result);
+      if(parsed.exportInfo && parsed.exportInfo.format==='barry-mitglied-meldung') throw new Error('Das ist eine Meldung eines Mitglieds. Bitte unter Verwaltung → Personen → 🔑 Zugänge & Selbstauskunft → „Meldungen der Mitglieder einlesen“ übernehmen.');
       if(parsed.exportInfo && parsed.exportInfo.format==='barry-mein-stand') throw new Error('Das ist ein Stand-Update, keine Datensicherung. Bitte unter Ausbildung & Team → 🎓 Mein Stand → „Stand-Update einlesen“ einspielen – dein Passwort bleibt dabei erhalten.');
       if(parsed.exportInfo && parsed.exportInfo.format==='barry-termine') throw new Error('Das ist ein Terminplan, keine Datensicherung. Bitte unter Organisation & Termine → Kalender → „Terminplan einlesen“ einspielen – dort werden nur die Termine abgeglichen.');
       if(!parsed.personen || !Array.isArray(parsed.personen)) throw new Error('Kein gültiges Bestandspaket.');
@@ -3876,7 +4535,7 @@ function bestandAusDateiImportieren(file){
       state = migriereState(Object.assign(leererState(), parsed));
       speichereState();
       session = null; loginEingabe = ''; loginFehler = '';
-      loginHinweis = 'Der Datenbestand wurde ersetzt. Bitte melden Sie sich jetzt mit einer Person aus dem neuen Bestand an (Name oder Benutzername). Zugänge aus dem vorherigen Bestand – z. B. „Admin“ – gelten nicht mehr. Bei importierten Personen gilt das Startpasswort, das Ihnen die Leitung mitgeteilt hat.';
+      loginHinweis = 'Der Datenbestand wurde ersetzt. Bitte melde dich jetzt mit einer Person aus dem neuen Bestand an (Name oder Benutzername). Zugänge aus dem vorherigen Bestand – z. B. „Admin“ – gelten nicht mehr. Bei importierten Personen gilt das Startpasswort, das dir die Leitung mitgeteilt hat.';
       zeigeToast('Bestand importiert. Vorheriger Stand wurde als Sicherheitskopie abgelegt.');
       render();
     }catch(err){
@@ -3906,6 +4565,9 @@ function renderModal(){
   if(modal.type==='csvVorschau') return renderModalCsvVorschau();
   if(modal.type==='terminImport') return renderModalTerminImport();
   if(modal.type==='trainingskarte') return renderModalTrainingskarte();
+  if(modal.type==='meldungImport') return renderModalMeldungImport();
+  if(modal.type==='bereicheWahl') return renderModalBereicheWahl();
+  if(modal.type==='vorpruefung') return renderModalVorpruefung();
   if(modal.type==='qualifikation') return renderModalQualifikation();
   if(modal.type==='zuordnung') return renderModalZuordnung();
   if(modal.type==='zusatzrecht') return renderModalZusatzrecht();
@@ -3932,6 +4594,9 @@ function bindModal(person){
   if(modal.type==='csvVorschau') return bindModalCsvVorschau();
   if(modal.type==='terminImport') return bindModalTerminImport();
   if(modal.type==='trainingskarte') return bindModalTrainingskarte();
+  if(modal.type==='meldungImport') return bindModalMeldungImport();
+  if(modal.type==='bereicheWahl') return bindModalBereicheWahl();
+  if(modal.type==='vorpruefung') return bindModalVorpruefung();
   if(modal.type==='qualifikation') return bindModalQualifikation();
   if(modal.type==='zuordnung') return bindModalZuordnung();
   if(modal.type==='zusatzrecht') return bindModalZusatzrecht();
@@ -4937,6 +5602,7 @@ const ORG_TABS = [
   {id:'kalender', label:'Kalender'},
   {id:'teilnahme', label:'Teilnahme'},
   {id:'planung', label:'Planung & Themenbörse'},
+  {id:'orte', label:'📍 Trainingsorte'},
 ];
 let orgTab = 'kalender';
 function renderOrganisation(person){
@@ -4946,7 +5612,7 @@ function renderOrganisation(person){
     <div class="row" style="margin:14px 0 20px;border-bottom:1px solid var(--line);padding-bottom:2px">
       ${ORG_TABS.map(t=>`<button class="btn ${orgTab===t.id?'btn-primary':'btn-ghost'}" data-otab="${t.id}">${esc(t.label)}</button>`).join('')}
     </div>
-    ${orgTab==='kalender' ? renderOrganisationKalender(person) : orgTab==='teilnahme' ? renderOrganisationTeilnahme(person) : renderOrganisationPlanung(person)}
+    ${orgTab==='kalender' ? renderOrganisationKalender(person) : orgTab==='teilnahme' ? renderOrganisationTeilnahme(person) : orgTab==='orte' ? renderOrganisationOrte(person) : renderOrganisationPlanung(person)}
     ${modal ? renderModal() : ''}
   `;
 }
@@ -5048,7 +5714,7 @@ function renderOrganisationTeilnahme(person){
           </div>
           ${status==='zusage'?`
           <div class="grid-2" style="margin-top:10px">
-            <div class="field" style="margin-bottom:0"><label>Gefahrene Km (Hin- und Rückfahrt)</label><input type="number" min="0" step="0.1" data-rm-km="${t.id}" value="${r?.km??''}"></div>
+            <div class="field" style="margin-bottom:0"><label>Gefahrene Km (Hin- und Rückfahrt)</label><input type="number" min="0" step="0.1" data-rm-km="${t.id}" value="${r?.km??''}" placeholder="${(()=>{ const v=kmVorschlagFuerTermin(person,t); return v?'Vorschlag '+v.km:''; })()}">${(()=>{ const v=kmVorschlagFuerTermin(person,t); return v && r?.km==null ? `<span class="hint">Vorschlag ${v.km} km (${esc(v.ort.name)}) – <button class="btn btn-ghost btn-sm" data-rm-km-vorschlag="${t.id}" data-km="${v.km}" style="padding:2px 6px;min-height:0">übernehmen</button></span>` : ''; })()}</div>
             <div class="field" style="margin-bottom:0"><label>Anrechenbare Stunden (optional)</label><input type="number" min="0" step="0.5" data-rm-stunden="${t.id}" value="${r?.stunden??''}"></div>
           </div>`:''}
         </div>`;
@@ -5063,6 +5729,7 @@ function bindZusageButtons(person){
       let r = rueckmeldungFuer(terminId, person.id);
       if(!r){ r = {id:uid(), terminId, personId:person.id, status:statusWert, km:null, stunden:null}; state.ruckmeldungen.push(r); }
       else r.status = statusWert;
+      if(statusWert==='zusage' && r.km==null){ const v=kmVorschlagFuerTermin(person, state.termine.find(x=>x.id===terminId)); if(v) r.km=v.km; }
       r.aktualisiertAm = nowIso();
       speichereState(); render();
     };
@@ -5070,6 +5737,7 @@ function bindZusageButtons(person){
   document.querySelectorAll('[data-rm-km]').forEach(inp=>{
     inp.onchange = ()=>{ const r = rueckmeldungFuer(inp.dataset.rmKm, person.id); if(r){ r.km = inp.value?parseFloat(inp.value):null; speichereState(); } };
   });
+  document.querySelectorAll('[data-rm-km-vorschlag]').forEach(b=>b.onclick=()=>{ const r=rueckmeldungFuer(b.dataset.rmKmVorschlag, person.id); if(r){ r.km=parseFloat(b.dataset.km); speichereState(); render(); } });
   document.querySelectorAll('[data-rm-stunden]').forEach(inp=>{
     inp.onchange = ()=>{ const r = rueckmeldungFuer(inp.dataset.rmStunden, person.id); if(r){ r.stunden = inp.value?parseFloat(inp.value):null; speichereState(); } };
   });
@@ -5144,6 +5812,7 @@ function bindOrganisation(person){
   });
   if(orgTab==='teilnahme') bindOrganisationTeilnahme(person);
   if(orgTab==='planung') bindOrganisationPlanung(person);
+  if(orgTab==='orte') bindOrganisationOrte(person);
   if(modal) bindModal(person);
 }
 
@@ -5158,7 +5827,7 @@ function terminplanExportieren(){
   const grenze = Date.now() - 400*86400000; // Löschvermerke gut ein Jahr mitgeben
   const geloescht = (state.geloeschteTermine||[]).filter(g=>new Date(g.geloeschtAm).getTime() >= grenze);
   const daten = { exportInfo:{ format:'barry-termine', app:'BARRY', appVersion:BARRY_APP_VERSION, exportiertAm:nowIso(), organisation: state.organisation.name||'', anzahlTermine: termine.length, anzahlGeloescht: geloescht.length },
-    termine, geloeschteTermine: geloescht };
+    termine, geloeschteTermine: geloescht, kmSatz: state.organisation.kmSatz??null, orte: (state.orte||[]).map(o=>({id:o.id, name:o.name, art:o.art||'', adresse:o.adresse||'', lat:o.lat||'', lon:o.lon||'', hinweis:o.hinweis||''})) };
   const blob = new Blob([JSON.stringify(daten)], {type:'application/json'});
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = `BARRY_Terminplan_${new Date().toISOString().slice(0,10)}.json`;
@@ -5193,9 +5862,13 @@ function terminplanAnalysieren(daten){
     const treffer = state.termine.find(x=>x.id===g.id) || (g.titel && g.beginn ? state.termine.find(x=>(x.sichtbarkeit||'staff')==='staff' && terminSchluessel(x)===terminSchluessel(g)) : null);
     if(treffer) loeschen.push({lok:treffer, g});
   });
-  return {neu, aktualisiert, unveraendert, uebersprungen, loeschen, geloeschteListe: daten.geloeschteTermine||[], info: daten.exportInfo};
+  const orteAenderung=(daten.orte||[]).filter(o=>{ const v=state.orte.find(x=>x.id===o.id); return !v || ['name','art','adresse','lat','lon','hinweis'].some(k=>String(v[k]||'')!==String(o[k]||'')); });
+   return {neu, aktualisiert, unveraendert, uebersprungen, loeschen, geloeschteListe: daten.geloeschteTermine||[], info: daten.exportInfo, orte: daten.orte||[], orteAenderung, kmSatz: daten.kmSatz};
 }
 function terminplanUebernehmen(a){
+  if(a.kmSatz!==undefined && a.kmSatz!==null) state.organisation.kmSatz = a.kmSatz;
+  if(a.kmSatz!=null && !isNaN(a.kmSatz)) state.organisation.kmSatz = a.kmSatz;
+  (a.orte||[]).forEach(o=>{ const vorh=state.orte.find(x=>x.id===o.id); if(vorh) Object.assign(vorh, {name:o.name, art:o.art, adresse:o.adresse, lat:o.lat, lon:o.lon, hinweis:o.hinweis}); else state.orte.push({...o, geometrie:null}); });
   a.neu.forEach(t=>state.termine.push(Object.assign({}, t)));
   a.aktualisiert.forEach(({lok,t})=>{ const {planungsnotiz, ...rest} = t; Object.assign(lok, rest); });
   const ids = new Set(a.loeschen.map(x=>x.lok.id));
@@ -5217,7 +5890,7 @@ function terminplanEinlesen(file){
 function renderModalTerminImport(){
   const a = terminImportVorschau; if(!a) return '';
   const zeile = (t, zusatz)=>`<li>${terminDatumKurz(t)} · ${esc(t.titel)}${zusatz?` <span class="hint">– ${esc(zusatz)}</span>`:''}</li>`;
-  const nichts = !a.neu.length && !a.aktualisiert.length && !a.loeschen.length;
+  const nichts = !a.neu.length && !a.aktualisiert.length && !a.loeschen.length && !(a.orteAenderung||[]).length;
   return `
   <div class="modal-back"><div class="modal" style="max-width:680px">
     <div class="modal-head"><h3>Terminplan einlesen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
@@ -5229,6 +5902,7 @@ function renderModalTerminImport(){
       ${a.loeschen.length?`<p style="margin:10px 0 4px"><strong>❌ Entfallene Termine (${a.loeschen.length})</strong></p><ul class="hint" style="margin:0 0 0 -18px">${a.loeschen.map(x=>zeile(x.lok, x.g.vermerk||'ohne Vermerk')).join('')}</ul>`:''}
       ${a.uebersprungen.length?`<details style="margin-top:10px"><summary class="hint" style="cursor:pointer">Nicht übernommen (${a.uebersprungen.length})</summary><ul class="hint" style="margin:4px 0 0 -18px">${a.uebersprungen.map(x=>zeile(x.t, x.grund)).join('')}</ul></details>`:''}
       ${a.unveraendert.length?`<p class="hint" style="margin-top:8px">${a.unveraendert.length} Termin(e) unverändert.</p>`:''}
+      ${(a.orteAenderung||[]).length?`<p class="hint" style="margin-top:8px">📍 Trainingsorte neu oder geändert: ${a.orteAenderung.map(o=>esc(o.name)).join(', ')}</p>`:''}
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button>${nichts?'':'<button class="btn btn-primary" id="m-termine-uebernehmen">Jetzt übernehmen</button>'}</div>
   </div></div>`;
@@ -5340,6 +6014,7 @@ function renderModalTrainingskarte(){
     <div class="modal-foot" style="flex-wrap:wrap;gap:6px">
       <button class="btn btn-ghost" id="tk-tagebuch" title="Als Eintrag im Trainingstagebuch speichern">📓 Ins Tagebuch</button>
       <button class="btn" id="tk-speichern">Speichern</button>
+      <button class="btn" id="tk-mail">📧 Per E-Mail</button>
       <button class="btn btn-primary" id="tk-senden">📤 An Ausbilder/-in senden</button>
     </div>
   </div></div>`;
@@ -5382,6 +6057,7 @@ function bindModalTrainingskarte(){
     try{ await navigator.clipboard.writeText(text); zeigeToast('Text kopiert – jetzt im Messenger einfügen.'); }
     catch(e){ prompt('Text kopieren und im Messenger einfügen:', text); }
   };
+  document.getElementById('tk-mail').onclick = ()=>{ const k=tkAusFormular(person); speichereState(); const h=state.hunde.find(x=>x.id===k.hundId); textPerMail(`Mein heutiges Training – ${person.name} / ${h?h.name:''} – ${fmtDatum(k.datum)}`, tkText(k)); };
   document.getElementById('tk-tagebuch').onclick = ()=>{
     const k=tkAusFormular(person);
     const notizen=[k.plan?'Vorhaben: '+k.plan:'', k.erreicht?'Ziel erreicht: '+k.erreicht:'', k.gut?'Lief gut: '+k.gut:'', k.weniger?'Lief weniger gut: '+k.weniger:'', k.arbeiten?'Daran arbeiten: '+k.arbeiten:''].filter(Boolean).join('\n');
@@ -5560,7 +6236,7 @@ function renderModalTermin(){
         <div class="field"><label>Beginn</label><input id="tf-beginn" type="${t.ganztags?'date':'datetime-local'}" value="${t.ganztags?(t.beginn||'').slice(0,10):toLocalInput(t.beginn)}" ${nurLesen?'disabled':''}></div>
         <div class="field"><label>Ende</label><input id="tf-ende" type="${t.ganztags?'date':'datetime-local'}" value="${t.ganztags?(t.ende||'').slice(0,10):toLocalInput(t.ende)}" ${nurLesen?'disabled':''}></div>
       </div>
-      <div class="field"><label>Ort</label><input id="tf-ort" value="${esc(t.ort)}" ${nurLesen?'disabled':''}></div>
+      <div class="field"><label>Ort</label><input id="tf-ort" list="tf-ort-liste" value="${esc(t.ort)}" placeholder="Trainingsort wählen oder frei eingeben" ${nurLesen?'disabled':''}><datalist id="tf-ort-liste">${state.orte.map(o=>`<option value="${esc(o.name)}">`).join('')}</datalist></div>
       <div class="field"><label>Beschreibung</label><textarea id="tf-beschreibung" rows="3" ${nurLesen?'disabled':''}>${esc(t.beschreibung)}</textarea></div>
       ${darfPlanung?`
       <div class="field"><label>Sichtbarkeit</label>
@@ -5657,7 +6333,7 @@ function bindModalTermin(person){
     const ende = ganztags ? (endeRoh||beginnRoh)+'T23:59' : (endeRoh||beginnRoh);
     const daten = {
       titel, kategorie:document.getElementById('tf-kategorie').value, ganztags,
-      beginn, ende, ort:document.getElementById('tf-ort').value.trim(),
+      beginn, ende, ort:document.getElementById('tf-ort').value.trim(), ortId:((state.orte.find(o=>o.name===document.getElementById('tf-ort').value.trim())||{}).id)||'',
       beschreibung:document.getElementById('tf-beschreibung').value.trim(),
     };
     const sichtbarkeitEl = document.getElementById('tf-sichtbarkeit');
@@ -5807,7 +6483,7 @@ function bindTabAnwesenheit(){
    AUSBILDUNG & TEAM (Trainingstagebuch, Finde- & Anzeigewille)
    ========================================================= */
 let ausbildungTeamFilter = 'alle'; // 'alle' | hundId
-let ausbildungTab = 'findewille'; // 'findewille' | 'tagebuecher'
+let ausbildungTab = null; // Startreiter je Rolle: Mitglieder „Mein Stand“, Ausbilder/-innen „Stand & Planung“
 let ausbildungTagebuchTyp = 'allgemein'; // 'allgemein' | 'flaeche' | 'mantrailing' — Unterauswahl innerhalb "Trainingstagebücher"
 let wissenTab = 'pruefung';
 function darfTrainingBearbeiten(person){ return hatAusbilderRecht(person) || istLeitungOderAdmin(person) || hatZusatzrecht(person, ZUSATZRECHT_AUSBILDUNG); }
@@ -5921,7 +6597,7 @@ function renderAusbildungPlanung(person){
       <select id="pl-team" style="width:auto">${hunde.map(h=>`<option value="${h.id}" ${h.id===planungHundId?'selected':''}>${esc(teamLabel(h))}</option>`).join('')}</select>
     </div>
     <div class="card card-pad" style="margin-bottom:14px;border-left:4px solid var(--t-ausbildung)">
-      <div class="spread"><h3>Ausbildungsstand</h3>${eins.length?`<span class="chip muted">${eins.length} Einschätzung(en)</span>`:''}</div>
+      <div class="spread"><h3>Ausbildungsstand</h3><span class="row" style="gap:6px">${eins.length?`<span class="chip muted">${eins.length} Einschätzung(en)</span>`:''}${istAusbilder?`<button class="btn btn-sm" data-vorpruefung="${hund.id}">📝 Vorprüfung</button>`:''}</span></div>
       ${istAusbilder?`
       <details ${eins.length?'':'open'} style="margin:4px 0 8px"><summary style="cursor:pointer;font-weight:600">+ Neue Einschätzung</summary>
         <textarea id="pl-eins-text" rows="5" style="width:100%;box-sizing:border-box;margin-top:8px" placeholder="z. B. Verbellen am Opfer sicher, Freiverweisen noch im Aufbau; Wippe ängstlich; Prüfung 1.2 im Frühjahr realistisch …"></textarea>
@@ -5998,6 +6674,7 @@ function renderStartGeteilteZiele(eigeneHunde){
     </div>`;
 }
 function renderAusbildung(person){
+  if(!ausbildungTab) ausbildungTab = darfTrainingBearbeiten(person) ? 'planung' : 'meinstand';
   const darfPlanung = darfTrainingBearbeiten(person) || state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h, person.id));
   if(ausbildungTab==='planung' && !darfPlanung) ausbildungTab = 'findewille';
   return `
@@ -6011,6 +6688,7 @@ function renderAusbildung(person){
   `;
 }
 function bindAusbildung(person){
+  if(!ausbildungTab) ausbildungTab = darfTrainingBearbeiten(person) ? 'planung' : 'meinstand';
   document.querySelectorAll('[data-atab]').forEach(b=>{ b.onclick=()=>{ ausbildungTab=b.dataset.atab; render(); }; });
   if(ausbildungTab==='findewille') bindAusbildungFindewille(person);
   else if(ausbildungTab==='meinstand') bindMeinStand(person);
@@ -8004,6 +8682,7 @@ function bindAusbildungRH(person){
   if(ortSel) ortSel.onchange = ()=>{
     const ort = state.orte.find(o=>o.id===ortSel.value);
     rhDraft.ortId = ortSel.value; if(ort) rhDraft.ort = ort.name;
+    if(ort && !rhDraft.entfernungHeim){ const e=meineEntfernung(aktuellePerson(), ort.id); if(e) rhDraft.entfernungHeim=String(e.km).replace('.',','); }
     render();
   };
   document.querySelectorAll('[data-rh-pfad]').forEach(el=>{
@@ -9434,6 +10113,7 @@ function renderModalTracks(){
       <p class="hint">In Gaia GPS Track oder Suchgebiet als GPX oder KML exportieren und hier auswählen. Die Datei wird offline eingelesen und als vereinfachte Lageübersicht dargestellt; es findet keine Übertragung an Gaia GPS statt. Karten-/Tracking-Anbindungen sind optional – alle Angaben bleiben jederzeit manuell erfassbar.</p>
       <input type="file" id="track-datei" accept=".gpx,.kml,application/gpx+xml,application/vnd.google-earth.kml+xml,text/xml,application/xml" style="display:none">
       <button class="btn btn-primary" id="btn-track-import">🧭 GPX-/KML-Track importieren</button>
+      <label class="btn" style="cursor:pointer;margin-left:6px">🎯 Übergabe Flächensuchassistent<input type="file" id="fl-uebergabe-datei" accept=".json,application/json" style="display:none"></label>
       ${nebenAnzahl?`<label class="chip-select ${alleZeigen?'active':''}" style="margin-top:12px"><input type="checkbox" id="trk-alle" ${alleZeigen?'checked':''}> Weitere Truppmitglieder einblenden (${nebenAnzahl})</label>
       <p class="hint">Standardmäßig wird je Suchtrupp nur der Track des Hundeführers gezeigt, um Überlagerungen zu vermeiden.</p>`:''}
       <div style="margin-top:14px">
@@ -9468,6 +10148,7 @@ function bindModalTracks(){
   document.getElementById('m-schliessen').onclick = schliesseModal;
   document.getElementById('m-abbrechen').onclick = schliesseModal;
   document.getElementById('btn-track-import').onclick = ()=> document.getElementById('track-datei').click();
+  const flu=document.getElementById('fl-uebergabe-datei'); if(flu) flu.onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(f) flUebergabeDateiEinlesen(modal.einsatzId, f); };
   document.getElementById('track-datei').onchange = (e)=>{
     const datei = e.target.files[0]; e.target.value=''; if(!datei) return;
     const reader = new FileReader();
@@ -9861,7 +10542,8 @@ const HILFE_ARTIKEL = [
   {id:"terminplan", kategorie:"Organisation & Termine", titel:"Terminplan an Mitglieder verteilen und aktualisieren", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Leitung/Ausbildung:</strong> Nach Änderungen am Jahresplan unter Organisation &amp; Termine → Kalender → „🔄 Terminplan verteilen / aktualisieren“ auf <strong>Terminplan exportieren</strong> tippen und die Datei an die Mitglieder schicken. Sie enthält nur die Staffeltermine (keine Ausbilder-internen oder persönlichen Termine, keine Planungsnotizen, keine Personendaten) sowie die Löschvermerke.</p>\n<p>Wird ein Staffeltermin gelöscht, fragt BARRY nach einem kurzen <strong>Vermerk</strong> (z. B. „fällt wegen Unwetter aus – Ersatz am 17.10.“). Der Vermerk wird mit dem nächsten Export verteilt; der Termin verschwindet dann auch bei den Mitgliedern und erscheint dort unter „Entfallene Termine“.</p>\n<p><strong>Mitglieder:</strong> Im selben Kasten auf <strong>Terminplan einlesen</strong> tippen und die Datei auswählen. Eine Vorschau zeigt neue, geänderte und entfallene Termine. Abgeglichen wird über eine feste Termin-Kennung (zusätzlich über Titel + Beginn), deshalb entsteht nichts doppelt; eigene Zusagen/Absagen und persönliche Termine bleiben erhalten. Ein älterer Plan holt bereits gelöschte Termine nicht zurück.</p>\n"},
   {id:"trainingskarte", kategorie:"Ausbildung & Team", titel:"Mein heutiges Training (digitale Trainingskarte)", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Ersetzt die Papierkarte „Mein heutiges Training“. Aufruf über die Startseite: <strong>🐾 Mein heutiges Training</strong>.</p>\n<p><strong>Vor dem Training:</strong> Ziel für heute, Vorhaben mit dem Hund und die Ausrüstung (Karte/Kompass, Funkgerät, Puder, Wasser, EH-Material, Abfragekarte). Als Vorschläge zum Antippen erscheinen geteilte Ziele aus „Stand &amp; Planung“, offene Hausaufgaben, begonnene Übungen mit der nächsten Stufe und „Woran muss ich noch arbeiten?“ vom letzten Training.</p>\n<p><strong>Nach dem Training:</strong> Ziel erreicht? Was lief gut, was weniger gut, woran muss ich noch arbeiten?</p>\n<p><strong>📤 An Ausbilder/-in senden</strong> öffnet das Teilen-Menü (z. B. WhatsApp, Signal, DRK.Chat) mit Name, Hund, Datum und allen Angaben. <strong>📓 Ins Tagebuch</strong> legt daraus einen Eintrag im Trainingstagebuch an bzw. aktualisiert ihn. Je Hund und Tag gibt es eine Karte; sie lässt sich jederzeit wieder öffnen und ergänzen.</p>\n"},
   {id:"funk-spickzettel", kategorie:"Wissen & Material", titel:"Funk-Spickzettel", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Wissen &amp; Material → 📻 Funk</strong> (oder über die Startseite) stehen – durchsuchbar und offline – Statusmeldungen Fahrzeug → Leitstelle (0–9, *) mit Merkhilfe „3 AUS · 4 AN · 1 AB · 2 EIN“, Meldungen der Leitstelle, wen man anfunkt (Suchtrupp → Einsatzleitung; Leitstelle über Status 5), Grundregeln, Betriebswörter, Lage- und Fundmeldung, Mustermeldungen im Suchdienst, Bedienung des Motorola MTP 850 (Gruppe einstellen, TMO/DMO, Notruf, GPS), Sprechgruppen einschließlich DMO-Gruppen der Gemeinden im Raum Kassel, Koordinaten, unsere Funkrufnamen, Buchstabieralphabet, Checkliste und Störungshilfe.</p>\n<p>Grundlage ist die Ausbildungsunterlage „Sprechfunk im BOS-Digitalfunk“ des DRK Kassel (Entwurf zur fachlichen Prüfung, 09/2026). Mit ⚠ markierte Punkte sind noch mit Leitstelle bzw. Servicepoint abzustimmen; verbindlich sind die Weisungen der Leitstelle.</p>\n"},
-  {id:"mein-stand", kategorie:"Ausbildung & Team", titel:"Mein Ausbildungsstand, Lehrgänge und Kurswünsche", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Ausbildung &amp; Team → 🎓 Mein Stand</strong> (oder über die Karte auf der Startseite) sieht jedes Mitglied seine <strong>Fristen</strong> (abgelaufen bzw. in den nächsten 90 Tagen fällig), <strong>was noch fehlt</strong> (z. B. für die Zulassung zur Rettungshundeprüfung oder die Einsatzfähigkeit), die eigenen Nachweise und die Lehrgänge, für die die Voraussetzungen erfüllt sind.</p>\n<p><strong>Kurswunsch:</strong> Lehrgang wählen – BARRY zeigt die Voraussetzungen laut Seminarbroschüre LV Hessen 2025 (mit Seitenangabe) und was noch fehlt. „Kurswunsch an die Leitung senden“ öffnet das Teilen-Menü. Die Leitung erfasst den Wunsch unter Auswertung → Kurswünsche und setzt den Status.</p>\n<p><strong>Aktuell halten:</strong> Die Leitung erstellt unter Verwaltung → Personen → 🔑 Zugänge &amp; Selbstauskunft „Stand-Updates für alle (ZIP)“ und schickt jeder Person ihre Datei. Einlesen unter 🎓 Mein Stand → „Stand-Update einlesen“ – Passwort und übrige Daten bleiben unverändert.</p>\n<p><strong>Kalender aufs Handy:</strong> Organisation &amp; Termine → Kalender → „📅 Kalenderdatei (.ics)“ – die Datei in Google-, Apple- oder Outlook-Kalender importieren.</p>\n"},
+  {id:"mein-stand", kategorie:"Ausbildung & Team", titel:"Mein Ausbildungsstand, Lehrgänge und Kurswünsche", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Ausbildung &amp; Team → 🎓 Mein Stand</strong> (oder über die Karte auf der Startseite) sieht jedes Mitglied seine <strong>Fristen</strong> (abgelaufen bzw. in den nächsten 90 Tagen fällig), <strong>was noch fehlt</strong> (z. B. für die Zulassung zur Rettungshundeprüfung oder die Einsatzfähigkeit), die eigenen Nachweise und die Lehrgänge, für die die Voraussetzungen erfüllt sind.</p>\n<p><strong>Kurswunsch:</strong> Lehrgang wählen – BARRY zeigt die Voraussetzungen laut Seminarbroschüre LV Hessen 2025 (mit Seitenangabe) und was noch fehlt. „Kurswunsch an die Leitung senden“ öffnet das Teilen-Menü. Die Leitung erfasst den Wunsch unter Auswertung → Kurswünsche und setzt den Status.</p>\n<p><strong>Selbst pflegen:</strong> Unter „✏️ Nachweis ergänzen“ trägt das Mitglied neue Ausbildungen ein (⏳ bis zur Bestätigung) und schickt sie mit „📤 Meine Angaben an die Leitung senden“ als Datei. Die Leitung liest sie unter Verwaltung → Personen → 🔑 Zugänge &amp; Selbstauskunft → „Meldungen der Mitglieder einlesen“ ein, bestätigt je Eintrag und schickt ein Stand-Update zurück.</p>\n<p><strong>Aktuell halten:</strong> Die Leitung erstellt unter Verwaltung → Personen → 🔑 Zugänge &amp; Selbstauskunft „Stand-Updates für alle (ZIP)“ und schickt jeder Person ihre Datei. Einlesen unter 🎓 Mein Stand → „Stand-Update einlesen“ – Passwort und übrige Daten bleiben unverändert.</p>\n<p><strong>Kalender aufs Handy:</strong> Organisation &amp; Termine → Kalender → „📅 Kalenderdatei (.ics)“ – die Datei in Google-, Apple- oder Outlook-Kalender importieren.</p>\n"},
+  {id:"neu-2-0", kategorie:"Erste Schritte", titel:"Neu in BARRY 2.0", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>📂 Datei einlesen</strong> (Menü und Startseite) erkennt jede BARRY-Datei selbst: Terminplan, Stand-Update, Zugangspaket, Datensicherung, Meldung, Selbstauskunft, Mitglieder-Tabelle und die Übergabe aus dem Flächensuchassistenten.</p><p><strong>⚙️ Bereiche auswählen</strong> (Anmeldeseite oder Menü): nicht benötigte Bereiche ausblenden; die Daten bleiben erhalten.</p><p><strong>📧 Per E-Mail:</strong> Kurswünsche und Trainingskarten öffnen eine fertige E-Mail an die Staffelleitung. Bei Meldungen neuer Nachweise wird die Datei gespeichert bzw. über „Teilen“ angehängt; die Adresse wird dabei in die Zwischenablage kopiert.</p><p><strong>🚨 Einsatzbereit heute</strong> (Startseite, Leitung/Ausbildung): Teams mit gültiger Modulprüfung 2 je Sparte; „eingeschränkt“, wenn bei der Hundeführerin bzw. dem Hundeführer ein ★-Nachweis fehlt oder abgelaufen ist. Keine Einsatzfreigabe.</p><p><strong>📝 Vorprüfung</strong> (Stand &amp; Planung): staffelinterner Beobachtungsbogen je Sparte; das Ergebnis wird als Einschätzung gespeichert, offene Punkte auf Wunsch als Ziele.</p><p><strong>🎯 Übergabe Flächensuchassistent</strong> (Einsatzprotokoll → Karten &amp; Tracking oder „Datei einlesen“): legt einen Suchtrupp mit Gebiet, Zeiten und Ergebnis an, übernimmt Ereignisse, Funde, Weg und Suchgebiet. Dieselbe Übergabe wird nicht doppelt eingelesen.</p><p><strong>📍 Trainingsorte</strong> (Organisation &amp; Termine): je Ort die eigene Entfernung eintragen oder online berechnen lassen; BARRY schlägt daraus die gefahrenen Kilometer (Hin- und Rückfahrt) bei der Zusage und die Entfernung im Trainingstagebuch vor. Die Orte (mit Adresse) pflegt die Leitung unter Verwaltung → Orte &amp; Gebiete; sie gehen mit dem Terminplan an alle.</p><p><strong>🚗 Fahrzeuge</strong> (Verwaltung → Fahrzeuge): Einsatzfahrzeuge mit Funkrufnamen und Fahrzeugeinweisungen. Fahren darf nur, wer auf das Fahrzeug eingewiesen ist; mit Sonder- und Wegerechten zusätzlich mit gültiger SuWR. Die Übersicht steht in „Einsatzbereit heute“, die eigenen Einweisungen unter Mein Stand.</p><p><strong>⚙️ Bereiche</strong> lassen sich schon auf der Anmeldeseite auswählen; ohne Auswahl wird alles angezeigt.</p><p><strong>💾 Sicherungserinnerung:</strong> Liegt die letzte Datensicherung mehr als 30 Tage zurück, erinnert die Startseite der Leitung daran.</p>\n"},
   {id:"datensicherung", kategorie:"Daten sichern & teilen", titel:"Backup exportieren und einspielen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung \u2192 Datensicherung</strong> l\u00e4sst sich der komplette Datenbestand als eine\neinzelne Datei <strong>exportieren</strong> \u2013 das sollte regelm\u00e4\u00dfig geschehen, am besten vor gr\u00f6\u00dferen\n\u00c4nderungen. Beim <strong>Import</strong> einer solchen Datei zeigt BARRY vorher eine Vorschau (Inhalt,\nHerkunft, Datum) und legt automatisch eine Sicherheitskopie des bisherigen Standes an, die sich bei\nBedarf mit einem Klick wiederherstellen l\u00e4sst. Eine Datei ohne anmeldef\u00e4hige Admin-Person wird\ngrunds\u00e4tzlich abgelehnt, damit sich niemand versehentlich aussperrt.</p>\n"},
   {id:"keine-automatische-sync", kategorie:"Daten sichern & teilen", titel:"Wichtig: Keine automatische Synchronisation zwischen Ger\u00e4ten", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>BARRY speichert alle Daten <strong>ausschlie\u00dflich lokal auf dem jeweiligen Ger\u00e4t</strong>. Es gibt\nkeinen Server im Hintergrund, der die Daten automatisch zwischen mehreren Handys oder Tablets abgleicht.\nMeldet sich jemand auf einem <em>anderen</em> Ger\u00e4t an, sieht diese Person eine eigenst\u00e4ndige,\nunabh\u00e4ngige Kopie \u2013 neue Eintr\u00e4ge auf dem einen Ger\u00e4t erscheinen nicht von selbst auf dem anderen.</p>\n<p><strong>F\u00fcr die Praxis bedeutet das:</strong> BARRY funktioniert am besten auf einem\n<strong>gemeinsam genutzten Ger\u00e4t</strong> (z. B. ein Staffel-Tablet), auf dem sich alle mit dem\neigenen Login anmelden. Soll BARRY auf mehreren eigenen Handys parallel genutzt werden, m\u00fcssen Daten\nbewusst per Export/Import \u00fcbertragen werden \u2013 siehe Artikel \u201eBackup exportieren und einspielen\".</p>\n"},
   {id:"austauschpaket", kategorie:"Daten sichern & teilen", titel:"Team-Stammdaten mit eigenst\u00e4ndigen Apps austauschen", rollen:["ausbilder", "leitung"], text:"\n<p>F\u00fcr einzelne Hundeteams l\u00e4sst sich unter <strong>Verwaltung \u2192 Hunde \u2192 Teamdaten</strong> eine kleine\nTeamdaten-Datei (Name, Rasse, Geburtsdatum, Sparten, Anzeigeart) exportieren und in eine der\neigenst\u00e4ndigen RHS-Apps (z. B. Tr\u00fcmmersuchassistent) importieren, und umgekehrt. Es handelt sich\nbewusst nur um Stammdaten, nicht um Trainings- oder Einsatzdaten; ein Import zeigt vorher immer eine\nVorschau inklusive Warnung, falls Name oder Hundef\u00fchrer/-in nicht zum gew\u00e4hlten Team passen.</p>\n"},
@@ -9886,8 +10568,8 @@ function renderHilfe(person){
     <h1>Bedienungsanleitung</h1>
     <p class="lead">Alles Wichtige zur Bedienung von BARRY – nach Themen geordnet, mit Suche und Rollenfilter. Diese Anleitung ist jederzeit über „Hilfe &amp; Anleitung" in der Seitenleiste erreichbar.</p>
 
-    <div class="card card-pad" style="margin-bottom:16px">
-      <h3>Rollen-Schnellübersicht</h3>
+    <details class="card card-pad" style="margin-bottom:16px">
+      <summary style="cursor:pointer;font-weight:700">Rollen-Schnellübersicht</summary>
       <div class="table-scroll"><table>
         <thead><tr><th>Bereich</th><th>Mitglied</th><th>Ausbilder/-in</th><th>Leitung/Admin</th></tr></thead>
         <tbody>
@@ -9901,7 +10583,7 @@ function renderHilfe(person){
         </tbody>
       </table></div>
       <p class="hint" style="margin-top:6px">* Nur für den einen zugewiesenen Übungseinsatz, ohne dauerhafte Rechteänderung. Details siehe Artikel „Einsatzleitung für eine Übung übernehmen".</p>
-    </div>
+    </details>
 
     <div class="row" style="margin-bottom:8px;flex-wrap:wrap">
       <input id="hf-suche" placeholder="Suchen, z. B. „Hausaufgabe", „Passwort", „Backup" …" value="${esc(hilfeSuche)}" style="flex:1;min-width:200px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">
@@ -9912,13 +10594,14 @@ function renderHilfe(person){
     </div>
 
     ${nachKategorie.map(g=>`
-      <h3 style="margin:18px 0 8px">${esc(g.k)}</h3>
+      <details ${hilfeSuche?'open':''} style="margin:10px 0"><summary style="cursor:pointer;font-weight:700;font-size:1.05rem;padding:6px 0">${esc(g.k)} <span class="chip muted">${g.liste.length}</span></summary>
       ${g.liste.map(a=>`
         <details class="card" style="margin-bottom:8px;padding:14px 16px">
           <summary style="cursor:pointer;font-weight:600">${esc(a.titel)} <span class="chip muted">${esc(hilfeRollenLabel(a.rollen))}</span></summary>
           <div class="hint" style="margin-top:10px;color:var(--ink)">${a.text}</div>
         </details>
       `).join('')}
+      </details>
     `).join('') || '<div class="card empty"><p>Keine Treffer für diese Suche.</p></div>'}
   `;
 }
