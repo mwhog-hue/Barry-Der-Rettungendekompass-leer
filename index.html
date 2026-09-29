@@ -917,9 +917,10 @@ const QUALI_KATEGORIEN = [
   'Betreuungsdienst & Verpflegung',
   'Technik & Logistik',
   'Weitere KatS-Module',
+  'Leitung, PSNV & weitere Lehrgänge (LV Hessen)',
   'Sonstige Ausbildungen',
 ];
-const [K_GA, K_FA, K_RHD, K_PR, K_EMP, K_AUS, K_FUE, K_SAN, K_BT, K_TL, K_KATS, K_SONST] = QUALI_KATEGORIEN;
+const [K_GA, K_FA, K_RHD, K_PR, K_EMP, K_AUS, K_FUE, K_SAN, K_BT, K_TL, K_KATS, K_WEITER, K_SONST] = QUALI_KATEGORIEN;
 const QUALI_HINWEIS_KBL = 'Wiederholungsfrist bitte bei der KBL bestätigen lassen.';
 const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   // 1) Grundausbildung Einsatzkraft Bereitschaft – Pflicht für Rettungshundehelfende und -führende
@@ -954,6 +955,32 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'modul_11', label:'Modulprüfung 1.1 – Verhalten und Grundfertigkeiten', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung (Hund + Hundeführer/in). Beim Eintragen werden die Elemente von DRK 1.1 unter Prüfungsordnungen für den Hund auf „bestanden“ gesetzt, wenn die Person genau einen aktiven Hund führt.', aliase:['Modul 1.1','Modulprüfung 1.1','Grundfertigkeiten und Verhalten','Verhalten und Grundfertigkeiten'] },
   { code:'modul_12', label:'Modulprüfung 1.2 – Gehorsam (oder VDH-Begleithundeprüfung mit Verkehrsteil)', kategorie:K_PR, pflichtRHF:true, hinweis:'Alternativ gilt die VDH-Begleithundeprüfung mit Verkehrsteil (BH/VT). Teamprüfung – Übertrag nach DRK 1.2 wie bei 1.1.', aliase:['Modul 1.2','Modulprüfung 1.2','Gehorsam','BH-VT','BH/VT','Begleithundeprüfung','Begleithundeprüfung VDH','VDH BH-VT'] },
   { code:'modul_13', label:'Modulprüfung 1.3 – Gewandtheit', kategorie:K_PR, pflichtRHF:true, hinweis:'Teamprüfung – Übertrag nach DRK 1.3 wie bei 1.1.', aliase:['Modul 1.3','Modulprüfung 1.3','Gewandtheit','Gewandheit'] },
+  { code:'lvb', label:'LvB – Leiten von Bereitschaften', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'gva', label:'GVA – Grundlagen Vorstandsarbeit', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'lvbikv', label:'LvBiKV – Leiten von Bereitschaften im Kreisverband', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'vupa', label:'VuPA – Vorstands- und Präsidiumsarbeit', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'bvfb', label:'BVfB – Bildungsverantwortung für Bereitschaften', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'laikv', label:'LAiKV – Lobbyarbeit im Kreisverband', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'gmfl', label:'GMfL – Grundlagen Mentoring für Leitungskräfte', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'zfue_btd', label:'ZFü.BtD – ZF-Fortbildung Betreuung', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'zfue_san', label:'ZFü.SAN – ZF-Fortbildung Sanität', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'vfg', label:'VFg – Verbandführung', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'rkb', label:'RKB – Rotkreuz-Beauftragte', kategorie:K_FUE, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'psnv_e2', label:'PSNV-E2 – PSNV Einsatzkräfte Modul 2', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'psnv_btd', label:'PSNV-BtD – PSNV im Betreuungsdienst', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'psnv_ab', label:'PSNV-AB – PSNV Grundlagen Ausbilderqualifikation', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'iuk', label:'IuK – Fachdienstlehrgang Information und Kommunikation', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'ikkib', label:'IkKiB – Interkulturelle Kompetenz im Bevölkerungsschutz', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'fwk_g', label:'FWK-G – Grundausbildung Freiwilligenkoordination', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'fwk_f', label:'FWK-F – Fachdienstausbildung Freiwilligenkoordination', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'drohne_b1', label:'BOS-Drohnensteuerer Teil B1', kategorie:K_WEITER, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'fko_fb', label:'FKo-Fb – Feldkoch-Fortbildung', kategorie:K_BT, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'btd_al', label:'BtD-AL – Betreuungsdienst Anleiter', kategorie:K_BT, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'btd_ab', label:'BtD-AB – Betreuungsdienst Ausbilder', kategorie:K_BT, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'past_g', label:'PASt-G – Grundlehrgang Personenauskunft', kategorie:K_BT, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'past_f', label:'PASt-F – Fachlehrgang Personenauskunft', kategorie:K_BT, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'twnv', label:'TWNV – Trinkwassernotversorgung', kategorie:K_TL, hinweis:'Seminarbroschüre LV Hessen 2025' },
+  { code:'san_ab', label:'SAN AB – SAN-Ausbilder', kategorie:K_SAN, hinweis:'Seminarbroschüre LV Hessen 2025' },
   { code:'rh_pruef', label:'Modulprüfung 2 – Suchprüfung (RH-Prüf)', kategorie:K_PR, ue:4, pflichtRHF:true, intervallMonate:24, hinweis:'Laut Dienstanweisung alle 24 Monate. Teamprüfung je Sparte: Hund, Sparte und Plakettennummer werden mit erfasst und beim Hund als Plakette eingetragen.', aliase:['RH-Prüf – Rettungshundeprüfung (Suchprüfung)','Suchprüfung','Rettungshundeprüfung','RH-Prüf','Modul 2','Modulprüfung 2'] },
   { code:'tf', label:'TF – Truppführer:in (online)', kategorie:K_PR, ue:3, pflichtRHF:true },
   { code:'hlw', label:'HLW und AED – Reanimationstraining (jährlich)', kategorie:K_PR, pflichtRHF:true, intervallMonate:12, hinweis:'Praktisches HLW- und AED-Training, jährlich (Staffel-Merkblatt, Fristenübersicht).', aliase:['HLW und AED (Auffrischung)','Reanimationstraining','HLW/AED'] },
@@ -980,7 +1007,7 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'teukm', label:'TEuKM – Teamentwicklung und Konfliktmanagement', kategorie:K_FUE, ue:16 },
   { code:'gfue', label:'GFü – Gruppenführer:in', kategorie:K_FUE, ue:40, hinweis:'Rettungshunde Einsatz-Fachberater:in (GF-RHA): RKAS + TEuKM + GFü + Prüfung', aliase:['Gruppenführer:in','Gruppenf.','Gruppenführer im Katastrophenschutz'] },
   { code:'gf_pruef', label:'Gruppenführer:in – Prüfung', kategorie:K_FUE, ue:2 },
-  { code:'psnv_e', label:'PSNV-E – Psychosoziale Notfallversorgung Einsatzkräfte Modul 1', kategorie:K_FUE, empfohlen:true, hinweis:'Empfohlen für Einsatz-Fachberater:innen' },
+  { code:'psnv_e', label:'PSNV-E1 – Psychosoziale Notfallversorgung Einsatzkräfte Modul 1', kategorie:K_FUE, empfohlen:true, hinweis:'Empfohlen für Einsatz-Fachberater:innen' },
   { code:'smufk', label:'SMuFK – Sozialmanagement und Freiwilligenkoordination', kategorie:K_FUE, ue:16 },
   { code:'susm', label:'SuSM – Selbst- und Stressmanagement', kategorie:K_FUE, ue:16 },
   { code:'zfue', label:'ZFü – Zugführer:in', kategorie:K_FUE, ue:40, hinweis:'Staffelleitung (ZF-RHA): GF-RHA + SMuFK + SuSM + ZFü + Prüfung' },
@@ -1037,12 +1064,13 @@ const QUALIFIKATIONEN_KATALOG_VORSCHLAG = [
   { code:'btd03', label:'BtD-03 – Einrichtungen & Strukturen', kategorie:K_KATS, ue:2.5 },
   { code:'btd10', label:'BtD-10 – Infektions-, Arbeits- und Umweltschutz', kategorie:K_KATS, ue:3.5 },
   { code:'btd13', label:'BtD-13 – Besondere Einsatzlagen', kategorie:K_KATS, ue:2 },
+  { code:'btd21', label:'BtD-21 – Personal- & Materialhygiene', kategorie:K_KATS, ue:3 },
   { code:'cbrn_g', label:'CBRN-G – Schutzausstattung', kategorie:K_KATS, ue:17 },
   { code:'pue', label:'PÜ# – Praktische Übungen (alle FachD)', kategorie:K_KATS, ue:2 },
   { code:'psu', label:'PSU – Psycho-Soziale Unterstützung', kategorie:K_KATS, ue:4 },
   { code:'at', label:'AT# – Aktuelle Themen (alle FachD)', kategorie:K_KATS, ue:2 },
 ].map(q=>({ intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null, aliase:[], ...q }));
-const QUALI_KATALOG_VERSION = 8;
+const QUALI_KATALOG_VERSION = 10;
 // Vorbelegte Ordner (entsprechen der bestehenden Ordnerstruktur der Staffel); jederzeit umbenenn-, lösch- und erweiterbar.
 const LEHRMATERIAL_STANDARD_ORDNER = ['Flächensuche','Mantrailing','Trümmerkunde','Kynologie','Geruch und Geruchsverteilung','Orientierung und Kartenkunde','EH Hund','UVV, Sicherheit im Einsatz, Transport','Funk','PSNV','Wasserrettung, Wassersuche','Organisation','Rechtliches und Grundlagen','Geschichte und Entwicklung','Hospitationen','Formulare & Vordrucke'];
 function qualiNorm(t){ return String(t||'').toLowerCase().replace(/[‐-–—]/g,'-').replace(/\s+/g,' ').trim(); }
@@ -1174,6 +1202,7 @@ function leererState(){
     anwesenheiten: [],   // {id,terminId,personId,status:'anwesend'|'entschuldigt'|'unentschuldigt'}
     trainingseintraege: [], // {id,personId,hundId,datum,kategorie,thema,notizen,erstelltVon}
     alltagseintraege: [], // {id,personId,hundId,datum,kategorie,thema,notizen,erstelltVon}
+    kurswuensche: [], // {id,personId,kursCode,bemerkung,datum,status,antwort}
     trainingskarten: [], // „Mein heutiges Training“: {id,personId,hundId,datum,terminId,ziel,plan,check,erreicht,gut,weniger,arbeiten,tagebuchId}
     hausaufgaben: [], // {id,hundId,titel,beschreibung,faelligBis,zugewiesenVon,zugewiesenAm,status:'offen'|'erledigt',erledigtAm,rueckmeldung}
     einsaetze: [], // {id,alarmierungZeit,meldender,einsatzort,vermisstName,vermisstAlter,vermisstBeschreibung,
@@ -1289,6 +1318,7 @@ function migriereState(s){
   if(!Array.isArray(s.hospitationen)) s.hospitationen = [];
   if(!Array.isArray(s.geloeschteTermine)) s.geloeschteTermine = [];
   if(!Array.isArray(s.trainingskarten)) s.trainingskarten = [];
+  if(!Array.isArray(s.kurswuensche)) s.kurswuensche = [];
   s.hunde.forEach(h=>{
     if(!Array.isArray(h.einschaetzungen)) h.einschaetzungen = [];
     if(h.ausbilderNotiz && !h.einschaetzungen.length){
@@ -1635,6 +1665,9 @@ function renderStart(person){
       ${eigeneHunde.length?`<button class="btn btn-primary" id="btn-start-trainingskarte">🐾 Mein heutiges Training</button>`:''}
       <button class="btn" id="btn-start-funk">📻 Funk-Spickzettel</button>
     </div>
+    ${(()=>{ const f=eigeneFristen(person.id, 60); const pr=meineZielProfile(person)[0]; const r=pr?profilAuswerten(person.id,pr):null; const offen=r?(r.fehlt.length+r.abgelaufen.length):0;
+      return `<div class="card card-pad" style="margin-top:16px;cursor:pointer" data-goto-meinstand><div class="spread"><h3 style="font-size:1.05rem;margin:0">🎓 Mein Ausbildungsstand</h3><span class="chip muted">öffnen →</span></div>
+        <p class="hint" style="margin:6px 0 0">${f.abgelaufen.length?`<b style="color:#b00020">${f.abgelaufen.length} abgelaufen</b> · `:''}${f.bald.length?`${f.bald.length} in den nächsten 60 Tagen fällig · `:''}${pr?`${esc(pr.label)}: ${offen?offen+' Punkt(e) offen':'vollständig ✅'}`:''}</p></div>`; })()}
     ${renderStartGeteilteZiele(eigeneHunde)}
     ${renderUebungDesTages(person, eigeneHunde)}
     <div class="card card-pad" style="margin:20px 0">
@@ -1718,6 +1751,7 @@ function bindStart(person){
   document.querySelectorAll('[data-goto-verwaltung]').forEach(el=>{
     el.onclick = ()=>{ route = {bereich:'verwaltung', unter:el.dataset.gotoVerwaltung, id:null}; render(); };
   });
+  document.querySelectorAll('[data-goto-meinstand]').forEach(el=>el.onclick=()=>{ route={bereich:'ausbildung',unter:null,id:null}; ausbildungTab='meinstand'; render(); window.scrollTo(0,0); });
   const tkBtn=document.getElementById('btn-start-trainingskarte');
   if(tkBtn) tkBtn.onclick = ()=>{ modal={type:'trainingskarte'}; render(); };
   const fkBtn=document.getElementById('btn-start-funk');
@@ -1875,7 +1909,7 @@ function renderTabPersonen(){
         </div>`).join('')}
     </div>`:''}
     <details class="card card-pad" style="margin-bottom:14px">
-      <summary style="cursor:pointer;font-weight:700">🔑 Zugänge für Mitglieder <span class="chip muted">${zugangsberechtigtePersonen().filter(p=>p.startPasswort).length} von ${zugangsberechtigtePersonen().length} mit Startpasswort</span></summary>
+      <summary style="cursor:pointer;font-weight:700">🔑 Zugänge & Selbstauskunft <span class="chip muted">${zugangsberechtigtePersonen().filter(p=>p.startPasswort).length} von ${zugangsberechtigtePersonen().length} mit Startpasswort</span></summary>
       <p class="hint" style="margin-top:8px">Jedes Mitglied erhält ein <b>eigenes Startpasswort</b> und ein eigenes Zugangspaket mit nur seinen Daten und Rechten. Die Startpasswörter bleiben hier in der Zugangsliste nachlesbar; bei der ersten Anmeldung muss jede Person ihr Passwort ändern.</p>
       <div class="row" style="gap:6px;flex-wrap:wrap">
         <button class="btn btn-sm" id="btn-startpw-vergeben">Fehlende Startpasswörter vergeben</button>
@@ -1883,6 +1917,14 @@ function renderTabPersonen(){
         <button class="btn btn-sm btn-primary" id="btn-alle-zugangspakete">Alle Zugangspakete (ZIP)</button>
       </div>
       <p class="hint" style="margin-top:6px">Die ZIP-Datei enthält je Person eine Datei „BARRY_Zugang_Name.json“. Datei und Passwort bitte getrennt weitergeben.</p>
+      <p class="hint" style="margin-top:4px">🔒 Bereits vergebene Startpasswörter werden nie automatisch geändert – „Fehlende Startpasswörter vergeben“ ergänzt nur Personen ohne Passwort. Hinweis: Spielt ein Mitglied ein Zugangspaket <b>erneut</b> ein, gilt auf seinem Gerät wieder das Startpasswort. Pakete daher nur an neue Mitglieder oder bei vergessenem Passwort erneut schicken.</p>
+      <h4 style="margin:12px 0 4px">📋 Selbstauskunft (Excel)</h4>
+      <p class="hint" style="margin:0 0 6px">Je Mitglied eine vorausgefüllte Excel-Datei mit persönlichen Daten, Hunden und allen Ausbildungen/Modulen zum Ergänzen. Zurückgeschickte Dateien hier einlesen – mit Vorschau, nichts wird ungefragt überschrieben.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm" id="btn-alle-selbstauskuenfte">Selbstauskünfte für alle (ZIP)</button>
+        <button class="btn btn-sm" id="btn-alle-standupdates" title="Aktueller Ausbildungsstand je Mitglied – ändert keine Passwörter">Stand-Updates für alle (ZIP)</button>
+        <label class="btn btn-sm btn-primary" style="cursor:pointer">Ausgefüllte Selbstauskunft einlesen<input type="file" id="in-selbstauskunft" multiple style="display:none"></label>
+      </div>
     </details>
     <div class="spread" style="margin-bottom:14px">
       <p class="hint">${state.personen.length} Personen im Bestand · Zum Bearbeiten anklicken</p>
@@ -1896,6 +1938,9 @@ function bindTabPersonen(){
   if(spv) spv.onclick = ()=>{ const n=fehlendeStartpasswoerterVergeben(); zeigeToast(n?`${n} Startpasswörter vergeben.`:'Alle haben bereits ein Startpasswort.'); render(); };
   const zl=document.getElementById('btn-zugangsliste'); if(zl) zl.onclick = ()=>{ fehlendeStartpasswoerterVergeben(); zugangslisteHerunterladen(); render(); };
   const az=document.getElementById('btn-alle-zugangspakete'); if(az) az.onclick = ()=>{ alleZugangspaketeHerunterladen(); render(); };
+  const asa=document.getElementById('btn-alle-selbstauskuenfte'); if(asa) asa.onclick = ()=>alleSelbstauskuenfteHerunterladen();
+  const asu=document.getElementById('btn-alle-standupdates'); if(asu) asu.onclick = ()=>alleStandUpdatesHerunterladen();
+  const isa=document.getElementById('in-selbstauskunft'); if(isa) isa.onchange = e=>{ const fs=Array.from(e.target.files||[]); e.target.value=''; selbstauskunftEinlesen(fs); };
   const btn = document.getElementById('btn-neue-person');
   if(btn) btn.onclick = ()=>{ modal = {type:'person', id:null}; render(); };
   document.querySelectorAll('[data-person]').forEach(tr=>{
@@ -2813,6 +2858,7 @@ function csvSchnellstartAnalysieren(text){
     return {f, i, istDatum};
   });
   const idxHundName=idx('hundname'), idxHundRasse=idx('hundrasse'), idxHundGeburt=idx('hundgeburtsdatum'), idxHundGeschlecht=idx('hundgeschlecht'), idxHundChip=idx('hundchipnummer');
+  const idxSuchSparte=idx('suchpruefungsparte');
   const idxSparten=idx('sparten'), idxPlFl=idx('plaketteflaeche'), idxPlTr=idx('plakettetruemmer'), idxPlMt=idx('plakettemantrailing'), idxZweit=idx('zweithundefuehrer');
   // Ausbildungsspalten („Ausb: …“) den Katalogeinträgen zuordnen
   const praefix = CSV_AUSB_PRAEFIX.toLowerCase().trim();
@@ -2822,7 +2868,7 @@ function csvSchnellstartAnalysieren(text){
     const q = qualiFindenNachBezeichnung(k.slice(praefix.length).trim());
     if(q) ausbSpalten.push({i, q}); else unbekannteAusb.push(k);
   });
-  const genutzt = new Set([idxName, idxRolle, ...personIdx.map(p=>p.i), idxHundName, idxHundRasse, idxHundGeburt, idxHundGeschlecht, idxHundChip, idxSparten, idxPlFl, idxPlTr, idxPlMt, idxZweit, ...ausbSpalten.map(a=>a.i)]);
+  const genutzt = new Set([idxSuchSparte, idxName, idxRolle, ...personIdx.map(p=>p.i), idxHundName, idxHundRasse, idxHundGeburt, idxHundGeschlecht, idxHundChip, idxSparten, idxPlFl, idxPlTr, idxPlMt, idxZweit, ...ausbSpalten.map(a=>a.i)]);
   const unbekannteSpalten = kopf.filter((k,i)=>k && !genutzt.has(i));
   const startHash = einfacherHash('start');
   const personenNeu=[], hundeNeu=[], personenUpdates=[], hundeUpdates=[], zweitZuordnungen=[], ausbNeu=[], protokoll=[], personenOhneAenderung=[];
@@ -2907,7 +2953,9 @@ function csvSchnellstartAnalysieren(text){
       let sparte='', plakette='';
       if(q.code==='rh_pruef'){
         const pl = [['flaeche',feld(f,idxPlFl)],['truemmer',feld(f,idxPlTr)],['mantrailing',feld(f,idxPlMt)]].filter(x=>x[1]);
-        if(pl.length===1){ sparte=pl[0][0]; plakette=pl[0][1]; }
+        const vorgabe = idxSuchSparte>-1 ? rhsSpartenNormalisieren(feld(f,idxSuchSparte))[0] : '';
+        if(vorgabe){ sparte=vorgabe; plakette=(pl.find(x=>x[0]===vorgabe)||[])[1]||''; }
+        else if(pl.length===1){ sparte=pl[0][0]; plakette=pl[0][1]; }
         else if(zeilenHund && (zeilenHund.sparten||[]).length===1) sparte=zeilenHund.sparten[0];
       }
       const eintrag = {person, q, datum, hund: istModul ? zeilenHund : null, sparte, plakette, ersetzt: datum && ohneDatum ? ohneDatum : null};
@@ -2962,7 +3010,9 @@ function renderModalCsvVorschau(){
   <div class="modal-back"><div class="modal" style="max-width:720px">
     <div class="modal-head"><h3>Vorschau: Tabelle einlesen</h3><button class="btn btn-ghost btn-sm" id="m-schliessen">✕</button></div>
     <div class="modal-body">
+      ${a.quelleText?`<p style="margin:0 0 6px"><strong>${esc(a.quelleText)}</strong></p>`:''}
       <p class="hint">Noch ist nichts gespeichert. So würde BARRY die Tabelle übernehmen:</p>
+      ${(a.sonstige||[]).length?`<p class="hint">Sonstige Ausbildungen: ${a.sonstige.map(x=>esc(x.label)+' ('+esc(x.datum)+')').join(' · ')}</p>`:''}
       ${!a.personenNeu.length && !a.personenUpdates.length && !a.hundeNeu.length && !a.hundeUpdates.some(u=>Object.values(u.werte).some(Boolean)) && !a.zweitZuordnungen.length && !a.ausbNeu.length ? '<p class="hint" style="color:var(--accent-ink)"><strong>Die Tabelle enthält gegenüber dem aktuellen Stand nichts Neues.</strong></p>' : ''}
       <div class="grid-2" style="gap:8px;margin-bottom:10px">
         <div class="card" style="padding:10px 12px"><div class="hint">Neue Personen</div><strong>${a.personenNeu.length}</strong></div>
@@ -2995,6 +3045,16 @@ function bindModalCsvVorschau(){
     const a = csvVorschau; csvVorschau=null;
     const startpw = document.getElementById('m-csv-startpw').checked;
     csvSchnellstartUebernehmen(a, document.getElementById('m-csv-ueberschreiben').checked);
+    (a.sonstige||[]).forEach(x=>{
+      const pers = state.personen.find(p=>p.status!=='inaktiv' && p.name===a.selbstName) || null;
+      if(!pers) return;
+      let q = qualiFindenNachBezeichnung(x.label);
+      if(!q){ q={id:uid(), label:x.label, kategorie:K_SONST, intervallMonate:null, hinweis:'', pflicht:false, pflichtRHF:false, empfohlen:false, ue:null}; state.qualifikationen.push(q); }
+      const d = x.datumIso || '';
+      if(!state.personQualifikationen.some(pq=>pq.personId===pers.id && pq.qualifikationId===q.id && (pq.datum||'')===d)) state.personQualifikationen.push({id:uid(), personId:pers.id, qualifikationId:q.id, datum:d, gueltigBis:null});
+    });
+    if((a.sonstige||[]).length) speichereState();
+    if((a.weitereDateien||[]).length) setTimeout(()=>selbstauskunftEinlesen(a.weitereDateien), 400);
     if(startpw){
       const n = fehlendeStartpasswoerterVergeben();
       setTimeout(()=>zeigeToast(n+' Startpasswörter vergeben – siehe Verwaltung → Personen → Zugänge.'), 1200);
@@ -3077,7 +3137,7 @@ function zugangspaketDaten(person, startpasswort){
     termine: state.termine.filter(t=>(t.sichtbarkeit||'staff')==='staff').map(t=>{ const {planungsnotiz, ...rest} = t; return rest; }),
     geloeschteTermine: state.geloeschteTermine||[],
     ruckmeldungen: (state.ruckmeldungen||[]).filter(r=>r.personId===person.id),
-    qualifikationen: state.qualifikationen, personQualifikationen: [], hospitationen: [],
+    qualifikationen: state.qualifikationen, personQualifikationen: state.personQualifikationen.filter(pq=>pq.personId===person.id), hospitationen: [], kurswuensche: (state.kurswuensche||[]).filter(w=>w.personId===person.id),
     pruefungsstatus: nurEigene(state.pruefungsstatus), findewilleProfile: nurEigene(state.findewilleProfile),
     hausaufgaben: nurEigene(state.hausaufgaben), trainingskarten: (state.trainingskarten||[]).filter(k=>k.personId===person.id), trainingseintraege: nurEigene(state.trainingseintraege), alltagseintraege: nurEigene(state.alltagseintraege),
     rhEintraege: nurEigene(state.rhEintraege), mantrailingEintraege: nurEigene(state.mantrailingEintraege),
@@ -3088,6 +3148,7 @@ function zugangspaketDaten(person, startpasswort){
 }
 function zugangspaketErstellen(person, startpasswort){
   const exportDaten = zugangspaketDaten(person, startpasswort);
+  person.zugangErstelltAm = nowIso(); speichereState();
   const blob = new Blob([JSON.stringify(exportDaten)], {type:'application/json'});
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href = url; a.download = zugangsDateiname(person);
@@ -3117,10 +3178,10 @@ function fehlendeStartpasswoerterVergeben(){
 }
 function zugangsDateiname(person){ return `BARRY_Zugang_${person.name.replace(/[^\p{L}\p{N}-]+/gu,'_')}.json`; }
 function zugangslisteHerunterladen(){
-  const zeilen=[['Name','Benutzername','Startpasswort','Hund(e)','Datei'].join(';')];
+  const zeilen=[['Name','Benutzername','Startpasswort','Hund(e)','Datei','Zugangspaket erstellt am'].join(';')];
   zugangsberechtigtePersonen().filter(p=>p.startPasswort).sort((a,b)=>a.name.localeCompare(b.name,'de')).forEach(p=>{
     const hunde=state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)).map(h=>h.name).join(', ');
-    zeilen.push([p.name, p.benutzername||'', p.startPasswort, hunde, zugangsDateiname(p)].map(csvZeileEscapen).join(';'));
+    zeilen.push([p.name, p.benutzername||'', p.startPasswort, hunde, zugangsDateiname(p), p.zugangErstelltAm?fmtDatum(p.zugangErstelltAm):''].map(csvZeileEscapen).join(';'));
   });
   csvDownload(zeilen, `BARRY_Zugangsliste_${new Date().toISOString().slice(0,10)}.csv`, '# Vertraulich: nur für die Staffelleitung. Passwort getrennt von der Datei weitergeben; es muss bei der ersten Anmeldung geändert werden.');
 }
@@ -3131,7 +3192,7 @@ function zipErstellen(dateien){ // [{name, text}]
   const enc=new TextEncoder(), teile=[], zentral=[]; let offset=0;
   const d=new Date(), dosZeit=(d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1), dosDatum=((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate();
   dateien.forEach(f=>{
-    const name=enc.encode(f.name), daten=enc.encode(f.text), crc=zipCrc32(daten);
+    const name=enc.encode(f.name), daten=f.bytes ? f.bytes : enc.encode(f.text), crc=zipCrc32(daten);
     const lh=new DataView(new ArrayBuffer(30));
     lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
     lh.setUint16(10,dosZeit,true); lh.setUint16(12,dosDatum,true); lh.setUint32(14,crc,true); lh.setUint32(18,daten.length,true); lh.setUint32(22,daten.length,true);
@@ -3153,11 +3214,644 @@ function alleZugangspaketeHerunterladen(){
   const neu = fehlendeStartpasswoerterVergeben();
   const personen = zugangsberechtigtePersonen().filter(p=>p.startPasswort);
   const dateien = personen.map(p=>({name: zugangsDateiname(p), text: JSON.stringify(zugangspaketDaten(p, p.startPasswort))}));
+  personen.forEach(p=>{ if(!p.zugangErstelltAm) p.zugangErstelltAm = nowIso(); }); speichereState();
   const blob = zipErstellen(dateien);
   const url = URL.createObjectURL(blob); const a=document.createElement('a');
   a.href=url; a.download=`BARRY_Zugangspakete_${new Date().toISOString().slice(0,10)}.zip`;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
   zeigeToast(`${dateien.length} Zugangspakete erstellt${neu?` (${neu} neue Startpasswörter vergeben)`:''}. Zugangsliste nicht vergessen.`);
+}
+
+/* =========================================================
+   SELBSTAUSKUNFT (Excel) – je Mitglied eine vorausgefüllte Datei zum Ausfüllen und Zurücksenden
+   Blätter: Anleitung · Meine Daten · Hunde · Ausbildungen (alle Katalogeinträge, Modulprüfungen je Hund, Sonstige)
+   Einlesen: Verwaltung → Personen → 🔑 Zugänge & Selbstauskunft → „Ausgefüllte Selbstauskunft einlesen“
+   ========================================================= */
+function xmlEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,''); }
+function xlsxSpalte(i){ let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; }
+/* Minimaler XLSX-Schreiber: blatt = {name, zeilen:[[{v, s}]], breiten:[..], fixiert:n, listen:[{sqref, werte:[..]}]}
+   Stile: 0 normal · 1 fett weiß auf rot (Kopf) · 2 fett auf grau (Gruppe) · 3 Text-Eingabe (hellblau, Format „Text“) · 4 grau klein (Kennung) · 5 Titel */
+function xlsxErstellen(blaetter){
+  const enc=new TextEncoder();
+  const zelle=(r,c,z)=>{ if(z==null) return ''; const o=typeof z==='object'?z:{v:z}; const ref=xlsxSpalte(c)+(r+1); const s=o.s?` s="${o.s}"`:'';
+    if(o.v===''||o.v==null) return o.s?`<c r="${ref}"${s}/>`:''; return `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${xmlEsc(o.v)}</t></is></c>`; };
+  const blattXml=b=>`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+${b.fixiert?`<sheetViews><sheetView workbookViewId="0"><pane ySplit="${b.fixiert}" topLeftCell="A${b.fixiert+1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>`:''}
+<cols>${(b.breiten||[]).map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')}</cols>
+<sheetData>${b.zeilen.map((z,r)=>`<row r="${r+1}">${z.map((c,ci)=>zelle(r,ci,c)).join('')}</row>`).join('')}</sheetData>
+${(b.listen||[]).length?`<dataValidations count="${b.listen.length}">${b.listen.map(l=>`<dataValidation type="list" allowBlank="1" showErrorMessage="0" sqref="${l.sqref}"><formula1>"${xmlEsc(l.werte.join(',').slice(0,250))}"</formula1></dataValidation>`).join('')}</dataValidations>`:''}
+</worksheet>`;
+  const dateien=[
+    {name:'[Content_Types].xml', text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${blaetter.map((b,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>`},
+    {name:'_rels/.rels', text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`},
+    {name:'xl/workbook.xml', text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${blaetter.map((b,i)=>`<sheet name="${xmlEsc(b.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets></workbook>`},
+    {name:'xl/_rels/workbook.xml.rels', text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${blaetter.map((b,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')}<Relationship Id="rId${blaetter.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`},
+    {name:'xl/styles.xml', text:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="5"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><sz val="9"/><color rgb="FF888888"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FFB3202A"/><name val="Calibri"/></font></fonts>
+<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB3202A"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEDEDED"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE6F2FA"/></patternFill></fill></fills>
+<borders count="2"><border/><border><left style="thin"><color rgb="FFBBBBBB"/></left><right style="thin"><color rgb="FFBBBBBB"/></right><top style="thin"><color rgb="FFBBBBBB"/></top><bottom style="thin"><color rgb="FFBBBBBB"/></bottom></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="3" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="49" fontId="0" fillId="4" borderId="1" xfId="0" applyNumberFormat="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="3" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="4" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Standard" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
+    ...blaetter.map((b,i)=>({name:`xl/worksheets/sheet${i+1}.xml`, text:blattXml(b)})),
+  ];
+  const blob = zipErstellen(dateien);
+  return new Blob([blob], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const SA_SPARTEN = ['Fläche','Trümmer','Mantrailing'];
+function selbstauskunftBlaetter(p){
+  const E = v=>({v:v||'', s:3});
+  const hunde = state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id));
+  const anleitung = {name:'Anleitung', breiten:[110], zeilen:[
+    [{v:'BARRY – Selbstauskunft Ausbildung', s:5}], [`für ${p.name} · erstellt am ${fmtDatum(new Date().toISOString())}`], [''],
+    ['So geht es:'],
+    ['1. Blatt „Meine Daten“: Angaben prüfen und ergänzen (hellblaue Felder).'],
+    ['2. Blatt „Hunde“: eigene Hunde prüfen bzw. ergänzen – je Hund eine Zeile.'],
+    ['3. Blatt „Ausbildungen“: bei jeder abgeschlossenen Ausbildung das Datum eintragen (TT.MM.JJJJ; nur Monat bekannt: MM.JJJJ; Datum unbekannt: x).'],
+    ['   Modulprüfungen 1.1–1.3 und Modulprüfung 2 (Suchprüfung) sind Teamprüfungen: je Hund eine Zeile; bei der Suchprüfung auch Sparte und Plakettennummer.'],
+    ['   Weitere Ausbildungen, die nicht aufgeführt sind, ganz unten unter „Sonstige Ausbildungen“ mit eigenem Namen eintragen.'],
+    ['4. Datei speichern (Dateiname und Format .xlsx beibehalten) und an die Staffelleitung zurückschicken.'],
+    [''], ['Bitte den Namen und die grauen Kennungen in Spalte A nicht ändern – daran erkennt BARRY die Einträge.'],
+    ['Bereits bekannte Angaben sind schon eingetragen. Nichts löschen: fehlende oder falsche Angaben einfach ergänzen bzw. korrigieren.'],
+  ]};
+  const f=(k)=>{ const v=p[k]; return (k==='geburtsdatum'||k==='mitgliedSeit') ? csvDatumDE(v) : (v||''); };
+  const daten = {name:'Meine Daten', breiten:[16,28,40], fixiert:1, zeilen:[
+    [{v:'Kennung',s:1},{v:'Feld',s:1},{v:'Angabe',s:1}],
+    [{v:'barry_id',s:4},'BARRY-Kennung (nicht ändern)',{v:p.id,s:4}],
+    [{v:'name',s:4},'Name (nicht ändern)',{v:p.name,s:2}],
+    ...CSV_PERSON_SPALTEN.map(([k,spalte,istDatum])=>[{v:k,s:4}, ({benutzername:'Benutzername',mitgliedsnummer:'Mitgliedsnummer',dienstbuchNr:'Dienstbuch-Nr.',geburtsdatum:'Geburtsdatum (TT.MM.JJJJ)',mitgliedSeit:'Mitglied im DRK seit (TT.MM.JJJJ)',strasse:'Straße, Hausnummer',plz:'PLZ',ort:'Ort',email:'E-Mail',telefon:'Telefon'})[k]||spalte, E(f(k))]),
+  ]};
+  const hRows = hunde.map(h=>{ const pl=sp=>((h.plaketten||[]).find(x=>x.sparte===sp)||{}).nummer||'';
+    return [{v:h.id,s:4},E(h.name),E(h.rasse),E(csvDatumDE(h.geburtsdatum)),E(h.geschlecht==='ruede'?'Rüde':h.geschlecht==='huendin'?'Hündin':''),E(h.chipnummer),E((h.sparten||[]).map(spartenLabel).join(', ')),E(pl('flaeche')),E(pl('truemmer')),E(pl('mantrailing'))]; });
+  for(let i=0;i<3;i++) hRows.push([{v:'neu',s:4},E(),E(),E(),E(),E(),E(),E(),E(),E()]);
+  const hundBlatt = {name:'Hunde', breiten:[12,18,24,14,10,20,26,16,16,16], fixiert:1, zeilen:[
+    [{v:'Kennung',s:1},{v:'Name',s:1},{v:'Rasse',s:1},{v:'Wurftag',s:1},{v:'Geschlecht',s:1},{v:'Chipnummer',s:1},{v:'Sparten (Fläche, Trümmer, Mantrailing)',s:1},{v:'Plakette Fläche',s:1},{v:'Plakette Trümmer',s:1},{v:'Plakette Mantrailing',s:1}], ...hRows],
+    listen:[{sqref:`E2:E${hRows.length+1}`, werte:['Rüde','Hündin']}]};
+  const hundNamen = hunde.map(h=>h.name);
+  const zeilen=[[{v:'Kennung',s:1},{v:'Ausbildung / Prüfung',s:1},{v:'UE',s:1},{v:'Datum (TT.MM.JJJJ / MM.JJJJ / x)',s:1},{v:'Hund',s:1},{v:'Sparte',s:1},{v:'Plakette',s:1},{v:'Bemerkung',s:1}]];
+  const hundListe=[], spartenListe=[];
+  qualiGruppiert().forEach(g=>{
+    if(g.kategorie===K_SONST) return;
+    zeilen.push([{v:'',s:2},{v:g.kategorie,s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2}]);
+    g.eintraege.forEach(q=>{
+      const eintraege = state.personQualifikationen.filter(pq=>pq.personId===p.id && pq.qualifikationId===q.id);
+      const code = q.code || ('id:'+q.id);
+      if(istTeamPruefung(q) && hunde.length){
+        hunde.forEach(h=>{
+          const e = eintraege.filter(x=>x.hundId===h.id || (!x.hundId && hunde.length===1)).sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||'')))[0];
+          const sparteL = e && e.sparte ? spartenLabel(e.sparte) : '';
+          zeilen.push([{v:code,s:4}, q.label, q.ue||'', E(e?(csvDatumDE(e.datum)||'x'):''), E(h.name), q.code==='rh_pruef'?E(sparteL):'', q.code==='rh_pruef'?E(e&&e.plakette||''):'', E()]);
+          const r=zeilen.length; hundListe.push(`E${r}`); if(q.code==='rh_pruef') spartenListe.push(`F${r}`);
+        });
+        if(q.code==='rh_pruef'){ // zweite Sparte je Hund möglich
+          zeilen.push([{v:code,s:4}, q.label+' (weitere Sparte)', q.ue||'', E(), E(hunde.length===1?hunde[0].name:''), E(), E(), E()]);
+          const r=zeilen.length; hundListe.push(`E${r}`); spartenListe.push(`F${r}`);
+        }
+      } else {
+        const e = eintraege.sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||'')))[0];
+        zeilen.push([{v:code,s:4}, q.label, q.ue||'', E(e?(csvDatumDE(e.datum)||'x'):''), '', '', '', E()]);
+      }
+    });
+  });
+  zeilen.push([{v:'',s:2},{v:'Sonstige Ausbildungen (eigener Name in Spalte B)',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2},{v:'',s:2}]);
+  state.personQualifikationen.filter(pq=>pq.personId===p.id).forEach(pq=>{ const q=state.qualifikationen.find(x=>x.id===pq.qualifikationId); if(q && !QUALI_KATEGORIEN.slice(0,-1).includes(q.kategorie)) zeilen.push([{v:'sonstig',s:4}, E(q.label), '', E(csvDatumDE(pq.datum)||'x'), '', '', '', E()]); });
+  for(let i=0;i<8;i++) zeilen.push([{v:'sonstig',s:4}, E(), '', E(), '', '', '', E()]);
+  const listen=[];
+  if(hundNamen.length && hundListe.length) listen.push({sqref:hundListe.join(' '), werte:hundNamen});
+  if(spartenListe.length) listen.push({sqref:spartenListe.join(' '), werte:SA_SPARTEN});
+  const ausb = {name:'Ausbildungen', breiten:[12,62,6,20,16,14,16,24], fixiert:1, zeilen, listen};
+  return [anleitung, daten, hundBlatt, ausb];
+}
+function selbstauskunftDateiname(p){ return `BARRY_Selbstauskunft_${p.name.replace(/[^\p{L}\p{N}-]+/gu,'_')}.xlsx`; }
+function selbstauskunftHerunterladen(p){
+  const blob=xlsxErstellen(selbstauskunftBlaetter(p));
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=selbstauskunftDateiname(p);
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+async function alleSelbstauskuenfteHerunterladen(){
+  const personen = zugangsberechtigtePersonen();
+  const dateien=[];
+  for(const p of personen){ const b=xlsxErstellen(selbstauskunftBlaetter(p)); dateien.push({name:selbstauskunftDateiname(p), bytes:new Uint8Array(await b.arrayBuffer())}); }
+  const blob=zipErstellen(dateien);
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`BARRY_Selbstauskuenfte_${new Date().toISOString().slice(0,10)}.zip`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast(`${dateien.length} Selbstauskunft-Dateien erstellt.`);
+}
+/* ---------- Einlesen ---------- */
+async function zipLesen(buf){
+  const d=new DataView(buf), u8=new Uint8Array(buf);
+  let eocd=-1; for(let i=u8.length-22;i>=Math.max(0,u8.length-66000);i--){ if(d.getUint32(i,true)===0x06054b50){ eocd=i; break; } }
+  if(eocd<0) throw new Error('Keine gültige Excel-Datei (.xlsx).');
+  const anzahl=d.getUint16(eocd+10,true); let off=d.getUint32(eocd+16,true); const dateien={};
+  for(let n=0;n<anzahl;n++){
+    const methode=d.getUint16(off+10,true), csize=d.getUint32(off+20,true), nlen=d.getUint16(off+28,true), xlen=d.getUint16(off+30,true), klen=d.getUint16(off+32,true), lho=d.getUint32(off+42,true);
+    const name=new TextDecoder().decode(u8.subarray(off+46, off+46+nlen));
+    const lnlen=d.getUint16(lho+26,true), lxlen=d.getUint16(lho+28,true); const start=lho+30+lnlen+lxlen;
+    dateien[name]={methode, daten:u8.subarray(start, start+csize)};
+    off += 46+nlen+xlen+klen;
+  }
+  const text=async name=>{ const f=dateien[name]; if(!f) return null;
+    if(f.methode===0) return new TextDecoder().decode(f.daten);
+    if(typeof DecompressionStream==='undefined') throw new Error('Dieser Browser kann die Excel-Datei nicht entpacken. Bitte BARRY in einem aktuellen Chrome, Edge, Firefox oder Safari öffnen.');
+    const s=new Blob([f.daten]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return await new Response(s).text(); };
+  return {namen:Object.keys(dateien), text};
+}
+function xlsxSerialZuDatum(n){ const d=new Date(Math.round((n-25569)*86400000)); return d.toISOString().slice(0,10); }
+async function xlsxLesen(buf){
+  const z=await zipLesen(buf); const dp=new DOMParser();
+  const wb=dp.parseFromString(await z.text('xl/workbook.xml'),'text/xml');
+  const rels=dp.parseFromString(await z.text('xl/_rels/workbook.xml.rels'),'text/xml');
+  const ssTxt=await z.text('xl/sharedStrings.xml'); const shared=[];
+  if(ssTxt){ const ss=dp.parseFromString(ssTxt,'text/xml'); Array.from(ss.getElementsByTagNameNS('*','si')).forEach(si=>shared.push(Array.from(si.getElementsByTagNameNS('*','t')).map(t=>t.textContent).join(''))); }
+  const stTxt=await z.text('xl/styles.xml'); const datumsStile=new Set();
+  if(stTxt){ const st=dp.parseFromString(stTxt,'text/xml'); const eigene={}; Array.from(st.getElementsByTagNameNS('*','numFmt')).forEach(f=>eigene[f.getAttribute('numFmtId')]=f.getAttribute('formatCode')||'');
+    const xfs=st.getElementsByTagNameNS('*','cellXfs')[0]; if(xfs) Array.from(xfs.getElementsByTagNameNS('*','xf')).forEach((xf,i)=>{ const id=+xf.getAttribute('numFmtId')||0; if((id>=14&&id<=22)||(id>=164 && /[dmyjt]/i.test((eigene[id]||'').replace(/"[^"]*"/g,'')) && !/^@$/.test(eigene[id]||''))) datumsStile.add(i); }); }
+  const blaetter={};
+  for(const sh of Array.from(wb.getElementsByTagNameNS('*','sheet'))){
+    const rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    const rel=Array.from(rels.getElementsByTagNameNS('*','Relationship')).find(r=>r.getAttribute('Id')===rid); if(!rel) continue;
+    let ziel=rel.getAttribute('Target'); ziel = ziel.startsWith('/') ? ziel.slice(1) : 'xl/'+ziel.replace(/^\.\//,'');
+    const x=dp.parseFromString(await z.text(ziel)||'<x/>','text/xml'); const zeilen=[];
+    Array.from(x.getElementsByTagNameNS('*','row')).forEach(row=>{ const r=(+row.getAttribute('r'))-1; const z2=zeilen[r]=zeilen[r]||[];
+      Array.from(row.getElementsByTagNameNS('*','c')).forEach(c=>{ const ref=c.getAttribute('r'); const col=ref.replace(/\d+/g,'').split('').reduce((a,ch)=>a*26+ch.charCodeAt(0)-64,0)-1;
+        const t=c.getAttribute('t'), s=+c.getAttribute('s')||0; const v=c.getElementsByTagNameNS('*','v')[0]; let wert='';
+        if(t==='inlineStr') wert=Array.from(c.getElementsByTagNameNS('*','t')).map(e=>e.textContent).join('');
+        else if(t==='s') wert=shared[+(v&&v.textContent)]||'';
+        else if(v){ wert=v.textContent; if((!t||t==='n') && datumsStile.has(s) && !isNaN(+wert)) wert=csvDatumDE(xlsxSerialZuDatum(+wert)); }
+        z2[col]=String(wert).trim(); }); });
+    blaetter[sh.getAttribute('name')]=zeilen;
+  }
+  return blaetter;
+}
+/* Selbstauskunft → Schnelleingabe-Tabelle (gleiche Logik und Vorschau wie der CSV-Import) */
+function selbstauskunftZuCsv(bl){
+  const daten=bl['Meine Daten'], hunde=bl['Hunde'], ausb=bl['Ausbildungen'];
+  if(!daten || !ausb) throw new Error('Das ist keine BARRY-Selbstauskunft (Blätter „Meine Daten“ und „Ausbildungen“ fehlen).');
+  const feld={}; daten.forEach(z=>{ if(z && z[0]) feld[z[0]]=z[2]||''; });
+  if(!feld.name) throw new Error('In der Selbstauskunft fehlt der Name.');
+  const person = state.personen.find(x=>x.id===feld.barry_id) || state.personen.find(x=>x.name.trim().toLowerCase()===feld.name.trim().toLowerCase());
+  const name = person ? person.name : feld.name;
+  const kopf=csvSchnellstartKopf(); const zeilen=[kopf.concat(['SuchpruefungSparte'])];
+  const leer=()=>kopf.map(()=>'').concat(['']); const setz=(z,sp,v)=>{ const i=kopf.indexOf(sp); if(i>-1) z[i]=v; };
+  const erste=leer(); setz(erste,'Name',name);
+  CSV_PERSON_SPALTEN.forEach(([k,sp])=>{ if(feld[k]) setz(erste,sp,feld[k]); });
+  const hundZeilen=[];
+  (hunde||[]).slice(1).forEach(z=>{ if(!z || !z[1]) return; const r=leer(); setz(r,'Name',name);
+    setz(r,'HundName',z[1]); setz(r,'HundRasse',z[2]||''); setz(r,'HundGeburtsdatum',z[3]||''); setz(r,'HundGeschlecht',/^r/i.test(z[4]||'')?'ruede':/^h/i.test(z[4]||'')?'huendin':'');
+    setz(r,'HundChipnummer',z[5]||''); setz(r,'Sparten',z[6]||''); setz(r,'PlaketteFlaeche',z[7]||''); setz(r,'PlaketteTruemmer',z[8]||''); setz(r,'PlaketteMantrailing',z[9]||''); hundZeilen.push(r); });
+  const sonstige=[];
+  ausb.slice(1).forEach(z=>{ if(!z) return; const code=z[0]||'', datum=(z[3]||'').trim(); if(!datum) return;
+    if(code==='sonstig'){ if(z[1]) sonstige.push({label:z[1], datum}); return; }
+    const q = code.startsWith('id:') ? state.qualifikationen.find(x=>x.id===code.slice(3)) : state.qualifikationen.find(x=>x.code===code);
+    if(!q) return; const spalte=CSV_AUSB_PRAEFIX+q.label;
+    if(istTeamPruefung(q) && z[4]){
+      const r=leer(); setz(r,'Name',name); setz(r,'HundName',z[4]); setz(r,spalte,datum);
+      if(q.code==='rh_pruef'){ const sp=rhsSpartenNormalisieren(z[5]||'')[0]; if(sp){ r[r.length-1]=sp; if(z[6]) setz(r, sp==='flaeche'?'PlaketteFlaeche':sp==='truemmer'?'PlaketteTruemmer':'PlaketteMantrailing', z[6]); } }
+      hundZeilen.push(r);
+    } else setz(erste, spalte, datum);
+  });
+  const alle=[zeilen[0], erste, ...hundZeilen];
+  return {csv: alle.map(z=>z.map(csvZeileEscapen).join(';')).join('\r\n'), sonstige, name, personGefunden: !!person};
+}
+function selbstauskunftEinlesen(files){
+  const liste=Array.from(files||[]); if(!liste.length) return;
+  const f=liste[0];
+  f.arrayBuffer().then(async buf=>{
+    try{
+      const bl=await xlsxLesen(buf); const r=selbstauskunftZuCsv(bl);
+      csvVorschau = csvSchnellstartAnalysieren(r.csv);
+      csvVorschau.sonstige = r.sonstige.map(s=>({...s, datumIso: parseCsvDatum(s.datum)}));
+      csvVorschau.selbstName = r.name;
+      csvVorschau.quelleText = `Selbstauskunft von ${r.name}${r.personGefunden?'':' (Person noch nicht im Bestand – wird neu angelegt)'}`;
+      csvVorschau.weitereDateien = liste.slice(1);
+      modal={type:'csvVorschau'}; render();
+    }catch(err){ alert('Die Selbstauskunft konnte nicht eingelesen werden: '+err.message); }
+  });
+}
+
+/* =========================================================
+   AUSWERTUNG AUSBILDUNGSSTAND (Ausbildung & Team → 📊 Auswertung; Ausbilder/-innen und Leitung)
+   Ziel-Profile: welche Nachweise für Einsatz, Prüfung oder weiterführende Lehrgänge vorliegen müssen.
+   Quellen: Dienstanweisung „Rettungshundearbeit in Hessen“ (29.08.2023), Übersicht „Notwendige Qualifikation
+   Rettungshundeführende“ (31.08.2023), Ausbildungsposter DRK-KV Region Kassel (2025), Seminarbroschüre
+   Bereitschaften LV Hessen 2025 und Festlegungen der Staffel.
+   ========================================================= */
+const GA_EKB = ['eh','rke','ds','ekga_e','ekga_t','tie','ekga_b','ekga_s'];
+const RHD_HELFER = ['eh','rke','ds','ekga_e','ekga_s','ekga_b','ekga_t','slg','ekf_pruef','bos','rhd'];
+const AUSBILDUNGSPROFILE = [
+  {id:'rhf_einsatz', gruppe:'Rettungshundearbeit', label:'Einsatzfähig als Rettungshundeführer/in (alle ★ gültig)', pflichtRHF:true, nurHundefuehrende:true,
+   quelle:'Dienstanweisung 8.2 und Staffel-Festlegungen (wiederkehrende Nachweise)'},
+  {id:'rhd_helfer', gruppe:'Rettungshundearbeit', label:'Rettungshundehelfer/in (RHd)', codes:RHD_HELFER,
+   quelle:'Dienstanweisung 8.1 / Übersicht Seminare; EKF.Prüf laut Übersicht „Notwendige Qualifikation Rettungshundeführende“'},
+  {id:'zul_suchpruefung', gruppe:'Rettungshundearbeit', label:'Zulassung zur Rettungshundeprüfung (Modul 2)', codes:[...RHD_HELFER,'modul_11','modul_12','modul_13'], nurHundefuehrende:true,
+   quelle:'Seminarbroschüre 2025: „gemäß Dienstanweisung“; Übersicht: Voraussetzung RHd. Module 1.1–1.3 nach Festlegung der Staffel.'},
+  {id:'ekf_rha', gruppe:'Rettungshundearbeit', label:'Qualifikationsstufe Einsatzkraft Fachdienst (RHA)', codes:RHD_HELFER, quelle:'Übersicht Seminare: Einsatzkraft Fachdienst (für RHA: RHd); Seminarbroschüre 2025 (Voraussetzung TEuKM/SuSM)'},
+  {id:'tf', gruppe:'Führung', label:'Truppführer/in (TF)', codes:['tf'], quelle:'Übersicht Seminare (RHF)'},
+  {id:'zul_gfue', gruppe:'Führung', label:'Zulassung Lehrgang Gruppenführer/in (GFü)', codes:[...RHD_HELFER,'rh_pruef','tf'],
+   quelle:'Seminarbroschüre 2025: Qualifikationsstufe Einsatzkraft KatS (für RHA: RHd, RH-Prüf, TF) und Nachweis Truppführer'},
+  {id:'gf_rha', gruppe:'Führung', label:'Rettungshunde Einsatz-Fachberater/in (GF-RHA)', codes:[...RHD_HELFER,'rh_pruef','tf','rkas','teukm','gfue','gf_pruef'], empfohlen:['psnv_e'],
+   quelle:'Dienstanweisung 8.3 und Übersicht Seminare; PSNV-E empfohlen'},
+  {id:'zul_zfue', gruppe:'Führung', label:'Zulassung Lehrgang Zugführer/in (ZFü)', codes:['rkas','teukm','gfue','gf_pruef'],
+   quelle:'Seminarbroschüre 2025: Qualifikationsstufe Gruppenführung (Nachweis GF-Prüfung)'},
+  {id:'zf_rha', gruppe:'Führung', label:'Staffelleitung (ZF-RHA)', codes:[...RHD_HELFER,'rh_pruef','tf','rkas','teukm','gfue','gf_pruef','smufk','susm','zfue','zf_pruef'],
+   quelle:'Dienstanweisung 8.4 und Übersicht Seminare'},
+  {id:'ekb', gruppe:'Bereitschaften allgemein', label:'Grundausbildung EK-B (71 UE)', codes:GA_EKB, quelle:'Ausbildungsposter 2025 / Logbuch Ausbildung'},
+  {id:'kats', gruppe:'Bereitschaften allgemein', label:'Zusatzausbildung KatS für alle EK-F (76 UE)', codes:['bos','psu','cbrn_g','heikat','btd13','psnv_g','pue','at','suwr','btd15','btd21','btd30'], quelle:'Ausbildungsposter 2025 / Logbuch Ausbildung'},
+  {id:'san', gruppe:'Bereitschaften allgemein', label:'Fachausbildung Sanität EK-F (66 UE)', codes:['slg','ekf_pruef'], quelle:'Ausbildungsposter 2025'},
+  {id:'btd_sbu', gruppe:'Bereitschaften allgemein', label:'Fachausbildung Soziale Betreuung & Unterkunft (53 UE)', codes:['btd01','btd02','btd03','btd04','btd05','btd06','btd07','btd08','btd09','btd10','btd11','btd12','btd14','ekf_pruef'], quelle:'Ausbildungsposter 2025'},
+  {id:'btd_verpf', gruppe:'Bereitschaften allgemein', label:'Fachausbildung Verpflegung (73 UE)', codes:['btd01','btd02','btd03','btd04','btd05','btd06','btd07','btd08','btd09','btd10','btd16','btd17','btd18','btd19','btd20','btd22','btd23','btd24','btd25','btd26','btd27','btd28','btd29','ekf_pruef'], quelle:'Ausbildungsposter 2025'},
+  {id:'btd_tl', gruppe:'Bereitschaften allgemein', label:'Fachausbildung Technik & Logistik (44,5 UE)', codes:['btd01','btd02','btd03','btd10','tlg','ekf_pruef'], quelle:'Ausbildungsposter 2025'},
+];
+function auswNeuester(personId, q){
+  const e = state.personQualifikationen.filter(pq=>pq.personId===personId && pq.qualifikationId===q.id);
+  if(!e.length) return null;
+  return e.sort((a,b)=>String(b.datum||'').localeCompare(String(a.datum||'')))[0];
+}
+/* Status einer Qualifikation für eine Person: gueltig | abgelaufen | durchSuch (einmalige Pflicht, durch Suchprüfung erfüllt) | entfaellt | fehlt */
+function qualiStatusFuer(personId, q){
+  if(!q) return {s:'fehlt'};
+  const n = auswNeuester(personId, q);
+  const heute = new Date().toISOString().slice(0,10);
+  if(n){
+    if(n.gueltigBis && n.gueltigBis < heute && !qualiFristEntfaellt(personId, q)) return {s:'abgelaufen', e:n};
+    return {s:'gueltig', e:n};
+  }
+  if(qualiFristEntfaellt(personId, q)) return {s:'entfaellt'};
+  if(q.pflichtRHF && !q.intervallMonate && hatSuchpruefung(personId)) return {s:'durchSuch'};
+  return {s:'fehlt'};
+}
+function profilCodes(profil){
+  if(profil.pflichtRHF) return state.qualifikationen.filter(q=>q.pflichtRHF).map(q=>q.code||q.id);
+  return profil.codes;
+}
+function profilAuswerten(personId, profil){
+  const codes = profilCodes(profil);
+  const posten = codes.map(c=>{ const q = state.qualifikationen.find(x=>x.code===c) || state.qualifikationen.find(x=>x.id===c); return {q, code:c, st: qualiStatusFuer(personId, q)}; });
+  const relevant = posten.filter(p=>p.st.s!=='entfaellt');
+  const ok = relevant.filter(p=>p.st.s==='gueltig' || p.st.s==='durchSuch');
+  return {gesamt: relevant.length, erfuellt: ok.length, fehlt: relevant.filter(p=>p.st.s==='fehlt'), abgelaufen: relevant.filter(p=>p.st.s==='abgelaufen'), posten};
+}
+let auswKurs = '';
+let auswAnsicht = 'profil', auswProfil = 'rhf_einsatz', auswPerson = '', auswQuali = '', auswKategorie = '', auswNurHF = true;
+function auswPersonen(){
+  return state.personen.filter(p=>p.status!=='inaktiv' && (p.name||'').toLowerCase()!=='admin' && !(p.name||'').startsWith('#'))
+    .filter(p=>!auswNurHF || state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)))
+    .sort((a,b)=>a.name.localeCompare(b.name,'de'));
+}
+const AUSW_SYMBOL = {gueltig:'✓', durchSuch:'✓*', abgelaufen:'⚠', fehlt:'–', entfaellt:'·'};
+function auswCsv(zeilen, name){ csvDownload(zeilen.map(z=>z.map(csvZeileEscapen).join(';')), name); }
+function renderAusbildungAuswertung(person){
+  const ans = [['profil','Nach Ziel / Voraussetzung'],['kurs','Lehrgang: wer darf?'],['person','Nach Person'],['wuensche',`Kurswünsche${(state.kurswuensche||[]).filter(w=>w.status==='offen').length?' ('+(state.kurswuensche||[]).filter(w=>w.status==='offen').length+')':''}`],['quali','Wer hat …?'],['matrix','Übersicht (Matrix)']];
+  let inhalt='';
+  const personen = auswPersonen();
+  const qLabel = q=> q ? q.label : '(nicht im Katalog)';
+  if(auswAnsicht==='profil'){
+    const pr = AUSBILDUNGSPROFILE.find(p=>p.id===auswProfil) || AUSBILDUNGSPROFILE[0];
+    const liste = personen.map(p=>({p, r:profilAuswerten(p.id, pr)})).sort((a,b)=>(a.r.gesamt-a.r.erfuellt)-(b.r.gesamt-b.r.erfuellt) || a.p.name.localeCompare(b.p.name,'de'));
+    const voll = liste.filter(x=>x.r.erfuellt===x.r.gesamt).length;
+    inhalt = `
+      <select id="aw-profil" style="width:100%;box-sizing:border-box;margin-bottom:6px">${[...new Set(AUSBILDUNGSPROFILE.map(p=>p.gruppe))].map(g=>`<optgroup label="${esc(g)}">${AUSBILDUNGSPROFILE.filter(p=>p.gruppe===g).map(p=>`<option value="${p.id}" ${p.id===pr.id?'selected':''}>${esc(p.label)}</option>`).join('')}</optgroup>`).join('')}</select>
+      <p class="hint" style="margin:0 0 8px">Quelle: ${esc(pr.quelle)}. <b>${voll} von ${liste.length}</b> erfüllen alle Voraussetzungen.</p>
+      ${liste.map(({p,r})=>`<details style="border-top:1px dashed var(--line);padding:6px 0"><summary style="cursor:pointer">${r.erfuellt===r.gesamt?'✅':r.abgelaufen.length?'⚠️':'⬜'} <strong>${esc(p.name)}</strong> <span class="hint">${r.erfuellt}/${r.gesamt}${r.fehlt.length?` · fehlt ${r.fehlt.length}`:''}${r.abgelaufen.length?` · abgelaufen ${r.abgelaufen.length}`:''}</span></summary>
+        ${r.fehlt.length||r.abgelaufen.length?`<ul class="hint" style="margin:6px 0 0 -18px">${r.abgelaufen.map(x=>`<li>⚠ ${esc(qLabel(x.q))} – abgelaufen am ${fmtDatum(x.st.e.gueltigBis)}</li>`).join('')}${r.fehlt.map(x=>`<li>– ${esc(qLabel(x.q))}</li>`).join('')}</ul>`:'<p class="hint" style="margin:6px 0 0">Alle Voraussetzungen erfüllt.</p>'}
+        ${pr.empfohlen?pr.empfohlen.map(c=>{ const q=state.qualifikationen.find(x=>x.code===c); const st=qualiStatusFuer(p.id,q); return st.s==='gueltig'?'':`<p class="hint" style="margin:4px 0 0">Empfohlen: ${esc(qLabel(q))}</p>`; }).join(''):''}
+      </details>`).join('') || '<p class="hint">Keine Personen in dieser Auswahl.</p>'}
+      <button class="btn btn-sm" id="aw-csv" style="margin-top:10px">Als Tabelle herunterladen (CSV)</button>`;
+  } else if(auswAnsicht==='kurs'){
+    const kurs = KURS_VORAUSSETZUNGEN.find(k=>k.code===auswKurs) || KURS_VORAUSSETZUNGEN[0]; auswKurs = kurs.code;
+    const liste = personen.map(p=>({p, r:kursPruefen(p.id,kurs)}));
+    const ja = liste.filter(x=>x.r.erfuellt && !x.r.vorhanden), hat = liste.filter(x=>x.r.vorhanden), nein = liste.filter(x=>!x.r.erfuellt && !x.r.vorhanden);
+    inhalt = `
+      <select id="aw-kurs" style="width:100%;box-sizing:border-box;margin-bottom:6px">${kursOptionenHtml(kurs.code)}</select>
+      <p class="hint" style="margin:0 0 8px">Quelle: ${esc(KURS_QUELLE)}, S. ${kurs.seite}.${kurs.text?` Bitte zusätzlich selbst prüfen: ${esc(kurs.text)}.`:''}</p>
+      <h4 style="margin:6px 0">✅ Voraussetzungen erfüllt (${ja.length})</h4><p class="hint" style="margin:0">${ja.map(x=>esc(x.p.name)).join(' · ')||'–'}</p>
+      <h4 style="margin:10px 0 6px">⬜ Es fehlt noch etwas (${nein.length})</h4>
+      ${nein.map(({p,r})=>`<details style="border-top:1px dashed var(--line);padding:4px 0"><summary style="cursor:pointer">${esc(p.name)} <span class="hint">fehlt ${r.posten.filter(x=>!x.ok).length}</span></summary><ul class="hint" style="margin:4px 0 0 -18px">${r.posten.filter(x=>!x.ok).map(x=>`<li>${x.abgelaufen?'⚠':'–'} ${esc(x.label)}</li>`).join('')}</ul></details>`).join('')||'<p class="hint">–</p>'}
+      <h4 style="margin:10px 0 6px">✓ Bereits vorhanden (${hat.length})</h4><p class="hint" style="margin:0">${hat.map(x=>esc(x.p.name)).join(' · ')||'–'}</p>`;
+  } else if(auswAnsicht==='wuensche'){
+    const alle = (state.kurswuensche||[]).slice().sort((a,b)=>(a.status==='offen'?0:1)-(b.status==='offen'?0:1) || String(b.datum).localeCompare(String(a.datum)));
+    const allePers = state.personen.filter(p=>p.status!=='inaktiv' && (p.name||'').toLowerCase()!=='admin').sort((a,b)=>a.name.localeCompare(b.name,'de'));
+    inhalt = `
+      <p class="hint" style="margin:0 0 8px">Kurswünsche, die Mitglieder in BARRY gemeldet und Ihnen geschickt haben, hier erfassen – die Prüfung der Voraussetzungen erfolgt automatisch.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <select id="aw-kw-person" style="flex:1 1 150px">${allePers.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>
+        <select id="aw-kw-kurs" style="flex:2 1 220px">${kursOptionenHtml('')}</select>
+        <button class="btn btn-sm btn-primary" id="aw-kw-neu">+ Kurswunsch erfassen</button>
+      </div>
+      ${alle.map(w=>{ const p=state.personen.find(x=>x.id===w.personId); const k=KURS_VORAUSSETZUNGEN.find(x=>x.code===w.kursCode)||{code:w.kursCode,vor:[],seite:''}; const r=p?kursPruefen(p.id,k):null;
+        return `<div style="border-top:1px dashed var(--line);padding:8px 0">
+          <div class="row" style="justify-content:space-between;gap:6px;flex-wrap:wrap"><span><b>${esc(p?p.name:'?')}</b> – ${esc(kursLabel(k))} <span class="hint">${fmtDatum(w.datum)}</span></span>
+          <select data-kw-status="${w.id}" style="width:auto">${KW_STATUS.map(([v,l])=>`<option value="${v}" ${w.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+          <p class="hint" style="margin:2px 0 0">${r?(r.erfuellt?'✅ Voraussetzungen erfüllt':'⬜ fehlt: '+esc(r.posten.filter(x=>!x.ok).map(x=>x.label).join(', '))):''}${k.text?' · selbst prüfen: '+esc(k.text):''}${w.bemerkung?' · „'+esc(w.bemerkung)+'“':''}</p></div>`; }).join('') || '<p class="hint">Noch keine Kurswünsche.</p>'}`;
+  } else if(auswAnsicht==='person'){
+    const p = personen.find(x=>x.id===auswPerson) || personen[0];
+    if(p) auswPerson = p.id;
+    inhalt = !p ? '<p class="hint">Keine Personen in dieser Auswahl.</p>' : `
+      <select id="aw-person" style="width:100%;box-sizing:border-box;margin-bottom:8px">${personen.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select>
+      ${hatSuchpruefung(p.id)?'<p class="hint">✓* Modulprüfung 2 vorhanden – einmalige Pflichtausbildungen gelten als erfüllt.</p>':''}
+      ${AUSBILDUNGSPROFILE.map(pr=>{ const r=profilAuswerten(p.id, pr); const proz = r.gesamt?Math.round(r.erfuellt*100/r.gesamt):0;
+        return `<details style="border-top:1px dashed var(--line);padding:6px 0"><summary style="cursor:pointer">${r.erfuellt===r.gesamt?'✅':r.abgelaufen.length?'⚠️':'⬜'} ${esc(pr.label)} <span class="hint">${r.erfuellt}/${r.gesamt}</span>
+          <div style="height:6px;background:var(--soft);border-radius:4px;margin-top:4px"><div style="height:6px;width:${proz}%;background:${proz===100?'#2e8b57':'#e30613'};border-radius:4px"></div></div></summary>
+          <ul class="hint" style="margin:6px 0 0 -18px">${r.posten.filter(x=>x.st.s!=='entfaellt').map(x=>`<li>${AUSW_SYMBOL[x.st.s]} ${esc(qLabel(x.q))}${x.st.e&&x.st.e.datum?` <span style="opacity:.7">(${fmtDatum(x.st.e.datum)}${x.st.e.gueltigBis?' – bis '+fmtDatum(x.st.e.gueltigBis):''})</span>`:''}</li>`).join('')}</ul></details>`; }).join('')}
+      <p class="hint" style="margin-top:8px">✓ vorhanden · ✓* durch Modulprüfung 2 abgedeckt · ⚠ abgelaufen · – fehlt</p>
+      <h4 style="margin:12px 0 4px">🎓 Nächste mögliche Lehrgänge</h4>
+      <p class="hint" style="margin:0">${passendeLehrgaenge(p.id).map(k=>esc(kursLabel(k))).join(' · ') || 'Derzeit keine – siehe „Lehrgang: wer darf?“ für Details.'}</p>`;
+  } else if(auswAnsicht==='quali'){
+    const q = state.qualifikationen.find(x=>x.id===auswQuali) || qualiSortiert()[0];
+    if(q) auswQuali = q.id;
+    const mit=[], ohne=[];
+    personen.forEach(p=>{ const st=qualiStatusFuer(p.id,q); (st.s==='gueltig'||st.s==='durchSuch'||st.s==='abgelaufen' ? mit : ohne).push({p,st}); });
+    inhalt = `
+      <select id="aw-quali" style="width:100%;box-sizing:border-box;margin-bottom:8px">${qualiOptionenHtml(q&&q.id)}</select>
+      <h4 style="margin:6px 0">Vorhanden (${mit.length})</h4>
+      <ul style="margin:0 0 0 -18px">${mit.map(({p,st})=>`<li>${AUSW_SYMBOL[st.s]} ${esc(p.name)}${st.e&&st.e.datum?` <span class="hint">${fmtDatum(st.e.datum)}${st.e.gueltigBis?' – bis '+fmtDatum(st.e.gueltigBis):''}${st.e.hundId?' · 🐕 '+esc((state.hunde.find(h=>h.id===st.e.hundId)||{}).name||''):''}</span>`:''}</li>`).join('') || '<li class="hint">niemand</li>'}</ul>
+      <h4 style="margin:10px 0 6px">Fehlt (${ohne.length})</h4>
+      <p class="hint" style="margin:0">${ohne.map(x=>esc(x.p.name)).join(' · ') || '–'}</p>
+      <button class="btn btn-sm" id="aw-csv" style="margin-top:10px">Als Tabelle herunterladen (CSV)</button>`;
+  } else {
+    const kats = QUALI_KATEGORIEN;
+    if(!kats.includes(auswKategorie)) auswKategorie = kats[0];
+    const qs = qualiSortiert().filter(q=>(QUALI_KATEGORIEN.includes(q.kategorie)?q.kategorie:K_SONST)===auswKategorie);
+    inhalt = `
+      <select id="aw-kat" style="width:100%;box-sizing:border-box;margin-bottom:8px">${kats.map(k=>`<option ${k===auswKategorie?'selected':''}>${esc(k)}</option>`).join('')}</select>
+      <div class="table-scroll" style="max-height:60vh;overflow:auto"><table style="font-size:.8rem"><thead><tr><th style="position:sticky;left:0;background:var(--card,#fff)">Person</th>${qs.map(q=>`<th title="${esc(q.label)}" style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;max-height:160px">${esc(q.label.length>28?q.label.slice(0,27)+'…':q.label)}</th>`).join('')}</tr></thead>
+      <tbody>${personen.map(p=>`<tr><td style="position:sticky;left:0;background:var(--card,#fff);white-space:nowrap">${esc(p.name)}</td>${qs.map(q=>{ const st=qualiStatusFuer(p.id,q); return `<td style="text-align:center;${st.s==='abgelaufen'?'color:#b00020;font-weight:700':st.s==='fehlt'?'opacity:.4':''}" title="${esc(q.label)}">${AUSW_SYMBOL[st.s]}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="hint" style="margin-top:6px">✓ vorhanden · ✓* durch Modulprüfung 2 abgedeckt · ⚠ abgelaufen · – fehlt · · entfällt</p>
+      <button class="btn btn-sm" id="aw-csv" style="margin-top:6px">Als Tabelle herunterladen (CSV)</button>`;
+  }
+  return `
+    <p class="lead">Wer hat welche Ausbildung – und was fehlt für Einsatz, Prüfung oder den nächsten Lehrgang?</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${ans.map(([id,l])=>`<button class="btn btn-sm ${auswAnsicht===id?'btn-primary':'btn-ghost'}" data-aw-ansicht="${id}">${esc(l)}</button>`).join('')}</div>
+    <label class="row" style="gap:6px;align-items:center;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="aw-nurhf" ${auswNurHF?'checked':''}> <span class="hint" style="color:var(--ink)">nur Hundeführende (Personen mit aktivem Hund)</span></label>
+    <div class="card card-pad">${inhalt}</div>
+    <p class="hint" style="margin-top:8px">Grundlage sind die in BARRY eingetragenen Qualifikationen. Die Ziel-Voraussetzungen sind aus den genannten Quellen zusammengestellt; verbindlich bleiben Dienstanweisung, Prüfungsordnung und Seminarbroschüre in der jeweils gültigen Fassung.</p>`;
+}
+function bindAusbildungAuswertung(person){
+  document.querySelectorAll('[data-aw-ansicht]').forEach(b=>b.onclick=()=>{ auswAnsicht=b.dataset.awAnsicht; render(); });
+  const nh=document.getElementById('aw-nurhf'); if(nh) nh.onchange=()=>{ auswNurHF=nh.checked; render(); };
+  const sp=document.getElementById('aw-profil'); if(sp) sp.onchange=()=>{ auswProfil=sp.value; render(); };
+  const pe=document.getElementById('aw-person'); if(pe) pe.onchange=()=>{ auswPerson=pe.value; render(); };
+  const qu=document.getElementById('aw-quali'); if(qu) qu.onchange=()=>{ auswQuali=qu.value; render(); };
+  const ka=document.getElementById('aw-kat'); if(ka) ka.onchange=()=>{ auswKategorie=ka.value; render(); };
+  const ku=document.getElementById('aw-kurs'); if(ku) ku.onchange=()=>{ auswKurs=ku.value; render(); };
+  const kn=document.getElementById('aw-kw-neu'); if(kn) kn.onclick=()=>{ state.kurswuensche=state.kurswuensche||[]; state.kurswuensche.push({id:uid(), personId:document.getElementById('aw-kw-person').value, kursCode:document.getElementById('aw-kw-kurs').value, bemerkung:'', datum:nowIso(), status:'offen', erfasstVon:person.id}); speichereState(); zeigeToast('Kurswunsch erfasst.'); render(); };
+  document.querySelectorAll('[data-kw-status]').forEach(sel=>sel.onchange=()=>{ const w=(state.kurswuensche||[]).find(x=>x.id===sel.dataset.kwStatus); if(w){ w.status=sel.value; w.geaendertAm=nowIso(); speichereState(); zeigeToast('Status gespeichert.'); } });
+  const csv=document.getElementById('aw-csv');
+  if(csv) csv.onclick=()=>{
+    const personen=auswPersonen(), heute=new Date().toISOString().slice(0,10);
+    if(auswAnsicht==='profil'){
+      const pr=AUSBILDUNGSPROFILE.find(p=>p.id===auswProfil)||AUSBILDUNGSPROFILE[0];
+      auswCsv([['Person','Erfüllt','Gesamt','Fehlt','Abgelaufen'], ...personen.map(p=>{ const r=profilAuswerten(p.id,pr); return [p.name, r.erfuellt, r.gesamt, r.fehlt.map(x=>x.q?x.q.label:x.code).join(' | '), r.abgelaufen.map(x=>x.q.label).join(' | ')]; })], `BARRY_Auswertung_${pr.id}_${heute}.csv`);
+    } else if(auswAnsicht==='quali'){
+      const q=state.qualifikationen.find(x=>x.id===auswQuali);
+      auswCsv([['Person','Status','Datum','Gültig bis'], ...personen.map(p=>{ const st=qualiStatusFuer(p.id,q); return [p.name, st.s, st.e?csvDatumDE(st.e.datum):'', st.e?csvDatumDE(st.e.gueltigBis):'']; })], `BARRY_Auswertung_Qualifikation_${heute}.csv`);
+    } else {
+      const qs=qualiSortiert().filter(q=>(QUALI_KATEGORIEN.includes(q.kategorie)?q.kategorie:K_SONST)===auswKategorie);
+      auswCsv([['Person', ...qs.map(q=>q.label)], ...personen.map(p=>[p.name, ...qs.map(q=>{ const st=qualiStatusFuer(p.id,q); return st.s==='gueltig'||st.s==='abgelaufen' ? (csvDatumDE(st.e.datum)||'x')+(st.s==='abgelaufen'?' (abgelaufen)':'') : st.s==='durchSuch'?'durch Modul 2':st.s==='entfaellt'?'entfällt':''; })])], `BARRY_Matrix_${heute}.csv`);
+    }
+  };
+}
+
+/* =========================================================
+   LEHRGANGS-VORAUSSETZUNGEN (Seminarbroschüre Bereitschaften LV Hessen 2025, Stand 02.11.2024)
+   Eintrag: code des Lehrgangs, Seite, vor = Liste von Bedingungen (alle müssen erfüllt sein):
+     'code' = Qualifikation vorhanden · 'profil:id' = Ziel-Profil vollständig · {oder:[…]} = eine davon genügt
+   text = Voraussetzungen, die BARRY nicht prüfen kann (werden als „bitte selbst prüfen“ angezeigt).
+   ========================================================= */
+const KURS_VORAUSSETZUNGEN = [
+  {code:'rh_pruef', seite:5, vor:['profil:zul_suchpruefung'], text:'gemäß Dienstanweisung Rettungshundearbeit'},
+  {code:'rkas', seite:15, vor:['rke']},
+  {code:'teukm', seite:15, vor:['profil:ekf_rha'], text:'Qualifikationsstufe Einsatzkraft Fachdienst'},
+  {code:'susm', seite:15, vor:['profil:ekf_rha'], text:'Qualifikationsstufe Einsatzkraft Fachdienst'},
+  {code:'smufk', seite:15, vor:['rkas','teukm'], text:'Qualifikationsstufe Gruppenleitung'},
+  {code:'lvb', seite:16, vor:['rkas','teukm'], text:'Qualifikationsstufe Gruppenleitung'},
+  {code:'gva', seite:16, vor:['rke']},
+  {code:'lvbikv', seite:16, vor:['lvb']},
+  {code:'vupa', seite:16, vor:['gva']},
+  {code:'bvfb', seite:16, vor:['lvb']},
+  {code:'laikv', seite:17, vor:['gva','lvb']},
+  {code:'gmfl', seite:17, vor:['lvb']},
+  {code:'gfue', seite:18, vor:['profil:zul_gfue'], text:'Qualifikationsstufe Einsatzkraft KatS, Nachweis Truppführer (TF)'},
+  {code:'gf_pruef', seite:18, vor:['rkas','teukm','gfue'], text:'Zulassung zur GF-Prüfung'},
+  {code:'zfue', seite:19, vor:['rkas','teukm','gfue','gf_pruef'], text:'Qualifikationsstufe Gruppenführung (Nachweis GF-Prüfung)'},
+  {code:'zf_pruef', seite:19, vor:['smufk','susm','zfue'], text:'Zulassung zur ZF-Prüfung'},
+  {code:'zfue_btd', seite:19, vor:['zfue','zf_pruef'], text:'im Betreuungsdienst tätig'},
+  {code:'zfue_san', seite:19, vor:['zfue','zf_pruef'], text:'im Sanitätsdienst tätig'},
+  {code:'vfg', seite:21, vor:['zfue','zf_pruef'], text:'Qualifikationsstufe Zugführung'},
+  {code:'rkb', seite:21, vor:['zfue']},
+  {code:'psnv_e', seite:11, vor:['psnv_g'], text:'psychische und physische Stabilität; Mindestalter 23 Jahre empfohlen'},
+  {code:'psnv_e2', seite:12, vor:['psnv_e'], text:'mehrjährige Erfahrung als Einsatzkraft; psychische und physische Stabilität; Mindestalter 23 Jahre'},
+  {code:'psnv_b', seite:12, vor:['psnv_g'], text:'psychische und physische Stabilität; Mindestalter 23 Jahre'},
+  {code:'psnv_btd', seite:11, vor:['psnv_g','profil:btd_sbu'], text:'psychische und physische Stabilität; Mindestalter 18 Jahre'},
+  {code:'psnv_ab', seite:12, vor:['psnv_g','psnv_e2'], text:'mindestens eine Hospitation bei diesem Seminar; psychische und physische Stabilität'},
+  {code:'iuk', seite:10, vor:['profil:ekb','bos']},
+  {code:'ikkib', seite:13, vor:[{oder:['profil:ekf_rha','profil:san','profil:btd_sbu','profil:btd_verpf','profil:btd_tl']}], text:'abgeschlossene Fachdienstausbildung'},
+  {code:'fwk_g', seite:13, vor:[], text:'Mitwirkung im DRK'},
+  {code:'fwk_f', seite:13, vor:['fwk_g']},
+  {code:'drohne_b1', seite:14, vor:['profil:ekb'], text:'Drohnensteuerer Basis-Ausbildung und weitere Angaben laut Broschüre'},
+  {code:'fko', seite:6, vor:['profil:btd_verpf']},
+  {code:'fko_fb', seite:6, vor:['fko'], text:'aktive Tätigkeit als Feldkoch'},
+  {code:'btd_al', seite:6, vor:[{oder:['profil:btd_sbu','profil:btd_verpf']}]},
+  {code:'btd_ab', seite:6, vor:[{oder:['profil:btd_sbu','profil:btd_verpf']}], text:'aktive Lehrtätigkeit als Anleiter (mind. 18 UE) und weitere Angaben laut Broschüre'},
+  {code:'past_g', seite:7, vor:[], text:'zeitnahe Datenschutzunterweisung'},
+  {code:'past_f', seite:7, vor:['past_g']},
+  {code:'twa1', seite:8, vor:['profil:btd_tl']},
+  {code:'twa2', seite:8, vor:['profil:btd_tl']},
+  {code:'twa3', seite:8, vor:['twa1','twa2']},
+  {code:'twnv', seite:8, vor:['profil:btd_tl']},
+  {code:'lsi', seite:8, vor:['profil:btd_tl']},
+  {code:'fkh', seite:9, vor:['profil:btd_tl']},
+  {code:'uwste', seite:10, vor:['profil:btd_tl']},
+  {code:'san_ab', seite:4, vor:[], text:'mindestens einjährige aktive Mitwirkung im Sanitätsdienst; Teilnahme an einem Sanitätsdienstlehrgang als Ausbildungshelfer und weitere Angaben laut Broschüre'},
+];
+const KURS_QUELLE = 'Seminarbroschüre Bereitschaften DRK-Landesverband Hessen 2025 (Stand 02.11.2024)';
+function profilErfuellt(personId, profilId){
+  const pr = AUSBILDUNGSPROFILE.find(p=>p.id===profilId); if(!pr) return {ok:false, label:profilId};
+  const r = profilAuswerten(personId, pr); return {ok: r.erfuellt===r.gesamt, label: pr.label, fehlt: r.fehlt.concat(r.abgelaufen)};
+}
+function bedingungPruefen(personId, b){
+  if(b && b.oder){ const teile=b.oder.map(x=>bedingungPruefen(personId,x)); return {ok: teile.some(t=>t.ok), label: teile.map(t=>t.label).join(' oder ')}; }
+  if(String(b).startsWith('profil:')) return profilErfuellt(personId, String(b).slice(7));
+  const q = state.qualifikationen.find(x=>x.code===b);
+  const st = qualiStatusFuer(personId, q);
+  return {ok: st.s==='gueltig' || st.s==='durchSuch', label: q ? q.label : b, abgelaufen: st.s==='abgelaufen'};
+}
+function kursPruefen(personId, kurs){
+  const posten = (kurs.vor||[]).map(b=>bedingungPruefen(personId, b));
+  const q = state.qualifikationen.find(x=>x.code===kurs.code);
+  const vorhanden = q ? ['gueltig','durchSuch'].includes(qualiStatusFuer(personId,q).s) : false;
+  return {erfuellt: posten.every(p=>p.ok), posten, manuell: kurs.text||'', vorhanden};
+}
+function kursLabel(kurs){ const q=state.qualifikationen.find(x=>x.code===kurs.code); return q?q.label:kurs.code; }
+function kursOptionenHtml(auswahl){
+  const gruppen={};
+  KURS_VORAUSSETZUNGEN.forEach(k=>{ const q=state.qualifikationen.find(x=>x.code===k.code); const g=q?q.kategorie:'Weitere'; (gruppen[g]=gruppen[g]||[]).push(k); });
+  return Object.entries(gruppen).map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(k=>`<option value="${k.code}" ${k.code===auswahl?'selected':''}>${esc(kursLabel(k))}</option>`).join('')}</optgroup>`).join('');
+}
+function kursErgebnisHtml(personId, kurs, kurz){
+  const r = kursPruefen(personId, kurs);
+  return `<div style="margin-top:6px">${r.vorhanden?'<p style="margin:0"><b>✓ Bereits vorhanden.</b></p>':''}
+    <p style="margin:0 0 4px"><b>${r.erfuellt?'✅ Voraussetzungen, die BARRY prüfen kann, sind erfüllt.':'⬜ Es fehlen noch Voraussetzungen:'}</b></p>
+    ${r.posten.length?`<ul class="hint" style="margin:0 0 0 -18px">${r.posten.map(p=>`<li>${p.ok?'✓':p.abgelaufen?'⚠':'–'} ${esc(p.label)}${!p.ok && p.fehlt && p.fehlt.length && !kurz?` <span style="opacity:.8">(fehlt: ${p.fehlt.slice(0,6).map(x=>esc(x.q?x.q.label:x.code)).join(', ')}${p.fehlt.length>6?' …':''})</span>`:''}</li>`).join('')}</ul>`:'<p class="hint" style="margin:0">Keine in BARRY prüfbaren Voraussetzungen.</p>'}
+    ${r.manuell?`<p class="hint" style="margin:4px 0 0">Bitte selbst prüfen: ${esc(r.manuell)}</p>`:''}
+    <p class="hint" style="margin:4px 0 0;opacity:.8">Quelle: ${esc(KURS_QUELLE)}, S. ${kurs.seite}</p></div>`;
+}
+function passendeLehrgaenge(personId){
+  return KURS_VORAUSSETZUNGEN.filter(k=>{ const r=kursPruefen(personId,k); return r.erfuellt && !r.vorhanden && (k.vor||[]).length; });
+}
+/* ---------- Kurswünsche ---------- */
+const KW_STATUS = [['offen','offen'],['angemeldet','angemeldet'],['zurueckgestellt','zurückgestellt'],['erledigt','erledigt'],['abgelehnt','nicht möglich']];
+function kurswunschText(w){
+  const p=state.personen.find(x=>x.id===w.personId), k=KURS_VORAUSSETZUNGEN.find(x=>x.code===w.kursCode)||{code:w.kursCode};
+  const r=p?kursPruefen(p.id,k):null;
+  return `🎓 Kurswunsch – ${p?p.name:'?'}\nLehrgang: ${kursLabel(k)}\nVoraussetzungen laut BARRY: ${r?(r.erfuellt?'erfüllt':'noch nicht vollständig ('+r.posten.filter(x=>!x.ok).map(x=>x.label).join(', ')+')'):'?'}${w.bemerkung?`\nBemerkung: ${w.bemerkung}`:''}\nGemeldet am ${fmtDatum(w.datum)}`;
+}
+
+/* =========================================================
+   MEIN AUSBILDUNGSSTAND (für jedes Mitglied) · Kurswünsche · Stand-Update der Leitung
+   ========================================================= */
+function eigeneFristen(personId, tage){
+  const heute=new Date().toISOString().slice(0,10), grenze=new Date(Date.now()+tage*86400000).toISOString().slice(0,10);
+  const neuester=new Map();
+  state.personQualifikationen.filter(pq=>pq.personId===personId).forEach(pq=>{ const k=pq.qualifikationId+'|'+(pq.hundId||'')+'|'+(pq.sparte||''); const a=neuester.get(k); if(!a || String(pq.datum||'')>String(a.datum||'')) neuester.set(k,pq); });
+  const abgelaufen=[], bald=[];
+  [...neuester.values()].forEach(pq=>{ if(!pq.gueltigBis) return; const q=state.qualifikationen.find(x=>x.id===pq.qualifikationId); if(!q || qualiFristEntfaellt(personId,q)) return;
+    if(pq.gueltigBis<heute) abgelaufen.push({pq,q}); else if(pq.gueltigBis<=grenze) bald.push({pq,q}); });
+  const sort=(a,b)=>a.pq.gueltigBis.localeCompare(b.pq.gueltigBis);
+  return {abgelaufen:abgelaufen.sort(sort), bald:bald.sort(sort)};
+}
+function meineZielProfile(person){
+  const hatHund = state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,person.id));
+  const ids = hatHund ? (hatSuchpruefung(person.id) ? ['rhf_einsatz'] : ['zul_suchpruefung','rhf_einsatz']) : ['rhd_helfer','ekb'];
+  return ids.map(id=>AUSBILDUNGSPROFILE.find(p=>p.id===id)).filter(Boolean);
+}
+let msKurs = '';
+function renderMeinStand(person){
+  const f = eigeneFristen(person.id, 90);
+  const hdl = state.personQualifikationen.filter(pq=>pq.personId===person.id);
+  const passende = passendeLehrgaenge(person.id);
+  const kurs = KURS_VORAUSSETZUNGEN.find(k=>k.code===msKurs) || KURS_VORAUSSETZUNGEN[0]; msKurs=kurs.code;
+  const meineWuensche = (state.kurswuensche||[]).filter(w=>w.personId===person.id).sort((a,b)=>String(b.datum).localeCompare(String(a.datum)));
+  const q2 = id=>state.qualifikationen.find(x=>x.id===id);
+  return `
+    <p class="lead">Dein eigener Ausbildungsstand: was du hast, was noch fehlt und welche Fristen anstehen.</p>
+    ${state.meta && state.meta.standUpdateAm?`<p class="hint">Stand der Leitung vom ${fmtDatum(state.meta.standUpdateAm)}.</p>`:''}
+    <div class="card card-pad" style="margin-bottom:12px">
+      <h3 style="margin-top:0">⏳ Fristen</h3>
+      ${f.abgelaufen.length||f.bald.length?`<ul style="margin:0 0 0 -18px">${f.abgelaufen.map(x=>`<li style="color:#b00020"><b>abgelaufen</b> seit ${fmtDatum(x.pq.gueltigBis)}: ${esc(x.q.label)}</li>`).join('')}${f.bald.map(x=>`<li>fällig am <b>${fmtDatum(x.pq.gueltigBis)}</b>: ${esc(x.q.label)}</li>`).join('')}</ul>`:'<p class="hint" style="margin:0">In den nächsten 90 Tagen läuft nichts ab.</p>'}
+    </div>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <h3 style="margin-top:0">🎯 Was noch fehlt</h3>
+      ${meineZielProfile(person).map(pr=>{ const r=profilAuswerten(person.id, pr); return `<p style="margin:8px 0 2px"><b>${esc(pr.label)}</b> <span class="hint">${r.erfuellt}/${r.gesamt}</span></p>${r.fehlt.length||r.abgelaufen.length?`<ul class="hint" style="margin:0 0 0 -18px">${r.abgelaufen.map(x=>`<li>⚠ ${esc(x.q.label)} (abgelaufen)</li>`).join('')}${r.fehlt.map(x=>`<li>– ${esc(x.q?x.q.label:x.code)}</li>`).join('')}</ul>`:'<p class="hint" style="margin:0">✅ vollständig</p>'}`; }).join('')}
+    </div>
+    <div class="card card-pad" style="margin-bottom:12px">
+      <h3 style="margin-top:0">🎓 Lehrgänge & Kurswunsch</h3>
+      ${passende.length?`<p class="hint" style="margin:0 0 6px">Für diese Lehrgänge erfüllst du laut BARRY die Voraussetzungen: ${passende.map(k=>esc(kursLabel(k))).join(' · ')}</p>`:''}
+      <select id="ms-kurs" style="width:100%;box-sizing:border-box">${kursOptionenHtml(kurs.code)}</select>
+      ${kursErgebnisHtml(person.id, kurs)}
+      <input id="ms-bemerkung" placeholder="Bemerkung (optional), z. B. Wunschtermin" style="width:100%;box-sizing:border-box;margin-top:8px">
+      <button class="btn btn-primary btn-sm" id="ms-wunsch" style="margin-top:6px">📤 Kurswunsch an die Leitung senden</button>
+      ${meineWuensche.length?`<p class="hint" style="margin:10px 0 2px">Meine Kurswünsche:</p><ul class="hint" style="margin:0 0 0 -18px">${meineWuensche.map(w=>`<li>${esc(kursLabel({code:w.kursCode}))} – ${fmtDatum(w.datum)} · ${esc((KW_STATUS.find(s=>s[0]===w.status)||['',w.status])[1])}</li>`).join('')}</ul>`:''}
+    </div>
+    <details class="card card-pad" style="margin-bottom:12px">
+      <summary style="cursor:pointer;font-weight:700">📜 Meine Nachweise (${hdl.length})</summary>
+      <ul class="hint" style="margin:8px 0 0 -18px">${hdl.map(pq=>({pq,q:q2(pq.qualifikationId)})).filter(x=>x.q).sort((a,b)=>a.q.label.localeCompare(b.q.label,'de')).map(({pq,q})=>`<li>${esc(q.label)}${pq.hundId?' · 🐕 '+esc((state.hunde.find(h=>h.id===pq.hundId)||{}).name||''):''}${pq.datum?' · '+fmtDatum(pq.datum):''}${pq.gueltigBis?' · bis '+fmtDatum(pq.gueltigBis):''}</li>`).join('') || '<li>Noch keine Nachweise eingetragen.</li>'}</ul>
+    </details>
+    ${!darfTrainingBearbeiten(person)?`<div class="card card-pad"><h3 style="margin-top:0">📥 Stand aktualisieren</h3><p class="hint" style="margin:0 0 6px">Hat die Leitung dir ein „Stand-Update“ geschickt, hier einlesen. Dein Passwort und deine übrigen Daten bleiben unverändert.</p><label class="btn btn-sm" style="cursor:pointer">Stand-Update einlesen<input type="file" id="ms-update" style="display:none"></label></div>`:''}
+    <p class="hint" style="margin-top:8px">Fehlt etwas oder stimmt etwas nicht? Bitte der Staffelleitung melden – sie pflegt die Nachweise.</p>`;
+}
+function bindMeinStand(person){
+  const k=document.getElementById('ms-kurs'); if(k) k.onchange=()=>{ msKurs=k.value; render(); };
+  const w=document.getElementById('ms-wunsch');
+  if(w) w.onclick=async ()=>{
+    state.kurswuensche=state.kurswuensche||[];
+    const wunsch={id:uid(), personId:person.id, kursCode:msKurs, bemerkung:document.getElementById('ms-bemerkung').value.trim(), datum:nowIso(), status:'offen'};
+    state.kurswuensche.push(wunsch); speichereState();
+    const text=kurswunschText(wunsch);
+    try{ if(navigator.share){ await navigator.share({title:'Kurswunsch', text}); zeigeToast('Kurswunsch gespeichert und geteilt.'); render(); return; } }catch(e){ if(e&&e.name==='AbortError'){ render(); return; } }
+    try{ await navigator.clipboard.writeText(text); zeigeToast('Kurswunsch gespeichert – Text kopiert, bitte an die Leitung senden.'); }catch(e){ prompt('Bitte an die Leitung senden:', text); }
+    render();
+  };
+  const u=document.getElementById('ms-update'); if(u) u.onchange=e=>{ const f=e.target.files[0]; e.target.value=''; if(f) standUpdateEinlesen(f); };
+}
+/* ---------- Stand-Update: nur eigene Nachweise + Katalog, ohne Passwort ---------- */
+function standUpdateDaten(p){
+  return {exportInfo:{format:'barry-mein-stand', app:'BARRY', appVersion:BARRY_APP_VERSION, fuer:p.name, personId:p.id, exportiertAm:nowIso()},
+    qualifikationen: state.qualifikationen, personQualifikationen: state.personQualifikationen.filter(pq=>pq.personId===p.id),
+    kurswuensche: (state.kurswuensche||[]).filter(w=>w.personId===p.id), pruefungsstatus: state.pruefungsstatus.filter(s=>state.hunde.some(h=>h.id===s.hundId && h.status!=='inaktiv' && hundGefuehrtVon(h,p.id))),
+    plaketten: state.hunde.filter(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)).map(h=>({hundId:h.id, plaketten:h.plaketten||[], sparten:h.sparten||[]}))};
+}
+function standUpdateDateiname(p){ return `BARRY_Stand_${p.name.replace(/[^\p{L}\p{N}-]+/gu,'_')}.json`; }
+function standUpdateHerunterladen(p){
+  const blob=new Blob([JSON.stringify(standUpdateDaten(p))],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=standUpdateDateiname(p); document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+function alleStandUpdatesHerunterladen(){
+  const personen=zugangsberechtigtePersonen();
+  const blob=zipErstellen(personen.map(p=>({name:standUpdateDateiname(p), text:JSON.stringify(standUpdateDaten(p))})));
+  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`BARRY_Stand-Updates_${new Date().toISOString().slice(0,10)}.zip`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast(`${personen.length} Stand-Updates erstellt.`);
+}
+function standUpdateEinlesen(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result); if(!d.exportInfo || d.exportInfo.format!=='barry-mein-stand') throw new Error('Das ist kein BARRY-Stand-Update.');
+      const pid=d.exportInfo.personId; const ich=aktuellePerson();
+      if(!state.personen.some(p=>p.id===pid)) throw new Error('Die Person dieses Stand-Updates gibt es auf diesem Gerät nicht.');
+      if(ich && ich.id!==pid && !darfTrainingBearbeiten(ich)) throw new Error('Dieses Stand-Update gehört zu einer anderen Person.');
+      // Katalog ergänzen/aktualisieren (IDs der Leitung übernehmen)
+      (d.qualifikationen||[]).forEach(q=>{ const vorh=state.qualifikationen.find(x=>x.id===q.id) || (q.code && state.qualifikationen.find(x=>x.code===q.code));
+        if(!vorh) state.qualifikationen.push(q); else if(vorh.id!==q.id){ state.personQualifikationen.forEach(pq=>{ if(pq.qualifikationId===vorh.id) pq.qualifikationId=q.id; }); Object.assign(vorh,q); } else Object.assign(vorh,q); });
+      state.personQualifikationen = state.personQualifikationen.filter(pq=>pq.personId!==pid).concat(d.personQualifikationen||[]);
+      const eigeneW=(state.kurswuensche||[]).filter(w=>w.personId===pid); const neu=d.kurswuensche||[];
+      state.kurswuensche=(state.kurswuensche||[]).filter(w=>w.personId!==pid).concat(neu, eigeneW.filter(w=>!neu.some(n=>n.id===w.id)));
+      const hundIds=new Set((d.plaketten||[]).map(x=>x.hundId));
+      state.pruefungsstatus=state.pruefungsstatus.filter(s=>!hundIds.has(s.hundId)).concat(d.pruefungsstatus||[]);
+      (d.plaketten||[]).forEach(x=>{ const h=state.hunde.find(h=>h.id===x.hundId); if(h){ h.plaketten=x.plaketten; h.sparten=x.sparten; } });
+      state.meta.standUpdateAm=d.exportInfo.exportiertAm; speichereState();
+      zeigeToast('Ausbildungsstand aktualisiert.'); render();
+    }catch(err){ alert('Stand-Update konnte nicht eingelesen werden: '+err.message); }
+  };
+  r.readAsText(file);
+}
+/* ---------- Kalender in eigenen Handy-Kalender (ICS / CSV) ---------- */
+function icsDatum(s, ganztags){ const t=String(s||''); if(ganztags) return t.slice(0,10).replace(/-/g,''); return t.slice(0,16).replace(/[-:]/g,'')+'00'; }
+function icsText(s){ return String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n'); }
+function icsFalten(z){ const out=[]; let rest=z; while(rest.length>73){ out.push(rest.slice(0,73)); rest=' '+rest.slice(73); } out.push(rest); return out.join('\r\n'); }
+function kalenderTermineFuer(person){
+  const heute=new Date().toISOString().slice(0,10);
+  return state.termine.filter(t=>t.beginn && String(t.ende||t.beginn).slice(0,10)>=heute.slice(0,4)+'-01-01' && ((t.sichtbarkeit||'staff')==='staff' || (t.sichtbarkeit==='personal' && t.ownerId===person.id) || (t.sichtbarkeit==='trainer' && terminSichtbarFuer(t, person))))
+    .sort((a,b)=>String(a.beginn).localeCompare(String(b.beginn)));
+}
+function kalenderIcsHerunterladen(person){
+  const termine=kalenderTermineFuer(person), org=(state.organisation&&state.organisation.name)||'DRK-Rettungshundestaffel';
+  const jetzt=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  const z=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//BARRY Rettungshundekompass//DE','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:'+icsText(org),'X-WR-TIMEZONE:Europe/Berlin'];
+  termine.forEach(t=>{
+    const ganz=!!t.ganztags;
+    let ende=t.ende||t.beginn;
+    if(ganz){ const d=new Date(String(ende).slice(0,10)+'T12:00:00'); d.setDate(d.getDate()+1); ende=d.toISOString().slice(0,10); }
+    z.push('BEGIN:VEVENT','UID:'+t.id+'@barry-rettungshundekompass','DTSTAMP:'+jetzt,
+      ganz?'DTSTART;VALUE=DATE:'+icsDatum(t.beginn,true):'DTSTART;TZID=Europe/Berlin:'+icsDatum(t.beginn),
+      ganz?'DTEND;VALUE=DATE:'+icsDatum(ende,true):'DTEND;TZID=Europe/Berlin:'+icsDatum(ende),
+      'SUMMARY:'+icsText(t.titel), t.ort?'LOCATION:'+icsText(t.ort):'', (t.beschreibung||t.thema)?'DESCRIPTION:'+icsText([t.thema?'Thema: '+t.thema:'', t.beschreibung||''].filter(Boolean).join('\n')):'', 'END:VEVENT');
+  });
+  z.push('END:VCALENDAR');
+  const text=z.filter(Boolean).map(icsFalten).join('\r\n');
+  const blob=new Blob([text],{type:'text/calendar'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=`BARRY_Kalender_${new Date().getFullYear()}.ics`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
+  zeigeToast(`${termine.length} Termine für den eigenen Kalender exportiert.`);
+}
+function kalenderCsvHerunterladen(person){
+  const termine=kalenderTermineFuer(person);
+  const de=s=>{ const d=String(s||''); return d.slice(8,10)+'.'+d.slice(5,7)+'.'+d.slice(0,4); };
+  const zeilen=[['Subject','Start Date','Start Time','End Date','End Time','All Day Event','Location','Description'].join(',')];
+  const q=v=>'"'+String(v||'').replace(/"/g,'""')+'"';
+  termine.forEach(t=>zeilen.push([q(t.titel), de(t.beginn), t.ganztags?'':String(t.beginn).slice(11,16), de(t.ende||t.beginn), t.ganztags?'':String(t.ende||t.beginn).slice(11,16), t.ganztags?'True':'False', q(t.ort), q([t.thema, t.beschreibung].filter(Boolean).join(' – '))].join(',')));
+  const blob=new Blob(['\uFEFF'+zeilen.join('\r\n')],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=`BARRY_Kalender_${new Date().getFullYear()}.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
 
 /* Gemeinsame Importlogik für Datensicherung und Erststart – alle Schutzprüfungen an einer Stelle. */
@@ -3166,6 +3860,7 @@ function bestandAusDateiImportieren(file){
   reader.onload = ()=>{
     try{
       const parsed = JSON.parse(reader.result);
+      if(parsed.exportInfo && parsed.exportInfo.format==='barry-mein-stand') throw new Error('Das ist ein Stand-Update, keine Datensicherung. Bitte unter Ausbildung & Team → 🎓 Mein Stand → „Stand-Update einlesen“ einspielen – dein Passwort bleibt dabei erhalten.');
       if(parsed.exportInfo && parsed.exportInfo.format==='barry-termine') throw new Error('Das ist ein Terminplan, keine Datensicherung. Bitte unter Organisation & Termine → Kalender → „Terminplan einlesen“ einspielen – dort werden nur die Termine abgeglichen.');
       if(!parsed.personen || !Array.isArray(parsed.personen)) throw new Error('Kein gültiges Bestandspaket.');
       if(parsed.exportInfo && parsed.exportInfo.format && parsed.exportInfo.format!=='barry-bestand') throw new Error('Diese Datei ist kein BARRY-Bestand (Format: '+parsed.exportInfo.format+').');
@@ -3338,6 +4033,10 @@ function renderPersonQualifikationenBereich(p){
   }).join('') || '<p class="hint" style="margin:6px 0">Noch keine Qualifikation zugeordnet.</p>';
   return `
   <div class="field">
+    <details style="margin:0 0 10px"><summary style="cursor:pointer;font-weight:600">🎓 Kurswunsch prüfen</summary>
+      <select id="pf-kurs" style="width:100%;box-sizing:border-box;margin-top:6px"><option value="">– Lehrgang wählen –</option>${kursOptionenHtml('')}</select>
+      <div id="pf-kurs-ergebnis"></div>
+    </details>
     <label>Qualifikationen dieser Person</label>
     ${hatSuchpruefung(p.id)?'<p class="hint" style="margin:0 0 4px;color:var(--ink)">✓ Modulprüfung 2 (Suchprüfung) vorhanden – alle einmaligen Pflichtausbildungen bis dahin gelten als erfüllt. Einzutragen sind nur noch aufbauende Qualifikationen und die wiederkehrenden Nachweise (jährlich: HLW/AED, UVV, Hygiene, Datenschutz, Sonderrechte; alle 2 Jahre: Suchprüfung, Erste Hilfe am Hund, Sanitätsfortbildung).</p>':''}
     <div id="pf-qual-liste">${zeilen}</div>
@@ -3487,6 +4186,8 @@ function renderModalPerson(){
           <button class="btn btn-sm btn-primary" id="pf-zp-erstellen" type="button">Zugangspaket herunterladen</button>
         </div>
         <div class="hint" id="pf-zp-hint" style="margin-top:6px"></div>
+        <button class="btn btn-sm" id="pf-selbstauskunft" type="button" style="margin-top:8px">📋 Selbstauskunft-Datei (Excel) für diese Person</button>
+        <button class="btn btn-sm" id="pf-standupdate" type="button" style="margin-top:8px">📥 Stand-Update (eigene Nachweise, ohne Passwort)</button>
       </div>`}
       ${bestehend?renderPersonQualifikationenBereich(bestehend):''}
       ${bestehend?renderPersonHospitationenBereich(bestehend):''}
@@ -3515,8 +4216,17 @@ function bindModalPerson(){
     };
   }
   const zpBtn = document.getElementById('pf-zp-erstellen');
+  const suBtn = document.getElementById('pf-standupdate');
+  if(suBtn) suBtn.onclick = ()=>{ standUpdateHerunterladen(state.personen.find(x=>x.id===modal.id)); zeigeToast('Stand-Update erstellt.'); };
+  const kwSel = document.getElementById('pf-kurs');
+  if(kwSel) kwSel.onchange = ()=>{ const k=KURS_VORAUSSETZUNGEN.find(x=>x.code===kwSel.value); document.getElementById('pf-kurs-ergebnis').innerHTML = k ? kursErgebnisHtml(modal.id, k) : ''; };
+  const saBtn = document.getElementById('pf-selbstauskunft');
+  if(saBtn) saBtn.onclick = ()=>{ selbstauskunftHerunterladen(state.personen.find(x=>x.id===modal.id)); zeigeToast('Selbstauskunft erstellt.'); };
   const zpNeu = document.getElementById('pf-zp-neu');
-  if(zpNeu) zpNeu.onclick = ()=>{ document.getElementById('pf-zp-passwort').value = startPasswortErzeugen(); document.getElementById('pf-zp-hint').textContent = 'Neues Startpasswort – wird beim Herunterladen des Zugangspakets gespeichert.'; };
+  if(zpNeu) zpNeu.onclick = ()=>{
+    const pp = state.personen.find(x=>x.id===modal.id);
+    if(pp && pp.startPasswort && !confirm(`${pp.name} hat bereits das Startpasswort „${pp.startPasswort}“${pp.zugangErstelltAm?' (Zugangspaket erstellt am '+fmtDatum(pp.zugangErstelltAm)+')':''}. Nur bei vergessenem oder unbekanntem Passwort ein neues erzeugen. Wirklich ein neues erzeugen?`)) return;
+    document.getElementById('pf-zp-passwort').value = startPasswortErzeugen(); document.getElementById('pf-zp-hint').textContent = 'Neues Startpasswort – wird beim Herunterladen des Zugangspakets gespeichert.'; };
   if(zpBtn) zpBtn.onclick = ()=>{
     const p = state.personen.find(x=>x.id===modal.id);
     let pw = document.getElementById('pf-zp-passwort').value.trim();
@@ -4277,13 +4987,18 @@ function renderOrganisationKalender(person){
       </div>
     </div>
     <details class="card card-pad" style="margin-top:12px">
-      <summary style="cursor:pointer;font-weight:600">🔄 Terminplan ${darf?'verteilen / ':''}aktualisieren</summary>
+      <summary style="cursor:pointer;font-weight:600">🔄 Terminplan ${darf?'verteilen / ':''}aktualisieren · 📅 in eigenen Kalender</summary>
       <p class="hint" style="margin-top:8px">${darf
         ? 'Nach Änderungen am Jahresplan den <strong>Terminplan exportieren</strong> und die Datei an die Mitglieder schicken (z. B. per Messenger oder E-Mail). Sie enthält nur die Staffeltermine und die Löschvermerke – keine Personen-, Planungs- oder Ausbilderdaten.'
         : 'Hat die Leitung einen neuen Terminplan geschickt, hier einlesen. Neue Termine kommen hinzu, geänderte werden aktualisiert, entfallene entfernt – nichts wird doppelt angelegt, eigene Zusagen bleiben erhalten.'}</p>
       <div class="row" style="gap:8px;flex-wrap:wrap">
         ${darf?`<button class="btn btn-sm btn-primary" id="btn-terminplan-export">Terminplan exportieren</button>`:''}
         <label class="btn btn-sm" style="cursor:pointer">Terminplan einlesen<input type="file" id="in-terminplan-import" accept="application/json,.json" style="display:none"></label>
+      </div>
+      <p class="hint" style="margin:10px 0 4px"><b>📅 In den eigenen Handy-Kalender übernehmen:</b> Die Datei (.ics) öffnen bzw. in Google-, Apple- oder Outlook-Kalender importieren. Enthalten sind die Staffeltermine des laufenden Jahres und die eigenen persönlichen Termine.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" id="btn-kal-ics">📅 Kalenderdatei (.ics)</button>
+        <button class="btn btn-sm" id="btn-kal-csv">Tabelle (CSV, Google-Format)</button>
       </div>
     </details>
     <div class="row" style="margin:14px 0 4px">
@@ -4418,6 +5133,8 @@ function bindOrganisation(person){
   if(neu) neu.onclick = ()=>{ modal={type:'termin', id:null}; render(); };
   const jp = document.getElementById('btn-jahresplan');
   if(jp) jp.onclick = ()=>{ modal={type:'jahresplan'}; render(); };
+  const kIcs=document.getElementById('btn-kal-ics'); if(kIcs) kIcs.onclick=()=>kalenderIcsHerunterladen(person);
+  const kCsv=document.getElementById('btn-kal-csv'); if(kCsv) kCsv.onclick=()=>kalenderCsvHerunterladen(person);
   const tpExp = document.getElementById('btn-terminplan-export');
   if(tpExp) tpExp.onclick = ()=> terminplanExportieren();
   const tpImp = document.getElementById('in-terminplan-import');
@@ -5104,9 +5821,11 @@ function teamLabel(hund){
   return `${hund.name}${namen?' ('+namen+')':''}${hund.status==='inaktiv'?' – inaktiv':''}`;
 }
 const AUSBILDUNG_TABS = [
+  {id:'meinstand', label:'🎓 Mein Stand'},
   {id:'findewille', label:'Findewille & Anzeigetraining'},
   {id:'planung', label:'Stand & Planung', nurAusbilder:true},
   {id:'tagebuecher', label:'Trainingstagebücher'},
+  {id:'auswertung', label:'📊 Auswertung', nurAusbilderStreng:true},
 ];
 const AUSBILDUNG_TAGEBUCH_TYPEN = [
   {id:'allgemein', label:'Allgemein'},
@@ -5285,16 +6004,18 @@ function renderAusbildung(person){
     <div class="eyebrow" style="--dot:var(--t-ausbildung)">Ausbildung & Team</div>
     <h1>Ausbildung & Team</h1>
     <div class="row" style="margin:14px 0 20px;border-bottom:1px solid var(--line);padding-bottom:2px">
-      ${AUSBILDUNG_TABS.filter(t=>!t.nurAusbilder || darfPlanung).map(t=>`<button class="btn ${ausbildungTab===t.id?'btn-primary':'btn-ghost'}" data-atab="${t.id}">${esc(t.label)}</button>`).join('')}
+      ${AUSBILDUNG_TABS.filter(t=>(!t.nurAusbilder || darfPlanung) && (!t.nurAusbilderStreng || darfTrainingBearbeiten(person))).map(t=>`<button class="btn ${ausbildungTab===t.id?'btn-primary':'btn-ghost'}" data-atab="${t.id}">${esc(t.label)}</button>`).join('')}
     </div>
-    ${ausbildungTab==='findewille' ? renderAusbildungFindewille(person) : ausbildungTab==='planung' ? renderAusbildungPlanung(person) : renderAusbildungTagebuecher(person)}
+    ${ausbildungTab==='meinstand' ? renderMeinStand(person) : ausbildungTab==='findewille' ? renderAusbildungFindewille(person) : ausbildungTab==='planung' ? renderAusbildungPlanung(person) : ausbildungTab==='auswertung' && darfTrainingBearbeiten(person) ? renderAusbildungAuswertung(person) : renderAusbildungTagebuecher(person)}
     ${modal ? renderModal() : ''}
   `;
 }
 function bindAusbildung(person){
   document.querySelectorAll('[data-atab]').forEach(b=>{ b.onclick=()=>{ ausbildungTab=b.dataset.atab; render(); }; });
   if(ausbildungTab==='findewille') bindAusbildungFindewille(person);
+  else if(ausbildungTab==='meinstand') bindMeinStand(person);
   else if(ausbildungTab==='planung') bindAusbildungPlanung(person);
+  else if(ausbildungTab==='auswertung' && darfTrainingBearbeiten(person)) bindAusbildungAuswertung(person);
   else bindAusbildungTagebuecher(person);
   if(modal) bindModal(person);
 }
@@ -9140,6 +9861,7 @@ const HILFE_ARTIKEL = [
   {id:"terminplan", kategorie:"Organisation & Termine", titel:"Terminplan an Mitglieder verteilen und aktualisieren", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p><strong>Leitung/Ausbildung:</strong> Nach Änderungen am Jahresplan unter Organisation &amp; Termine → Kalender → „🔄 Terminplan verteilen / aktualisieren“ auf <strong>Terminplan exportieren</strong> tippen und die Datei an die Mitglieder schicken. Sie enthält nur die Staffeltermine (keine Ausbilder-internen oder persönlichen Termine, keine Planungsnotizen, keine Personendaten) sowie die Löschvermerke.</p>\n<p>Wird ein Staffeltermin gelöscht, fragt BARRY nach einem kurzen <strong>Vermerk</strong> (z. B. „fällt wegen Unwetter aus – Ersatz am 17.10.“). Der Vermerk wird mit dem nächsten Export verteilt; der Termin verschwindet dann auch bei den Mitgliedern und erscheint dort unter „Entfallene Termine“.</p>\n<p><strong>Mitglieder:</strong> Im selben Kasten auf <strong>Terminplan einlesen</strong> tippen und die Datei auswählen. Eine Vorschau zeigt neue, geänderte und entfallene Termine. Abgeglichen wird über eine feste Termin-Kennung (zusätzlich über Titel + Beginn), deshalb entsteht nichts doppelt; eigene Zusagen/Absagen und persönliche Termine bleiben erhalten. Ein älterer Plan holt bereits gelöschte Termine nicht zurück.</p>\n"},
   {id:"trainingskarte", kategorie:"Ausbildung & Team", titel:"Mein heutiges Training (digitale Trainingskarte)", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Ersetzt die Papierkarte „Mein heutiges Training“. Aufruf über die Startseite: <strong>🐾 Mein heutiges Training</strong>.</p>\n<p><strong>Vor dem Training:</strong> Ziel für heute, Vorhaben mit dem Hund und die Ausrüstung (Karte/Kompass, Funkgerät, Puder, Wasser, EH-Material, Abfragekarte). Als Vorschläge zum Antippen erscheinen geteilte Ziele aus „Stand &amp; Planung“, offene Hausaufgaben, begonnene Übungen mit der nächsten Stufe und „Woran muss ich noch arbeiten?“ vom letzten Training.</p>\n<p><strong>Nach dem Training:</strong> Ziel erreicht? Was lief gut, was weniger gut, woran muss ich noch arbeiten?</p>\n<p><strong>📤 An Ausbilder/-in senden</strong> öffnet das Teilen-Menü (z. B. WhatsApp, Signal, DRK.Chat) mit Name, Hund, Datum und allen Angaben. <strong>📓 Ins Tagebuch</strong> legt daraus einen Eintrag im Trainingstagebuch an bzw. aktualisiert ihn. Je Hund und Tag gibt es eine Karte; sie lässt sich jederzeit wieder öffnen und ergänzen.</p>\n"},
   {id:"funk-spickzettel", kategorie:"Wissen & Material", titel:"Funk-Spickzettel", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Wissen &amp; Material → 📻 Funk</strong> (oder über die Startseite) stehen – durchsuchbar und offline – Statusmeldungen Fahrzeug → Leitstelle (0–9, *) mit Merkhilfe „3 AUS · 4 AN · 1 AB · 2 EIN“, Meldungen der Leitstelle, wen man anfunkt (Suchtrupp → Einsatzleitung; Leitstelle über Status 5), Grundregeln, Betriebswörter, Lage- und Fundmeldung, Mustermeldungen im Suchdienst, Bedienung des Motorola MTP 850 (Gruppe einstellen, TMO/DMO, Notruf, GPS), Sprechgruppen einschließlich DMO-Gruppen der Gemeinden im Raum Kassel, Koordinaten, unsere Funkrufnamen, Buchstabieralphabet, Checkliste und Störungshilfe.</p>\n<p>Grundlage ist die Ausbildungsunterlage „Sprechfunk im BOS-Digitalfunk“ des DRK Kassel (Entwurf zur fachlichen Prüfung, 09/2026). Mit ⚠ markierte Punkte sind noch mit Leitstelle bzw. Servicepoint abzustimmen; verbindlich sind die Weisungen der Leitstelle.</p>\n"},
+  {id:"mein-stand", kategorie:"Ausbildung & Team", titel:"Mein Ausbildungsstand, Lehrgänge und Kurswünsche", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>Unter <strong>Ausbildung &amp; Team → 🎓 Mein Stand</strong> (oder über die Karte auf der Startseite) sieht jedes Mitglied seine <strong>Fristen</strong> (abgelaufen bzw. in den nächsten 90 Tagen fällig), <strong>was noch fehlt</strong> (z. B. für die Zulassung zur Rettungshundeprüfung oder die Einsatzfähigkeit), die eigenen Nachweise und die Lehrgänge, für die die Voraussetzungen erfüllt sind.</p>\n<p><strong>Kurswunsch:</strong> Lehrgang wählen – BARRY zeigt die Voraussetzungen laut Seminarbroschüre LV Hessen 2025 (mit Seitenangabe) und was noch fehlt. „Kurswunsch an die Leitung senden“ öffnet das Teilen-Menü. Die Leitung erfasst den Wunsch unter Auswertung → Kurswünsche und setzt den Status.</p>\n<p><strong>Aktuell halten:</strong> Die Leitung erstellt unter Verwaltung → Personen → 🔑 Zugänge &amp; Selbstauskunft „Stand-Updates für alle (ZIP)“ und schickt jeder Person ihre Datei. Einlesen unter 🎓 Mein Stand → „Stand-Update einlesen“ – Passwort und übrige Daten bleiben unverändert.</p>\n<p><strong>Kalender aufs Handy:</strong> Organisation &amp; Termine → Kalender → „📅 Kalenderdatei (.ics)“ – die Datei in Google-, Apple- oder Outlook-Kalender importieren.</p>\n"},
   {id:"datensicherung", kategorie:"Daten sichern & teilen", titel:"Backup exportieren und einspielen", rollen:["leitung"], text:"\n<p>Unter <strong>Verwaltung \u2192 Datensicherung</strong> l\u00e4sst sich der komplette Datenbestand als eine\neinzelne Datei <strong>exportieren</strong> \u2013 das sollte regelm\u00e4\u00dfig geschehen, am besten vor gr\u00f6\u00dferen\n\u00c4nderungen. Beim <strong>Import</strong> einer solchen Datei zeigt BARRY vorher eine Vorschau (Inhalt,\nHerkunft, Datum) und legt automatisch eine Sicherheitskopie des bisherigen Standes an, die sich bei\nBedarf mit einem Klick wiederherstellen l\u00e4sst. Eine Datei ohne anmeldef\u00e4hige Admin-Person wird\ngrunds\u00e4tzlich abgelehnt, damit sich niemand versehentlich aussperrt.</p>\n"},
   {id:"keine-automatische-sync", kategorie:"Daten sichern & teilen", titel:"Wichtig: Keine automatische Synchronisation zwischen Ger\u00e4ten", rollen:["mitglied", "ausbilder", "leitung"], text:"\n<p>BARRY speichert alle Daten <strong>ausschlie\u00dflich lokal auf dem jeweiligen Ger\u00e4t</strong>. Es gibt\nkeinen Server im Hintergrund, der die Daten automatisch zwischen mehreren Handys oder Tablets abgleicht.\nMeldet sich jemand auf einem <em>anderen</em> Ger\u00e4t an, sieht diese Person eine eigenst\u00e4ndige,\nunabh\u00e4ngige Kopie \u2013 neue Eintr\u00e4ge auf dem einen Ger\u00e4t erscheinen nicht von selbst auf dem anderen.</p>\n<p><strong>F\u00fcr die Praxis bedeutet das:</strong> BARRY funktioniert am besten auf einem\n<strong>gemeinsam genutzten Ger\u00e4t</strong> (z. B. ein Staffel-Tablet), auf dem sich alle mit dem\neigenen Login anmelden. Soll BARRY auf mehreren eigenen Handys parallel genutzt werden, m\u00fcssen Daten\nbewusst per Export/Import \u00fcbertragen werden \u2013 siehe Artikel \u201eBackup exportieren und einspielen\".</p>\n"},
   {id:"austauschpaket", kategorie:"Daten sichern & teilen", titel:"Team-Stammdaten mit eigenst\u00e4ndigen Apps austauschen", rollen:["ausbilder", "leitung"], text:"\n<p>F\u00fcr einzelne Hundeteams l\u00e4sst sich unter <strong>Verwaltung \u2192 Hunde \u2192 Teamdaten</strong> eine kleine\nTeamdaten-Datei (Name, Rasse, Geburtsdatum, Sparten, Anzeigeart) exportieren und in eine der\neigenst\u00e4ndigen RHS-Apps (z. B. Tr\u00fcmmersuchassistent) importieren, und umgekehrt. Es handelt sich\nbewusst nur um Stammdaten, nicht um Trainings- oder Einsatzdaten; ein Import zeigt vorher immer eine\nVorschau inklusive Warnung, falls Name oder Hundef\u00fchrer/-in nicht zum gew\u00e4hlten Team passen.</p>\n"},
