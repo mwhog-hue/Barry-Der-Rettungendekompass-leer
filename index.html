@@ -1248,6 +1248,21 @@ function nowIso(){ return new Date().toISOString(); }
 // Prüft, ob eine Person oder ein Hund noch in historischen Daten referenziert wird –
 // harte Löschung würde diese Daten sonst verwaisen lassen (siehe Prüfbericht A3).
 function hundGefuehrtVon(h, personId){ return !!personId && (h.hundefuehrerId===personId || h.zweitHundefuehrerId===personId); }
+
+/* Endgültiges Löschen (z. B. Testeinträge) samt aller zugehörigen Daten */
+function hundEndgueltigLoeschen(hundId){
+  state.hunde = state.hunde.filter(h=>h.id!==hundId);
+  ['trainingseintraege','alltagseintraege','mantrailingEintraege','rhEintraege','findewilleProfile','pruefungsstatus','hausaufgaben','trainingskarten'].forEach(k=>{ state[k]=(state[k]||[]).filter(e=>e.hundId!==hundId); });
+  state.personQualifikationen = state.personQualifikationen.filter(pq=>pq.hundId!==hundId);
+  (state.einsaetze||[]).forEach(e=>(e.suchtrupps||[]).forEach(t=>{ if(t.hundId===hundId) t.hundId=null; }));
+}
+function personEndgueltigLoeschen(personId){
+  state.hunde.filter(h=>h.hundefuehrerId===personId && !h.zweitHundefuehrerId).map(h=>h.id).forEach(hundEndgueltigLoeschen);
+  state.hunde.forEach(h=>{ if(h.hundefuehrerId===personId){ h.hundefuehrerId=h.zweitHundefuehrerId||''; h.zweitHundefuehrerId=''; } if(h.zweitHundefuehrerId===personId) h.zweitHundefuehrerId=''; });
+  state.personen = state.personen.filter(p=>p.id!==personId);
+  ['personQualifikationen','hospitationen','ruckmeldungen','anwesenheiten','trainingseintraege','alltagseintraege','mantrailingEintraege','rhEintraege','trainingskarten','kurswuensche','fahrzeugEinweisungen'].forEach(k=>{ state[k]=(state[k]||[]).filter(e=>e.personId!==personId); });
+  state.termine = state.termine.filter(t=>!(t.sichtbarkeit==='personal' && t.ownerId===personId));
+}
 function personReferenziert(personId){
   return state.hunde.some(h=>hundGefuehrtVon(h, personId))
     || state.trainingseintraege.some(e=>e.personId===personId)
@@ -2052,12 +2067,13 @@ function renderTabPersonen(){
     return `<div class="card empty"><h3>Noch keine Personen</h3><p>Lege die erste Person an.</p><button class="btn btn-primary" id="btn-neue-person">Person anlegen</button></div>`;
   }
   const duplikate = personenDuplikatGruppen();
-  const zeilen = state.personen.map(p=>`
+  const archivAnz = state.personen.filter(p=>p.status==='inaktiv').length;
+  const zeilen = state.personen.filter(p=>archivZeigen || p.status!=='inaktiv').map(p=>`
     <tr class="clickable" data-person="${p.id}">
       <td>${esc(p.name)}</td>
       <td>${(p.rollen||[]).map(r=>esc(rolleInfo(r).label)).join(', ')||'–'}</td>
       <td>${esc(p.mitgliedsnummer)||'–'}</td>
-      <td>${p.status==='inaktiv'?'<span class="badge off">inaktiv</span>':p.status==='extern'?'<span class="badge warn">extern</span>':'<span class="badge ok">aktiv</span>'}</td>
+      <td>${p.status==='inaktiv'?`<span class="badge off">📦 archiviert${p.archiviertAm?' '+fmtDatum(p.archiviertAm):''}</span>`:p.status==='extern'?'<span class="badge warn">extern</span>':'<span class="badge ok">aktiv</span>'}</td>
     </tr>`).join('');
   return `
     ${duplikate.length?`
@@ -2071,9 +2087,10 @@ function renderTabPersonen(){
         </div>`).join('')}
     </div>`:''}
     <div class="spread" style="margin-bottom:14px">
-      <p class="hint">${state.personen.length} Personen im Bestand · Zum Bearbeiten anklicken</p>
+      <p class="hint">${state.personen.length-archivAnz} aktive Personen${archivAnz?` · ${archivAnz} im Archiv`:''} · Zum Bearbeiten anklicken</p>
       <button class="btn btn-primary" id="btn-neue-person">+ Person anlegen</button>
     </div>
+    ${archivUmschalter(archivAnz)}
     <div class="card table-scroll"><table><thead><tr><th>Name</th><th>Rollen</th><th>Mitgl.-Nr.</th><th>Status</th></tr></thead><tbody>${zeilen}</tbody></table></div>
   `;
 }
@@ -2266,14 +2283,15 @@ function renderTabHunde(){
     return `<div class="card empty"><h3>Noch keine Hunde</h3><p>Lege den ersten Hund an.</p><button class="btn btn-primary" id="btn-neuer-hund">Hund anlegen</button></div>`;
   }
   const hundDuplikate = hundeDuplikatGruppen();
-  const zeilen = state.hunde.map(h=>{
+  const archivAnzH = state.hunde.filter(h=>h.status==='inaktiv').length;
+  const zeilen = state.hunde.filter(h=>archivZeigen || h.status!=='inaktiv').map(h=>{
     const fuehrer = state.personen.find(p=>p.id===h.hundefuehrerId);
     const zweit = h.zweitHundefuehrerId ? state.personen.find(p=>p.id===h.zweitHundefuehrerId) : null;
     return `<tr class="clickable" data-hund="${h.id}">
       <td>${esc(h.name)}</td><td>${esc(h.rasse)||'–'}</td>
       <td>${fuehrer?esc(fuehrer.name):'–'}${zweit?` <span class="hint">/ ${esc(zweit.name)}</span>`:''}</td>
       <td>${esc(hundeLebensphase(h.geburtsdatum))||'–'}</td>
-      <td>${h.status==='inaktiv'?'<span class="badge off">inaktiv</span>':'<span class="badge ok">aktiv</span>'}</td>
+      <td>${h.status==='inaktiv'?'<span class="badge off">📦 archiviert</span>':'<span class="badge ok">aktiv</span>'}</td>
       <td><button class="btn btn-sm btn-ghost" data-austausch="${h.id}">Teamdaten</button></td>
     </tr>`;
   }).join('');
@@ -2289,9 +2307,10 @@ function renderTabHunde(){
         </div>`).join('')}
     </div>`:''}
     <div class="spread" style="margin-bottom:14px">
-      <p class="hint">${state.hunde.length} Hunde im Bestand · Zum Bearbeiten anklicken</p>
+      <p class="hint">${state.hunde.length-archivAnzH} aktive Hunde${archivAnzH?` · ${archivAnzH} im Archiv`:''} · Zum Bearbeiten anklicken</p>
       <button class="btn btn-primary" id="btn-neuer-hund">+ Hund anlegen</button>
     </div>
+    ${archivUmschalter(archivAnzH)}
     <div class="card table-scroll"><table><thead><tr><th>Name</th><th>Rasse</th><th>Hundeführer/in</th><th>Lebensphase</th><th>Status</th><th></th></tr></thead><tbody>${zeilen}</tbody></table></div>
   `;
 }
@@ -3635,8 +3654,8 @@ function profilAuswerten(personId, profil){
 let auswKurs = '';
 let auswAnsicht = 'profil', auswProfil = 'rhf_einsatz', auswPerson = '', auswQuali = '', auswKategorie = '', auswNurHF = true;
 function auswPersonen(){
-  return state.personen.filter(p=>p.status!=='inaktiv' && (p.name||'').toLowerCase()!=='admin' && !(p.name||'').startsWith('#'))
-    .filter(p=>!auswNurHF || state.hunde.some(h=>h.status!=='inaktiv' && hundGefuehrtVon(h,p.id)))
+  return state.personen.filter(p=>(auswArchiv || p.status!=='inaktiv') && (p.name||'').toLowerCase()!=='admin' && !(p.name||'').startsWith('#'))
+    .filter(p=>!auswNurHF || state.hunde.some(h=>(auswArchiv || h.status!=='inaktiv') && hundGefuehrtVon(h,p.id)))
     .sort((a,b)=>a.name.localeCompare(b.name,'de'));
 }
 const AUSW_SYMBOL = {gueltig:'✓', durchSuch:'✓*', abgelaufen:'⚠', fehlt:'–', entfaellt:'·'};
@@ -3724,12 +3743,14 @@ function renderAusbildungAuswertung(person){
     <p class="lead">Wer hat welche Ausbildung – und was fehlt für Einsatz, Prüfung oder den nächsten Lehrgang?</p>
     <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">${ans.map(([id,l])=>`<button class="btn btn-sm ${auswAnsicht===id?'btn-primary':'btn-ghost'}" data-aw-ansicht="${id}">${esc(l)}</button>`).join('')}</div>
     <label class="row" style="gap:6px;align-items:center;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="aw-nurhf" ${auswNurHF?'checked':''}> <span class="hint" style="color:var(--ink)">nur Hundeführende (Personen mit aktivem Hund)</span></label>
+    ${state.personen.some(p=>p.status==='inaktiv')?`<label class="row" style="gap:6px;align-items:center;margin:-4px 0 10px;cursor:pointer"><input type="checkbox" id="aw-archiv" ${auswArchiv?'checked':''}> <span class="hint" style="color:var(--ink)">📦 Archivierte Mitglieder einbeziehen (${state.personen.filter(p=>p.status==='inaktiv').length})</span></label>`:''}
     <div class="card card-pad">${inhalt}</div>
     <p class="hint" style="margin-top:8px">Grundlage sind die in BARRY eingetragenen Qualifikationen. Die Ziel-Voraussetzungen sind aus den genannten Quellen zusammengestellt; verbindlich bleiben Dienstanweisung, Prüfungsordnung und Seminarbroschüre in der jeweils gültigen Fassung.</p>`;
 }
 function bindAusbildungAuswertung(person){
   document.querySelectorAll('[data-aw-ansicht]').forEach(b=>b.onclick=()=>{ auswAnsicht=b.dataset.awAnsicht; render(); });
   const nh=document.getElementById('aw-nurhf'); if(nh) nh.onchange=()=>{ auswNurHF=nh.checked; render(); };
+  const ar=document.getElementById('aw-archiv'); if(ar) ar.onchange=()=>{ auswArchiv=ar.checked; render(); };
   const sp=document.getElementById('aw-profil'); if(sp) sp.onchange=()=>{ auswProfil=sp.value; render(); };
   const pe=document.getElementById('aw-person'); if(pe) pe.onchange=()=>{ auswPerson=pe.value; render(); };
   const qu=document.getElementById('aw-quali'); if(qu) qu.onchange=()=>{ auswQuali=qu.value; render(); };
@@ -4491,6 +4512,29 @@ function bindWissenApps(person){
   document.querySelectorAll('[data-app-aus]').forEach(b=>b.onclick=()=>{ state.organisation.appLinks=state.organisation.appLinks||{}; const e=state.organisation.appLinks[b.dataset.appAus]=state.organisation.appLinks[b.dataset.appAus]||{}; e.aus=!e.aus; speichereState(); render(); });
 }
 
+
+/* ---------- ARCHIV: Mitglieder und Hunde, die nicht mehr aktiv sind (Status „inaktiv“) ----------
+   Archivierte verschwinden aus Listen, Zusagen, Einsatzbereitschaft und Zugangspaketen, bleiben aber für Auswertungen erhalten. */
+let archivZeigen = false, auswArchiv = false;
+function personArchivieren(p){
+  p.status='inaktiv'; p.archiviertAm=nowIso();
+  state.hunde.filter(h=>h.status!=='inaktiv' && h.hundefuehrerId===p.id && !h.zweitHundefuehrerId).forEach(h=>{ h.status='inaktiv'; h.archiviertAm=nowIso(); });
+}
+function archivUmschalter(anzahl){ return anzahl?`<label class="row" style="gap:6px;align-items:center;cursor:pointer;margin:0 0 10px"><input type="checkbox" data-archiv-zeigen ${archivZeigen?'checked':''}> <span class="hint" style="color:var(--ink)">📦 Archiv anzeigen (${anzahl})</span></label>`:''; }
+document.addEventListener('change', e=>{ if(e.target.matches && e.target.matches('[data-archiv-zeigen]')){ archivZeigen=e.target.checked; render(); } });
+document.addEventListener('click', e=>{ const b=e.target.closest && e.target.closest('#m-archiv'); if(!b || !modal) return; e.preventDefault();
+  if(modal.type==='person'){ const p=state.personen.find(x=>x.id===modal.id); if(!p) return;
+    if(p.status==='inaktiv'){ p.status='aktiv'; delete p.archiviertAm;
+      const hunde=state.hunde.filter(h=>h.status==='inaktiv' && h.hundefuehrerId===p.id);
+      if(hunde.length && confirm(`Auch ${hunde.map(h=>h.name).join(', ')} wiederherstellen?`)) hunde.forEach(h=>{ h.status='aktiv'; delete h.archiviertAm; });
+      speichereState(); zeigeToast(`${p.name} wiederhergestellt.`); }
+    else { if(!confirm(`${p.name} archivieren? Die Person erscheint nicht mehr in Listen, Zusagen und Einsatzbereitschaft, bleibt aber für Auswertungen erhalten. Hunde, die nur diese Person führt, werden mit archiviert.`)) return; personArchivieren(p); speichereState(); zeigeToast(`${p.name} archiviert.`); }
+    schliesseModal(); }
+  else if(modal.type==='hund'){ const h=state.hunde.find(x=>x.id===modal.id); if(!h) return;
+    if(h.status==='inaktiv'){ h.status='aktiv'; delete h.archiviertAm; zeigeToast(`${h.name} wiederhergestellt.`); } else { h.status='inaktiv'; h.archiviertAm=nowIso(); zeigeToast(`${h.name} archiviert.`); }
+    speichereState(); schliesseModal(); }
+});
+
 /* ---------- Zentraler Knopf „Datei einlesen“: erkennt jede BARRY-Datei und leitet weiter ---------- */
 function dateiArtErkennen(name, text, bytes){
   if(bytes && bytes[0]===0x50 && bytes[1]===0x4B) return /zip$/i.test(name) ? 'zip' : 'xlsx';
@@ -4923,7 +4967,7 @@ function renderModalPerson(){
       ${bestehend?renderPersonHospitationenBereich(bestehend):''}
     </div>
     <div class="modal-foot">
-      ${bestehend?`<button class="btn btn-danger" id="m-loeschen" style="margin-right:auto">Löschen</button>`:''}
+      ${bestehend?`<button class="btn btn-danger" id="m-loeschen">Löschen</button><button class="btn" id="m-archiv" style="margin-right:auto">${(state.personen.find(x=>x.id===modal.id)||{}).status==='inaktiv'?'♻️ Wiederherstellen':'📦 Archivieren'}</button>`:''}
       <button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button>
       <button class="btn btn-primary" id="m-speichern">Speichern</button>
     </div>
@@ -4980,9 +5024,14 @@ function bindModalPerson(){
       const p = state.personen.find(x=>x.id===modal.id);
       if(istLetzterAdmin(p)){ alert('Diese Person ist die letzte Admin-Person im Bestand und kann nicht gelöscht werden. Bitte zuerst eine weitere Admin-Rolle vergeben.'); return; }
       if(personReferenziert(modal.id)){
-        if(!confirm('Für diese Person liegen bereits Trainings-, Termin- oder Hundezuordnungsdaten vor. Ein Löschen würde diese Daten verwaisen lassen. Stattdessen auf „inaktiv“ setzen?')) return;
-        p.status = 'inaktiv';
-        speichereState(); zeigeToast('Person auf inaktiv gesetzt.'); schliesseModal(); return;
+        if(!confirm('Für diese Person liegen bereits Trainings-, Termin- oder Hundezuordnungsdaten vor. Empfohlen: archivieren – die Daten bleiben für Auswertungen erhalten.\n\nOK = archivieren\nAbbrechen = weitere Möglichkeiten')){
+          if(confirm(`„${p.name}“ ENDGÜLTIG löschen – einschließlich Qualifikationen, Rückmeldungen, Tagebucheinträgen und der Hunde, die nur diese Person führt? (z. B. bei einem Testeintrag)\n\nDas lässt sich nicht rückgängig machen.`)){
+            personEndgueltigLoeschen(p.id); speichereState(); zeigeToast('Person mit allen zugehörigen Daten gelöscht.'); schliesseModal();
+          }
+          return;
+        }
+        personArchivieren(p);
+        speichereState(); zeigeToast(`${p.name} archiviert.`); schliesseModal(); return;
       }
       if(!confirm('Diese Person wirklich löschen? Zugeordnete Qualifikationen und Hospitationen werden mit gelöscht.')) return;
       state.personen = state.personen.filter(p=>p.id!==modal.id);
@@ -5098,7 +5147,7 @@ function renderModalHund(){
       <p class="hint">Sparten und Anzeigeart werden für den Datenaustausch mit den Assistenten-Apps (Mantrailing, Trümmersuche, Fläche/Taktik) verwendet. Rassegruppe und Lebensphase (aus dem Geburtsdatum berechnet) liefern Trainingshinweise unter Ausbildung & Team.</p>
     </div>
     <div class="modal-foot">
-      ${bestehend?`<button class="btn btn-danger" id="m-loeschen" style="margin-right:auto">Löschen</button>`:''}
+      ${bestehend?`<button class="btn btn-danger" id="m-loeschen">Löschen</button><button class="btn" id="m-archiv" style="margin-right:auto">${(state.hunde.find(x=>x.id===modal.id)||{}).status==='inaktiv'?'♻️ Wiederherstellen':'📦 Archivieren'}</button>`:''}
       <button class="btn btn-ghost" id="m-abbrechen">Abbrechen</button>
       <button class="btn btn-primary" id="m-speichern">Speichern</button>
     </div>
@@ -5136,10 +5185,15 @@ function bindModalHund(){
   if(modal.id){
     document.getElementById('m-loeschen').onclick = ()=>{
       if(hundReferenziert(modal.id)){
-        if(!confirm('Für diesen Hund liegen bereits Trainingseinträge oder Ausbildungsdaten vor. Ein Löschen würde diese Daten verwaisen lassen. Stattdessen auf „inaktiv“ setzen?')) return;
+        if(!confirm('Für diesen Hund liegen bereits Trainingseinträge oder Ausbildungsdaten vor. Empfohlen: archivieren – die Daten bleiben für Auswertungen erhalten.\n\nOK = archivieren\nAbbrechen = weitere Möglichkeiten')){
+          if(confirm('Hund ENDGÜLTIG löschen – einschließlich aller Trainingseinträge, Prüfstände, Hausaufgaben und Teamprüfungen dieses Hundes? (z. B. bei einem Testeintrag)\n\nDas lässt sich nicht rückgängig machen.')){
+            hundEndgueltigLoeschen(modal.id); speichereState(); zeigeToast('Hund mit allen zugehörigen Daten gelöscht.'); schliesseModal();
+          }
+          return;
+        }
         const h = state.hunde.find(x=>x.id===modal.id);
-        h.status = 'inaktiv';
-        speichereState(); zeigeToast('Hund auf inaktiv gesetzt.'); schliesseModal(); return;
+        h.status = 'inaktiv'; h.archiviertAm = nowIso();
+        speichereState(); zeigeToast(`${h.name} archiviert.`); schliesseModal(); return;
       }
       if(!confirm('Diesen Hund wirklich löschen?')) return;
       state.hunde = state.hunde.filter(h=>h.id!==modal.id);
