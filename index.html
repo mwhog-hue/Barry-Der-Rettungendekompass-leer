@@ -1509,7 +1509,7 @@ function renderMeineFahrzeugeEinweisungen(person){
 }
 
 const BARRY_SCHEMA_VERSION = 1; // muss VOR ladeState() definiert sein (temporal dead zone)
-const BARRY_APP_VERSION = '2.3';
+const BARRY_APP_VERSION = '2.4';
 const GRUPPEN_VORSCHLAG = [
   { id:'g_hofgeismar', name:'Hofgeismar' }, { id:'g_kassel', name:'Kassel' },
   { id:'g_korbach', name:'Korbach' }, { id:'g_schwalm_eder', name:'Schwalm-Eder' },
@@ -1621,6 +1621,15 @@ function seedState(){
 const SITZUNG_KEY = STORAGE_KEY + '-sitzung';
 function sitzungLaden(){ try{ const x = JSON.parse(sessionStorage.getItem(SITZUNG_KEY)||'null'); return (x && x.personId) ? x : null; }catch(e){ return null; } }
 function sitzungMerken(){ try{ if(session) sessionStorage.setItem(SITZUNG_KEY, JSON.stringify({personId:session.personId, route})); else sessionStorage.removeItem(SITZUNG_KEY); }catch(e){} }
+// Nach Import/Wiederherstellung angemeldet bleiben, wenn dieselbe Person (gleiche Kennung, aktiv, unverändertes Passwort) im neuen Bestand vorhanden ist
+function sitzungVorherMerken(){ const p = aktuellePerson(); return p ? { id:p.id, passwortHash:p.passwortHash||'' } : null; }
+function sitzungUebernehmen(vorher){
+  const p = vorher && state.personen.find(x=>x.id===vorher.id);
+  if(p && p.status!=='inaktiv' && !p.mussPasswortAendern && (p.passwortHash||'')===vorher.passwortHash){
+    session = { personId:p.id }; route = { bereich:'start', unter:null, id:null }; return true;
+  }
+  session = null; return false;
+}
 const gemerkteSitzung = sitzungLaden();
 let session = gemerkteSitzung ? { personId: gemerkteSitzung.personId } : null; // { personId }
 function aktuellePerson(){
@@ -3020,9 +3029,11 @@ function bindTabDatensicherung(){
     if(!confirm('Den Stand von vor dem letzten Import wiederherstellen? Der aktuelle Bestand wird dabei ersetzt.')) return;
     try{
       const roh = localStorage.getItem(STORAGE_KEY+'-vor-import-backup');
+      const sitzungVorher = sitzungVorherMerken();
       state = migriereState(Object.assign(leererState(), JSON.parse(roh)));
       speichereState();
-      session = null; loginEingabe = ''; loginFehler = '';
+      if(sitzungUebernehmen(sitzungVorher)){ loginHinweis=''; zeigeToast('Vorheriger Stand wiederhergestellt – Sie bleiben angemeldet.'); render(); return; }
+      loginEingabe = ''; loginFehler = '';
         loginHinweis = 'Der vorherige Datenbestand wurde wiederhergestellt. Bitte melde dich jetzt mit einer Person aus dem neuen Bestand an (Name oder Benutzername). Zugänge aus dem vorherigen Bestand – z. B. „Admin“ – gelten nicht mehr. Bei importierten Personen gilt das Startpasswort, das dir die Leitung mitgeteilt hat.';
         zeigeToast('Vorheriger Stand wiederhergestellt.');
       render();
@@ -4855,9 +4866,11 @@ function bestandAusDateiImportieren(file){
       const umfang = `\nInhalt: ${parsed.personen.length} Personen, ${(parsed.hunde||[]).length} Hunde, ${(parsed.termine||[]).length} Termine, ${(parsed.einsaetze||[]).length} Einsätze.`;
       if(!confirm('Der bestehende Bestand auf diesem Gerät wird ersetzt (der aktuelle Stand wird vorher automatisch als Sicherheitskopie abgelegt). Fortfahren?'+info+umfang)) return;
       try{ localStorage.setItem(STORAGE_KEY+'-vor-import-backup', JSON.stringify(state)); }catch(e){ /* Backup optional, Import trotzdem versuchen */ }
+      const sitzungVorher = sitzungVorherMerken();
       state = migriereState(Object.assign(leererState(), parsed));
       speichereState();
-      session = null; loginEingabe = ''; loginFehler = '';
+      if(sitzungUebernehmen(sitzungVorher)){ loginHinweis=''; zeigeToast('Bestand importiert – Sie bleiben angemeldet. Der vorherige Stand wurde als Sicherheitskopie abgelegt.'); render(); return; }
+      loginEingabe = ''; loginFehler = '';
       loginHinweis = 'Der Datenbestand wurde ersetzt. Bitte melde dich jetzt mit einer Person aus dem neuen Bestand an (Name oder Benutzername). Zugänge aus dem vorherigen Bestand – z. B. „Admin“ – gelten nicht mehr. Bei importierten Personen gilt das Startpasswort, das dir die Leitung mitgeteilt hat.';
       zeigeToast('Bestand importiert. Vorheriger Stand wurde als Sicherheitskopie abgelegt.');
       render();

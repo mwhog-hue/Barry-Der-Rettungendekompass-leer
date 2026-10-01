@@ -2,7 +2,7 @@
    Damit bekommt jede/r nach dem Hochladen einer neuen index.html sofort die neue Version,
    und BARRY bleibt trotzdem offline nutzbar. */
 const CACHE_PREFIX = 'barry-shell-';
-const CACHE = CACHE_PREFIX + 'v3-2.3';   // bei jeder Veröffentlichung hochzählen (BARRY 2.3)
+const CACHE = CACHE_PREFIX + 'v4-2.4';   // bei jeder Veröffentlichung hochzählen (BARRY 2.4)
 const SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
