@@ -1,7 +1,8 @@
 /* BARRY Service Worker – Netzwerk zuerst, Cache nur als Offline-Ersatz.
    Damit bekommt jede/r nach dem Hochladen einer neuen index.html sofort die neue Version,
    und BARRY bleibt trotzdem offline nutzbar. */
-const CACHE = 'barry-shell-v2';
+const CACHE_PREFIX = 'barry-shell-';
+const CACHE = CACHE_PREFIX + 'v3-2.3';   // bei jeder Veröffentlichung hochzählen (BARRY 2.3)
 const SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
@@ -10,7 +11,7 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith(CACHE_PREFIX) && k !== CACHE)   /* nur eigene Caches löschen – andere Apps unter mwhog-hue.github.io (z. B. BARRY · TEST) bleiben unberührt */.map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
