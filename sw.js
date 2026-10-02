@@ -2,12 +2,11 @@
    Damit bekommt jede/r nach dem Hochladen einer neuen index.html sofort die neue Version,
    und BARRY bleibt trotzdem offline nutzbar. */
 const CACHE_PREFIX = 'barry-shell-';
-const CACHE = CACHE_PREFIX + 'v14-2.13';   // bei jeder Veröffentlichung hochzählen (BARRY 2.13)
-// App-Dateien inkl. Icons (aus der Fassung 2.8 übernommen); fehlt eine Datei, wird nur diese übersprungen
-const SHELL = ['./', './index.html', './manifest.webmanifest', './rhs-apple-touch-icon.png', './rhs-favicon-32.png'];
+const CACHE = CACHE_PREFIX + 'v6-2.6';   // bei jeder Veröffentlichung hochzählen (BARRY 2.6)
+const SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(c => Promise.all(SHELL.map(u => c.add(u).catch(()=>{})))).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(()=>{})).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', event => {
